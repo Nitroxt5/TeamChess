@@ -4,11 +4,37 @@ ONE = 0b1000000000000000000000000000000000000000000000000000000000000000
 COLORS = ("w", "b")
 PIECES = ("K", "Q", "R", "B", "N", "p")
 COLORED_PIECES = [color + piece for color in COLORS for piece in PIECES]
-CASTLE_SIDES = {"wKs": 0, "wQs": 1, "bKs": 2, "bQs": 3}
+CASTLE_SIDES = {"wKs": 8, "wQs": 4, "bKs": 2, "bQs": 1}
 DIMENSION = 8
+bbOfPawnStarts = {"w": 0b0000000000000000000000000000000000000000000000001111111100000000,
+                  "b": 0b0000000011111111000000000000000000000000000000000000000000000000}
+bbOfColumns = {"a": 0b1000000010000000100000001000000010000000100000001000000010000000,
+               "b": 0b0100000001000000010000000100000001000000010000000100000001000000,
+               "c": 0b0010000000100000001000000010000000100000001000000010000000100000,
+               "d": 0b0001000000010000000100000001000000010000000100000001000000010000,
+               "e": 0b0000100000001000000010000000100000001000000010000000100000001000,
+               "f": 0b0000010000000100000001000000010000000100000001000000010000000100,
+               "g": 0b0000001000000010000000100000001000000010000000100000001000000010,
+               "h": 0b0000000100000001000000010000000100000001000000010000000100000001}
+bbOfRows = {"1": 0b0000000000000000000000000000000000000000000000000000000011111111,
+            "2": 0b0000000000000000000000000000000000000000000000001111111100000000,
+            "3": 0b0000000000000000000000000000000000000000111111110000000000000000,
+            "4": 0b0000000000000000000000000000000011111111000000000000000000000000,
+            "5": 0b0000000000000000000000001111111100000000000000000000000000000000,
+            "6": 0b0000000000000000111111110000000000000000000000000000000000000000,
+            "7": 0b0000000011111111000000000000000000000000000000000000000000000000,
+            "8": 0b1111111100000000000000000000000000000000000000000000000000000000}
+bbOfCorrections = {"a": 0b0111111101111111011111110111111101111111011111110111111101111111,
+                   "ab": 0b0011111100111111001111110011111100111111001111110011111100111111,
+                   "h": 0b1111111011111110111111101111111011111110111111101111111011111110,
+                   "gh": 0b1111110011111100111111001111110011111100111111001111110011111100,
+                   "1": 0b1111111111111111111111111111111111111111111111111111111100000000,
+                   "12": 0b1111111111111111111111111111111111111111111111110000000000000000,
+                   "8": 0b0000000011111111111111111111111111111111111111111111111111111111,
+                   "78": 0b0000000000000000111111111111111111111111111111111111111111111111}
 
 
-def powTo(x, n):
+def powTo(x: int, n: int):
     y = 1
     while n > 0:
         if n % 2 == 1:
@@ -18,7 +44,7 @@ def powTo(x, n):
     return y
 
 
-def numSplit(number):
+def numSplit(number: int):
     num1 = number
     num2 = num1
     result = []
@@ -34,7 +60,7 @@ def numSplit(number):
     return result
 
 
-def getPower(number):
+def getPower(number: int):
     num = number
     counter = 0
     while num:
@@ -43,7 +69,7 @@ def getPower(number):
     return 64 - counter
 
 
-def getBitsCount(number):
+def getBitsCount(number: int):
     num = number
     counter = 0
     while num:
@@ -85,17 +111,7 @@ class GameState:
         # self.bbOfOccupiedSquares = {"w": 0b0000000000100000010000000000000000000000000000000000000000000000,
         #                             "b": 0b1000000000000000000000000000000000000000000000000000000000000000,
         #                             "a": 0b1000000000100000010000000000000000000000000000000000000000000000}
-        self.bbOfCorrections = {"a": 0b0111111101111111011111110111111101111111011111110111111101111111,
-                                "ab": 0b0011111100111111001111110011111100111111001111110011111100111111,
-                                "h": 0b1111111011111110111111101111111011111110111111101111111011111110,
-                                "gh": 0b1111110011111100111111001111110011111100111111001111110011111100,
-                                "1": 0b1111111111111111111111111111111111111111111111111111111100000000,
-                                "12": 0b1111111111111111111111111111111111111111111111110000000000000000,
-                                "8": 0b0000000011111111111111111111111111111111111111111111111111111111,
-                                "78": 0b0000000000000000111111111111111111111111111111111111111111111111}
         self.bbOfThreats = {"w": 0, "b": 0}
-        self.bbOfPawnStarts = {"w": 0b0000000000000000000000000000000000000000000000001111111100000000,
-                               "b": 0b0000000011111111000000000000000000000000000000000000000000000000}
         self.moveFunc = {"p": self.getPawnMoves, "R": self.getRookMoves, "N": self.getKnightMoves,
                          "B": self.getBishopMoves, "Q": self.getQueenMoves, "K": self.getKingMoves}
         self.threatTableFunc = {"p": self.createPawnThreatTable, "R": self.createRookThreatTable,
@@ -128,38 +144,38 @@ class GameState:
         for piece in PIECES:
             self.threatTableFunc[piece]("b")
 
-    def createPawnThreatTable(self, color):
+    def createPawnThreatTable(self, color: str):
         piece = color + "p"
         if color == "w":
-            self.bbOfThreats[color] |= ((self.bbOfPieces[piece] & self.bbOfCorrections["h"]) << 7)
-            self.bbOfThreats[color] |= ((self.bbOfPieces[piece] & self.bbOfCorrections["a"]) << 9)
+            self.bbOfThreats[color] |= ((self.bbOfPieces[piece] & bbOfCorrections["h"]) << 7)
+            self.bbOfThreats[color] |= ((self.bbOfPieces[piece] & bbOfCorrections["a"]) << 9)
         elif color == "b":
-            self.bbOfThreats[color] |= ((self.bbOfPieces[piece] & self.bbOfCorrections["h"]) >> 9)
-            self.bbOfThreats[color] |= ((self.bbOfPieces[piece] & self.bbOfCorrections["a"]) >> 7)
+            self.bbOfThreats[color] |= ((self.bbOfPieces[piece] & bbOfCorrections["h"]) >> 9)
+            self.bbOfThreats[color] |= ((self.bbOfPieces[piece] & bbOfCorrections["a"]) >> 7)
 
-    def createKnightThreatTable(self, color):
+    def createKnightThreatTable(self, color: str):
         piece = color + "N"
-        self.bbOfThreats[color] |= ((self.bbOfPieces[piece] & self.bbOfCorrections["h"] & self.bbOfCorrections["78"]) << 15)
-        self.bbOfThreats[color] |= ((self.bbOfPieces[piece] & self.bbOfCorrections["gh"] & self.bbOfCorrections["8"]) << 6)
-        self.bbOfThreats[color] |= ((self.bbOfPieces[piece] & self.bbOfCorrections["gh"] & self.bbOfCorrections["1"]) >> 10)
-        self.bbOfThreats[color] |= ((self.bbOfPieces[piece] & self.bbOfCorrections["h"] & self.bbOfCorrections["12"]) >> 17)
-        self.bbOfThreats[color] |= ((self.bbOfPieces[piece] & self.bbOfCorrections["a"] & self.bbOfCorrections["12"]) >> 15)
-        self.bbOfThreats[color] |= ((self.bbOfPieces[piece] & self.bbOfCorrections["ab"] & self.bbOfCorrections["1"]) >> 6)
-        self.bbOfThreats[color] |= ((self.bbOfPieces[piece] & self.bbOfCorrections["ab"] & self.bbOfCorrections["8"]) << 10)
-        self.bbOfThreats[color] |= ((self.bbOfPieces[piece] & self.bbOfCorrections["a"] & self.bbOfCorrections["78"]) << 17)
+        self.bbOfThreats[color] |= ((self.bbOfPieces[piece] & bbOfCorrections["h"] & bbOfCorrections["78"]) << 15)
+        self.bbOfThreats[color] |= ((self.bbOfPieces[piece] & bbOfCorrections["gh"] & bbOfCorrections["8"]) << 6)
+        self.bbOfThreats[color] |= ((self.bbOfPieces[piece] & bbOfCorrections["gh"] & bbOfCorrections["1"]) >> 10)
+        self.bbOfThreats[color] |= ((self.bbOfPieces[piece] & bbOfCorrections["h"] & bbOfCorrections["12"]) >> 17)
+        self.bbOfThreats[color] |= ((self.bbOfPieces[piece] & bbOfCorrections["a"] & bbOfCorrections["12"]) >> 15)
+        self.bbOfThreats[color] |= ((self.bbOfPieces[piece] & bbOfCorrections["ab"] & bbOfCorrections["1"]) >> 6)
+        self.bbOfThreats[color] |= ((self.bbOfPieces[piece] & bbOfCorrections["ab"] & bbOfCorrections["8"]) << 10)
+        self.bbOfThreats[color] |= ((self.bbOfPieces[piece] & bbOfCorrections["a"] & bbOfCorrections["78"]) << 17)
 
-    def createKingThreatTable(self, color):
+    def createKingThreatTable(self, color: str):
         piece = color + "K"
-        self.bbOfThreats[color] |= ((self.bbOfPieces[piece] & self.bbOfCorrections["8"]) << 8)
-        self.bbOfThreats[color] |= ((self.bbOfPieces[piece] & self.bbOfCorrections["h"] & self.bbOfCorrections["8"]) << 7)
-        self.bbOfThreats[color] |= ((self.bbOfPieces[piece] & self.bbOfCorrections["h"]) >> 1)
-        self.bbOfThreats[color] |= ((self.bbOfPieces[piece] & self.bbOfCorrections["h"] & self.bbOfCorrections["1"]) >> 9)
-        self.bbOfThreats[color] |= ((self.bbOfPieces[piece] & self.bbOfCorrections["1"]) >> 8)
-        self.bbOfThreats[color] |= ((self.bbOfPieces[piece] & self.bbOfCorrections["a"] & self.bbOfCorrections["1"]) >> 7)
-        self.bbOfThreats[color] |= ((self.bbOfPieces[piece] & self.bbOfCorrections["a"]) << 1)
-        self.bbOfThreats[color] |= ((self.bbOfPieces[piece] & self.bbOfCorrections["a"] & self.bbOfCorrections["8"]) << 9)
+        self.bbOfThreats[color] |= ((self.bbOfPieces[piece] & bbOfCorrections["8"]) << 8)
+        self.bbOfThreats[color] |= ((self.bbOfPieces[piece] & bbOfCorrections["h"] & bbOfCorrections["8"]) << 7)
+        self.bbOfThreats[color] |= ((self.bbOfPieces[piece] & bbOfCorrections["h"]) >> 1)
+        self.bbOfThreats[color] |= ((self.bbOfPieces[piece] & bbOfCorrections["h"] & bbOfCorrections["1"]) >> 9)
+        self.bbOfThreats[color] |= ((self.bbOfPieces[piece] & bbOfCorrections["1"]) >> 8)
+        self.bbOfThreats[color] |= ((self.bbOfPieces[piece] & bbOfCorrections["a"] & bbOfCorrections["1"]) >> 7)
+        self.bbOfThreats[color] |= ((self.bbOfPieces[piece] & bbOfCorrections["a"]) << 1)
+        self.bbOfThreats[color] |= ((self.bbOfPieces[piece] & bbOfCorrections["a"] & bbOfCorrections["8"]) << 9)
 
-    def createBishopThreatTable(self, color, isQueen=False):
+    def createBishopThreatTable(self, color: str, isQueen=False):
         if isQueen:
             piece = color + "Q"
         else:
@@ -167,31 +183,31 @@ class GameState:
         splitPositions = numSplit(self.bbOfPieces[piece])
         for splitPosition in splitPositions:
             checkingSq = splitPosition
-            while checkingSq & self.bbOfCorrections["h"] & self.bbOfCorrections["8"]:
+            while checkingSq & bbOfCorrections["h"] & bbOfCorrections["8"]:
                 checkingSq <<= 7
                 self.bbOfThreats[color] |= checkingSq
                 if checkingSq & self.bbOfOccupiedSquares["a"]:
                     break
             checkingSq = splitPosition
-            while checkingSq & self.bbOfCorrections["h"] & self.bbOfCorrections["1"]:
+            while checkingSq & bbOfCorrections["h"] & bbOfCorrections["1"]:
                 checkingSq >>= 9
                 self.bbOfThreats[color] |= checkingSq
                 if checkingSq & self.bbOfOccupiedSquares["a"]:
                     break
             checkingSq = splitPosition
-            while checkingSq & self.bbOfCorrections["a"] & self.bbOfCorrections["1"]:
+            while checkingSq & bbOfCorrections["a"] & bbOfCorrections["1"]:
                 checkingSq >>= 7
                 self.bbOfThreats[color] |= checkingSq
                 if checkingSq & self.bbOfOccupiedSquares["a"]:
                     break
             checkingSq = splitPosition
-            while checkingSq & self.bbOfCorrections["a"] & self.bbOfCorrections["8"]:
+            while checkingSq & bbOfCorrections["a"] & bbOfCorrections["8"]:
                 checkingSq <<= 9
                 self.bbOfThreats[color] |= checkingSq
                 if checkingSq & self.bbOfOccupiedSquares["a"]:
                     break
 
-    def createRookThreatTable(self, color, isQueen=False):
+    def createRookThreatTable(self, color: str, isQueen=False):
         if isQueen:
             piece = color + "Q"
         else:
@@ -199,31 +215,31 @@ class GameState:
         splitPositions = numSplit(self.bbOfPieces[piece])
         for splitPosition in splitPositions:
             checkingSq = splitPosition
-            while checkingSq & self.bbOfCorrections["8"]:
+            while checkingSq & bbOfCorrections["8"]:
                 checkingSq <<= 8
                 self.bbOfThreats[color] |= checkingSq
                 if checkingSq & self.bbOfOccupiedSquares["a"]:
                     break
             checkingSq = splitPosition
-            while checkingSq & self.bbOfCorrections["h"]:
+            while checkingSq & bbOfCorrections["h"]:
                 checkingSq >>= 1
                 self.bbOfThreats[color] |= checkingSq
                 if checkingSq & self.bbOfOccupiedSquares["a"]:
                     break
             checkingSq = splitPosition
-            while checkingSq & self.bbOfCorrections["1"]:
+            while checkingSq & bbOfCorrections["1"]:
                 checkingSq >>= 8
                 self.bbOfThreats[color] |= checkingSq
                 if checkingSq & self.bbOfOccupiedSquares["a"]:
                     break
             checkingSq = splitPosition
-            while checkingSq & self.bbOfCorrections["a"]:
+            while checkingSq & bbOfCorrections["a"]:
                 checkingSq <<= 1
                 self.bbOfThreats[color] |= checkingSq
                 if checkingSq & self.bbOfOccupiedSquares["a"]:
                     break
 
-    def createQueenThreatTable(self, color):
+    def createQueenThreatTable(self, color: str):
         self.createBishopThreatTable(color, True)
         self.createRookThreatTable(color, True)
 
@@ -320,28 +336,28 @@ class GameState:
             self.unsetCastleRight(CASTLE_SIDES["bKs"])
             self.unsetCastleRight(CASTLE_SIDES["bQs"])
         elif move.movedPiece == "wR":
-            if not (move.startSquare & self.bbOfCorrections["1"]):
-                if not (move.startSquare & self.bbOfCorrections["a"]):
+            if not (move.startSquare & bbOfCorrections["1"]):
+                if not (move.startSquare & bbOfCorrections["a"]):
                     self.unsetCastleRight(CASTLE_SIDES["wQs"])
-                elif not (move.startSquare & self.bbOfCorrections["h"]):
+                elif not (move.startSquare & bbOfCorrections["h"]):
                     self.unsetCastleRight(CASTLE_SIDES["wKs"])
         elif move.movedPiece == "bR":
-            if not (move.startSquare & self.bbOfCorrections["8"]):
-                if not (move.startSquare & self.bbOfCorrections["a"]):
+            if not (move.startSquare & bbOfCorrections["8"]):
+                if not (move.startSquare & bbOfCorrections["a"]):
                     self.unsetCastleRight(CASTLE_SIDES["bQs"])
-                elif not (move.startSquare & self.bbOfCorrections["h"]):
+                elif not (move.startSquare & bbOfCorrections["h"]):
                     self.unsetCastleRight(CASTLE_SIDES["bKs"])
         if move.capturedPiece == "wR":
-            if not (move.endSquare & self.bbOfCorrections["1"]):
-                if not (move.endSquare & self.bbOfCorrections["a"]):
+            if not (move.endSquare & bbOfCorrections["1"]):
+                if not (move.endSquare & bbOfCorrections["a"]):
                     self.unsetCastleRight(CASTLE_SIDES["wQs"])
-                elif not (move.endSquare & self.bbOfCorrections["h"]):
+                elif not (move.endSquare & bbOfCorrections["h"]):
                     self.unsetCastleRight(CASTLE_SIDES["wKs"])
         elif move.capturedPiece == "bR":
-            if not (move.endSquare & self.bbOfCorrections["8"]):
-                if not (move.endSquare & self.bbOfCorrections["a"]):
+            if not (move.endSquare & bbOfCorrections["8"]):
+                if not (move.endSquare & bbOfCorrections["a"]):
                     self.unsetCastleRight(CASTLE_SIDES["bQs"])
-                elif not (move.endSquare & self.bbOfCorrections["h"]):
+                elif not (move.endSquare & bbOfCorrections["h"]):
                     self.unsetCastleRight(CASTLE_SIDES["bKs"])
 
     def getPossibleMoves(self):
@@ -353,18 +369,18 @@ class GameState:
                     self.moveFunc[piece[1]](position, moves)
         return moves
 
-    def getPawnMoves(self, square, moves):
+    def getPawnMoves(self, square: int, moves: list):
         if self.whiteTurn:
             if not self.getSqState(square << 8):
                 moves.append(Move(square, square << 8, self, movedPiece="wp"))
-                if (square & self.bbOfPawnStarts["w"]) and not self.getSqState(square << 16):
+                if (square & bbOfPawnStarts["w"]) and not self.getSqState(square << 16):
                     moves.append(Move(square, square << 16, self, movedPiece="wp", isFirst=True))
-            if square & self.bbOfCorrections["a"]:
+            if square & bbOfCorrections["a"]:
                 if self.getSqStateByColor("b", square << 9):
                     moves.append(Move(square, square << 9, self, movedPiece="wp"))
                 elif square << 9 == self.enpassantSq:
                     moves.append(Move(square, square << 9, self, movedPiece="wp", isEnpassant=True))
-            if square & self.bbOfCorrections["h"]:
+            if square & bbOfCorrections["h"]:
                 if self.getSqStateByColor("b", square << 7):
                     moves.append(Move(square, square << 7, self, movedPiece="wp"))
                 elif square << 7 == self.enpassantSq:
@@ -372,20 +388,20 @@ class GameState:
         if not self.whiteTurn:
             if not self.getSqState(square >> 8):
                 moves.append(Move(square, square >> 8, self, movedPiece="bp"))
-                if (square & self.bbOfPawnStarts["b"]) and not self.getSqState(square >> 16):
+                if (square & bbOfPawnStarts["b"]) and not self.getSqState(square >> 16):
                     moves.append(Move(square, square >> 16, self, movedPiece="bp", isFirst=True))
-            if square & self.bbOfCorrections["a"]:
+            if square & bbOfCorrections["a"]:
                 if self.getSqStateByColor("w", square >> 7):
                     moves.append(Move(square, square >> 7, self, movedPiece="bp"))
                 elif square >> 7 == self.enpassantSq:
                     moves.append(Move(square, square >> 7, self, movedPiece="bp", isEnpassant=True))
-            if square & self.bbOfCorrections["h"]:
+            if square & bbOfCorrections["h"]:
                 if self.getSqStateByColor("w", square >> 9):
                     moves.append(Move(square, square >> 9, self, movedPiece="bp"))
                 elif square >> 9 == self.enpassantSq:
                     moves.append(Move(square, square >> 9, self, movedPiece="bp", isEnpassant=True))
 
-    def getRookMoves(self, square, moves, isQueen=False):
+    def getRookMoves(self, square: int, moves: list, isQueen=False):
         allyColor = "w" if self.whiteTurn else "b"
         enemyColor = "b" if self.whiteTurn else "w"
         if isQueen:
@@ -393,7 +409,7 @@ class GameState:
         else:
             piece = f"{allyColor}R"
         tempSquare = square
-        while tempSquare & self.bbOfCorrections["8"]:
+        while tempSquare & bbOfCorrections["8"]:
             tempSquare <<= 8
             if not self.getSqState(tempSquare):
                 moves.append(Move(square, tempSquare, self, movedPiece=piece))
@@ -403,7 +419,7 @@ class GameState:
             else:
                 break
         tempSquare = square
-        while tempSquare & self.bbOfCorrections["1"]:
+        while tempSquare & bbOfCorrections["1"]:
             tempSquare >>= 8
             if not self.getSqState(tempSquare):
                 moves.append(Move(square, tempSquare, self, movedPiece=piece))
@@ -413,7 +429,7 @@ class GameState:
             else:
                 break
         tempSquare = square
-        while tempSquare & self.bbOfCorrections["a"]:
+        while tempSquare & bbOfCorrections["a"]:
             tempSquare <<= 1
             if not self.getSqState(tempSquare):
                 moves.append(Move(square, tempSquare, self, movedPiece=piece))
@@ -423,7 +439,7 @@ class GameState:
             else:
                 break
         tempSquare = square
-        while tempSquare & self.bbOfCorrections["h"]:
+        while tempSquare & bbOfCorrections["h"]:
             tempSquare >>= 1
             if not self.getSqState(tempSquare):
                 moves.append(Move(square, tempSquare, self, movedPiece=piece))
@@ -433,44 +449,45 @@ class GameState:
             else:
                 break
 
-    def getKnightMoves(self, square, moves):
+    def getKnightMoves(self, square: int, moves: list):
         enemyColor = "b" if self.whiteTurn else "w"
         allyColor = "w" if self.whiteTurn else "b"
         piece = f"{allyColor}N"
-        if square & self.bbOfCorrections["h"] & self.bbOfCorrections["78"]:
+        if square & bbOfCorrections["h"] & bbOfCorrections["78"]:
             tempSquare = square << 15
             if not self.getSqState(tempSquare) or self.getSqStateByColor(enemyColor, tempSquare):
                 moves.append(Move(square, tempSquare, self, movedPiece=piece))
-        if square & self.bbOfCorrections["a"] & self.bbOfCorrections["78"]:
+        if square & bbOfCorrections["a"] & bbOfCorrections["78"]:
             tempSquare = square << 17
             if not self.getSqState(tempSquare) or self.getSqStateByColor(enemyColor, tempSquare):
                 moves.append(Move(square, tempSquare, self, movedPiece=piece))
-        if square & self.bbOfCorrections["gh"] & self.bbOfCorrections["8"]:
+        if square & bbOfCorrections["gh"] & bbOfCorrections["8"]:
             tempSquare = square << 6
             if not self.getSqState(tempSquare) or self.getSqStateByColor(enemyColor, tempSquare):
                 moves.append(Move(square, tempSquare, self, movedPiece=piece))
-        if square & self.bbOfCorrections["gh"] & self.bbOfCorrections["1"]:
+        if square & bbOfCorrections["gh"] & bbOfCorrections["1"]:
             tempSquare = square >> 10
             if not self.getSqState(tempSquare) or self.getSqStateByColor(enemyColor, tempSquare):
                 moves.append(Move(square, tempSquare, self, movedPiece=piece))
-        if square & self.bbOfCorrections["h"] & self.bbOfCorrections["12"]:
+        if square & bbOfCorrections["h"] & bbOfCorrections["12"]:
             tempSquare = square >> 17
             if not self.getSqState(tempSquare) or self.getSqStateByColor(enemyColor, tempSquare):
                 moves.append(Move(square, tempSquare, self, movedPiece=piece))
-        if square & self.bbOfCorrections["a"] & self.bbOfCorrections["12"]:
+        if square & bbOfCorrections["a"] & bbOfCorrections["12"]:
             tempSquare = square >> 15
             if not self.getSqState(tempSquare) or self.getSqStateByColor(enemyColor, tempSquare):
                 moves.append(Move(square, tempSquare, self, movedPiece=piece))
-        if square & self.bbOfCorrections["ab"] & self.bbOfCorrections["1"]:
+        if square & bbOfCorrections["ab"] & bbOfCorrections["1"]:
             tempSquare = square >> 6
             if not self.getSqState(tempSquare) or self.getSqStateByColor(enemyColor, tempSquare):
                 moves.append(Move(square, tempSquare, self, movedPiece=piece))
-        if square & self.bbOfCorrections["ab"] & self.bbOfCorrections["8"]:
+
+        if square & bbOfCorrections["ab"] & bbOfCorrections["8"]:
             tempSquare = square << 10
             if not self.getSqState(tempSquare) or self.getSqStateByColor(enemyColor, tempSquare):
                 moves.append(Move(square, tempSquare, self, movedPiece=piece))
 
-    def getBishopMoves(self, square, moves, isQueen=False):
+    def getBishopMoves(self, square: int, moves: list, isQueen=False):
         enemyColor = "b" if self.whiteTurn else "w"
         allyColor = "w" if self.whiteTurn else "b"
         if isQueen:
@@ -478,7 +495,7 @@ class GameState:
         else:
             piece = f"{allyColor}B"
         tempSquare = square
-        while tempSquare & self.bbOfCorrections["h"] & self.bbOfCorrections["8"]:
+        while tempSquare & bbOfCorrections["h"] & bbOfCorrections["8"]:
             tempSquare <<= 7
             if not self.getSqState(tempSquare):
                 moves.append(Move(square, tempSquare, self, movedPiece=piece))
@@ -488,7 +505,7 @@ class GameState:
             else:
                 break
         tempSquare = square
-        while tempSquare & self.bbOfCorrections["a"] & self.bbOfCorrections["8"]:
+        while tempSquare & bbOfCorrections["a"] & bbOfCorrections["8"]:
             tempSquare <<= 9
             if not self.getSqState(tempSquare):
                 moves.append(Move(square, tempSquare, self, movedPiece=piece))
@@ -498,7 +515,7 @@ class GameState:
             else:
                 break
         tempSquare = square
-        while tempSquare & self.bbOfCorrections["h"] & self.bbOfCorrections["1"]:
+        while tempSquare & bbOfCorrections["h"] & bbOfCorrections["1"]:
             tempSquare >>= 9
             if not self.getSqState(tempSquare):
                 moves.append(Move(square, tempSquare, self, movedPiece=piece))
@@ -508,7 +525,7 @@ class GameState:
             else:
                 break
         tempSquare = square
-        while tempSquare & self.bbOfCorrections["a"] & self.bbOfCorrections["1"]:
+        while tempSquare & bbOfCorrections["a"] & bbOfCorrections["1"]:
             tempSquare >>= 7
             if not self.getSqState(tempSquare):
                 moves.append(Move(square, tempSquare, self, movedPiece=piece))
@@ -518,48 +535,48 @@ class GameState:
             else:
                 break
 
-    def getQueenMoves(self, square, moves):
+    def getQueenMoves(self, square: int, moves: list):
         self.getRookMoves(square, moves, True)
         self.getBishopMoves(square, moves, True)
 
-    def getKingMoves(self, square, moves):
+    def getKingMoves(self, square: int, moves: list):
         enemyColor = "b" if self.whiteTurn else "w"
         allyColor = "w" if self.whiteTurn else "b"
         piece = f"{allyColor}K"
-        if square & self.bbOfCorrections["8"]:
+        if square & bbOfCorrections["8"]:
             tempSquare = square << 8
             if not self.getSqState(tempSquare) or self.getSqStateByColor(enemyColor, tempSquare):
                 moves.append(Move(square, tempSquare, self, movedPiece=piece))
-        if square & self.bbOfCorrections["h"] & self.bbOfCorrections["8"]:
+        if square & bbOfCorrections["h"] & bbOfCorrections["8"]:
             tempSquare = square << 7
             if not self.getSqState(tempSquare) or self.getSqStateByColor(enemyColor, tempSquare):
                 moves.append(Move(square, tempSquare, self, movedPiece=piece))
-        if square & self.bbOfCorrections["h"]:
+        if square & bbOfCorrections["h"]:
             tempSquare = square >> 1
             if not self.getSqState(tempSquare) or self.getSqStateByColor(enemyColor, tempSquare):
                 moves.append(Move(square, tempSquare, self, movedPiece=piece))
-        if square & self.bbOfCorrections["h"] & self.bbOfCorrections["1"]:
+        if square & bbOfCorrections["h"] & bbOfCorrections["1"]:
             tempSquare = square >> 9
             if not self.getSqState(tempSquare) or self.getSqStateByColor(enemyColor, tempSquare):
                 moves.append(Move(square, tempSquare, self, movedPiece=piece))
-        if square & self.bbOfCorrections["1"]:
+        if square & bbOfCorrections["1"]:
             tempSquare = square >> 8
             if not self.getSqState(tempSquare) or self.getSqStateByColor(enemyColor, tempSquare):
                 moves.append(Move(square, tempSquare, self, movedPiece=piece))
-        if square & self.bbOfCorrections["a"] & self.bbOfCorrections["1"]:
+        if square & bbOfCorrections["a"] & bbOfCorrections["1"]:
             tempSquare = square >> 7
             if not self.getSqState(tempSquare) or self.getSqStateByColor(enemyColor, tempSquare):
                 moves.append(Move(square, tempSquare, self, movedPiece=piece))
-        if square & self.bbOfCorrections["a"]:
+        if square & bbOfCorrections["a"]:
             tempSquare = square << 1
             if not self.getSqState(tempSquare) or self.getSqStateByColor(enemyColor, tempSquare):
                 moves.append(Move(square, tempSquare, self, movedPiece=piece))
-        if square & self.bbOfCorrections["a"] & self.bbOfCorrections["8"]:
+        if square & bbOfCorrections["a"] & bbOfCorrections["8"]:
             tempSquare = square << 9
             if not self.getSqState(tempSquare) or self.getSqStateByColor(enemyColor, tempSquare):
                 moves.append(Move(square, tempSquare, self, movedPiece=piece))
 
-    def getCastleMoves(self, square, moves):
+    def getCastleMoves(self, square: int, moves: list):
         if self.isSquareAttacked(square):
             return
         if (self.whiteTurn and self.getCastleRight(CASTLE_SIDES["wKs"])) or (
@@ -569,7 +586,7 @@ class GameState:
                 not self.whiteTurn and self.getCastleRight(CASTLE_SIDES["bQs"])):
             self.getQueenSideCastle(square, moves)
 
-    def getKingSideCastle(self, square, moves):
+    def getKingSideCastle(self, square: int, moves: list):
         if self.whiteTurn:
             piece = "wK"
         else:
@@ -578,7 +595,7 @@ class GameState:
             if not self.isSquareAttacked(square >> 1) and not self.isSquareAttacked(square >> 2):
                 moves.append(Move(square, square >> 2, self, movedPiece=piece, isCastle=True))
 
-    def getQueenSideCastle(self, square, moves):
+    def getQueenSideCastle(self, square: int, moves: list):
         if self.whiteTurn:
             piece = "wK"
         else:
@@ -622,20 +639,20 @@ class GameState:
             self.isBlackInCheck = self.isSquareAttacked(self.bbOfPieces["bK"])
             return self.isBlackInCheck
 
-    def isSquareAttacked(self, square):
+    def isSquareAttacked(self, square: int):
         if self.whiteTurn and (self.bbOfThreats["b"] & square):
             return True
         if not self.whiteTurn and (self.bbOfThreats["w"] & square):
             return True
         return False
 
-    def setSqState(self, piece, piecePosition):
+    def setSqState(self, piece: str, piecePosition: int):
         if piece is not None:
             self.bbOfPieces[piece] |= piecePosition
             self.bbOfOccupiedSquares[piece[0]] |= piecePosition
             self.bbOfOccupiedSquares["a"] |= piecePosition
 
-    def unsetSqState(self, piece, piecePosition):
+    def unsetSqState(self, piece: str, piecePosition: int):
         if piece is not None:
             newBit = ctypes.c_uint64(piecePosition)
             newBit.value = ~newBit.value
@@ -643,32 +660,31 @@ class GameState:
             self.bbOfOccupiedSquares[piece[0]] &= newBit.value
             self.bbOfOccupiedSquares["a"] &= newBit.value
 
-    def getSqStateByPiece(self, piece, piecePosition):
+    def getSqStateByPiece(self, piece: str, piecePosition: int):
         if piece is not None:
             return (self.bbOfPieces[piece] & piecePosition) != 0
         return False
 
-    def getSqStateByColor(self, color, piecePosition):
+    def getSqStateByColor(self, color: str, piecePosition: int):
         return (self.bbOfOccupiedSquares[color] & piecePosition) != 0
 
-    def getSqState(self, piecePosition):
+    def getSqState(self, piecePosition: int):
         return (self.bbOfOccupiedSquares["a"] & piecePosition) != 0
 
-    def getPieceBySquare(self, piecePosition):
+    def getPieceBySquare(self, piecePosition: int):
         if self.getSqState(piecePosition):
             for piece in COLORED_PIECES:
                 if self.getSqStateByPiece(piece, piecePosition):
                     return piece
         return None
 
-    def unsetCastleRight(self, right):
-        newBit = ctypes.c_uint(8 >> right)
+    def unsetCastleRight(self, right: int):
+        newBit = ctypes.c_uint(right)
         newBit.value = ~newBit.value
         self.currentCastlingRight &= newBit.value
 
-    def getCastleRight(self, right):
-        mask = 8 >> right
-        return (self.currentCastlingRight & mask) != 0
+    def getCastleRight(self, right: int):
+        return (self.currentCastlingRight & right) != 0
 
 
 class Move:
@@ -679,7 +695,8 @@ class Move:
                   "bKs": 0b0000001000000000000000000000000000000000000000000000000000000000,
                   "bQs": 0b0010000000000000000000000000000000000000000000000000000000000000}
 
-    def __init__(self, startSq, endSq, gameState, movedPiece=None, isEnpassant=False, isCastle=False, isFirst=False):
+    def __init__(self, startSq: int, endSq: int, gameState: GameState, movedPiece=None, isEnpassant=False,
+                 isCastle=False, isFirst=False):
         self.startSquare = startSq
         self.endSquare = endSq
         self.startLoc = getPower(self.startSquare)
@@ -693,14 +710,15 @@ class Move:
         else:
             self.capturedPiece = "bp" if self.movedPiece == "wp" else "wp"
         self.moveID = self.startLoc * 100 + self.endLoc
-        self.isPawnPromotion = (self.movedPiece == "wp" and not self.endSquare & gameState.bbOfCorrections["8"]) or (
-                self.movedPiece == "bp" and not self.endSquare & gameState.bbOfCorrections["1"])
+        self.isPawnPromotion = (self.movedPiece == "wp" and not self.endSquare & bbOfCorrections["8"]) or (
+                self.movedPiece == "bp" and not self.endSquare & bbOfCorrections["1"])
         self.isCapture = False
         if self.capturedPiece is not None and self.movedPiece is not None:
             if self.capturedPiece[0] != self.movedPiece[0]:
                 self.isCapture = True
         self.isCastle = isCastle
         self.isFirst = isFirst
+        self.moveScore = 0
 
     def __eq__(self, other):
         if isinstance(other, Move):
@@ -713,7 +731,7 @@ class Move:
     def __str__(self):
         return self.getMoveNotation()
 
-    def getSquareNotation(self, square):
+    def getSquareNotation(self, square: int):
         location = getPower(square)
         return self.columnToLetter[location % 8] + self.rowToNumber[location // 8]
 

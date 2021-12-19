@@ -20,7 +20,7 @@ def main():
     pg.init()
     screen = pg.display.set_mode((BOARD_WIDTH, BOARD_HEIGHT))
     screen.fill(pg.Color("white"))
-    whitePlayer = False
+    whitePlayer = True
     blackPlayer = False
     playerColor = False if blackPlayer and not whitePlayer else True
     gameState = Engine.GameState()
@@ -59,6 +59,7 @@ def main():
                 if moveCountFloor != 0:
                     print(f"Average time per move: {AIThinkingTime / moveCountFloor}")
                     print(f"Average calculated positions per move: {AIPositionCounter / moveCountFloor}")
+                    print(f"Average time per position: {AIThinkingTime / AIPositionCounter}")
                 quit()
             elif e.type == pg.MOUSEBUTTONDOWN:
                 if not gameOver:
@@ -143,10 +144,12 @@ def main():
         elif gameState.stalemate:
             gameOver = True
             drawText(screen, "Stalemate")
+        # if len(gameState.gameLog) == 60:
+        #     gameOver = True
         pg.display.flip()
 
 
-def highlightSq(screen, gameState, validMoves, selectedSq, playerColor):
+def highlightSq(screen: pg.Surface, gameState: Engine.GameState, validMoves: list, selectedSq: tuple, playerColor: bool):
     if selectedSq != ():
         square = Engine.ONE >> (8 * selectedSq[1] + selectedSq[0])
         piece = gameState.getPieceBySquare(square)
@@ -171,7 +174,7 @@ def highlightSq(screen, gameState, validMoves, selectedSq, playerColor):
                             screen.blit(s, (c * SQ_SIZE, r * SQ_SIZE))
 
 
-def highlightLastMove(screen, gameState, playerColor):
+def highlightLastMove(screen: pg.Surface, gameState: Engine.GameState, playerColor: bool):
     if len(gameState.gameLog) != 0:
         lastMove = gameState.gameLog[-1]
         s = pg.Surface((SQ_SIZE, SQ_SIZE))
@@ -187,7 +190,7 @@ def highlightLastMove(screen, gameState, playerColor):
                             (Engine.DIMENSION - 1 - lastMove.endLoc // 8) * SQ_SIZE))
 
 
-# def highlightThreatTable(screen, gameState):
+# def highlightThreatTable(screen: pg.Surface, gameState: Engine.GameState):
 #     s = pg.Surface((SQ_SIZE, SQ_SIZE))
 #     s.set_alpha(100)
 #     s.fill(pg.Color(255, 0, 0))
@@ -202,7 +205,7 @@ def highlightLastMove(screen, gameState, playerColor):
 #         screen.blit(s, (loc % 8 * SQ_SIZE, loc // 8 * SQ_SIZE))
 
 
-def drawGameState(screen, gameState, validMoves, selectedSq, playerColor):
+def drawGameState(screen: pg.Surface, gameState: Engine.GameState, validMoves: list, selectedSq: tuple, playerColor: bool):
     drawBoard(screen)
     highlightLastMove(screen, gameState, playerColor)
     highlightSq(screen, gameState, validMoves, selectedSq, playerColor)
@@ -210,14 +213,14 @@ def drawGameState(screen, gameState, validMoves, selectedSq, playerColor):
     drawPieces(screen, gameState, playerColor)
 
 
-def drawBoard(screen):
+def drawBoard(screen: pg.Surface):
     for column in range(Engine.DIMENSION):
         for row in range(Engine.DIMENSION):
             color = BOARD_COLORS[(row + column) % 2]
             pg.draw.rect(screen, color, pg.Rect(column * SQ_SIZE, row * SQ_SIZE, SQ_SIZE, SQ_SIZE))
 
 
-def drawPieces(screen, gameState, playerColor):
+def drawPieces(screen: pg.Surface, gameState: Engine.GameState, playerColor: bool):
     if playerColor:
         for piece in Engine.COLORED_PIECES:
             splitPositions = Engine.numSplit(gameState.bbOfPieces[piece])
@@ -232,7 +235,7 @@ def drawPieces(screen, gameState, playerColor):
                 screen.blit(IMAGES[piece], pg.Rect(pos % 8 * SQ_SIZE, pos // 8 * SQ_SIZE, SQ_SIZE, SQ_SIZE))
 
 
-def drawText(screen, text):
+def drawText(screen: pg.Surface, text: str):
     font = pg.font.SysFont("Helvetica", 32, True, False)
     textObj = font.render(text, False, pg.Color("gray"))
     textLocation = pg.Rect(0, 0, BOARD_WIDTH, BOARD_HEIGHT).move(BOARD_WIDTH / 2 - textObj.get_width() / 2,
