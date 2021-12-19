@@ -10,6 +10,20 @@ IMAGES = {}
 BOARD_COLORS = (pg.Color("white"), pg.Color("dark gray"))
 
 
+def isListNone(lst: list):
+    for e in lst:
+        if e is not None:
+            return False
+    return True
+
+
+def areProcessesDead(processes: list):
+    for proc in processes:
+        if proc.is_alive():
+            return False
+    return True
+
+
 def loadImages():
     for piece in Engine.COLORED_PIECES:
         IMAGES[piece] = pg.transform.scale(pg.image.load(f"images/{piece}.png"), (SQ_SIZE, SQ_SIZE))
@@ -20,7 +34,7 @@ def main():
     pg.init()
     screen = pg.display.set_mode((BOARD_WIDTH, BOARD_HEIGHT))
     screen.fill(pg.Color("white"))
-    whitePlayer = True
+    whitePlayer = False
     blackPlayer = False
     playerColor = False if blackPlayer and not whitePlayer else True
     gameState = Engine.GameState()
@@ -28,8 +42,9 @@ def main():
     moveMade = False
     gameOver = False
     AIThinking = False
-    AIProcess = None
-    returnQ = Queue()
+    threadsAmount = 4
+    AIProcess = [Process()] * threadsAmount
+    returnQ = [Queue()] * threadsAmount
 
     loadImages()
     pg.display.set_caption("SwiChess")
@@ -44,7 +59,8 @@ def main():
         for e in pg.event.get():
             if e.type == pg.QUIT:
                 if AIThinking:
-                    AIProcess.terminate()
+                    for proc in AIProcess:
+                        proc.terminate()
                     AIThinking = False
                 print(gameState.gameLog)
                 if not whitePlayer and not blackPlayer:
@@ -96,7 +112,8 @@ def main():
                         gameOver = False
                         playerTurn = (gameState.whiteTurn and whitePlayer) or (not gameState.whiteTurn and blackPlayer)
                     if AIThinking:
-                        AIProcess.terminate()
+                        for proc in AIProcess:
+                            proc.terminate()
                         playerTurn = (gameState.whiteTurn and whitePlayer) or (not gameState.whiteTurn and blackPlayer)
                         AIThinking = False
                 if e.key == pg.K_r:
@@ -109,24 +126,48 @@ def main():
                         playerTurn = (gameState.whiteTurn and whitePlayer) or (not gameState.whiteTurn and blackPlayer)
                     moveMade = False
                     if AIThinking:
-                        AIProcess.terminate()
+                        for proc in AIProcess:
+                            proc.terminate()
                         playerTurn = (gameState.whiteTurn and whitePlayer) or (not gameState.whiteTurn and blackPlayer)
                         AIThinking = False
         if not gameOver and not playerTurn:
             if not AIThinking:
                 print("thinking...")
+                print(validMoves)
                 AIThinking = True
-                AIProcess = Process(target=AI.negaMaxWithPruningMoveAI, args=(gameState, validMoves, returnQ))
-                AIProcess.start()
-            if not AIProcess.is_alive():
-                AIMove, thinkingTime, positionCounter = returnQ.get()
-                AIThinkingTime += thinkingTime
-                AIPositionCounter += positionCounter
+                divider = ceil(len(validMoves) / threadsAmount)
+                for i in range(threadsAmount):
+                    AIProcess[i] = Process(target=AI.negaMaxWithPruningMoveAI,
+                                           args=(gameState, validMoves[divider * i:divider * (i + 1)], returnQ[i]))
+                    AIProcess[i].start()
+            if areProcessesDead(AIProcess):
+                AIMove = [Engine.Move()] * threadsAmount
+                thinkingTime = [0] * threadsAmount
+                positionCounter = [0] * threadsAmount
+                for i in range(threadsAmount):
+                    AIMove[i], thinkingTime[i], positionCounter[i] = returnQ[i].get()
+                AIThinkingTime += max(thinkingTime)
+                AIPositionCounter += sum(positionCounter)
                 print("came up with a move")
-                if AIMove is None:
-                    AIMove = AI.randomMoveAI(validMoves)
+                print(f"Thinking time: {max(thinkingTime)} s")
+                print(f"Positions calculated: {sum(positionCounter)}")
+                if not isListNone(AIMove):
+                    bestScores = []
+                    bestMoves = {}
+                    for i in range(threadsAmount):
+                        if AIMove[i] is not None:
+                            bestScores.append(AIMove[i].exactScore)
+                            bestMoves[AIMove[i].exactScore] = AIMove[i]
+                    bestMove = bestMoves[max(bestScores)]
+                    print(bestScores)
+                    print(bestMoves)
+                    print(bestMove)
+                else:
+                    bestMove = None
+                if bestMove is None:
+                    bestMove = AI.randomMoveAI(validMoves)
                     print("made a random move")
-                gameState.makeMove(AIMove)
+                gameState.makeMove(bestMove)
                 moveMade = True
                 AIThinking = False
                 selectedSq = ()
@@ -144,8 +185,8 @@ def main():
         elif gameState.stalemate:
             gameOver = True
             drawText(screen, "Stalemate")
-        # if len(gameState.gameLog) == 60:
-        #     gameOver = True
+        if len(gameState.gameLog) == 40:
+            gameOver = True
         pg.display.flip()
 
 

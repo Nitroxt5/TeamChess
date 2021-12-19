@@ -6,7 +6,7 @@ from multiprocessing import Queue
 pieceScores = {"K": 0, "Q": 900, "R": 500, "B": 300, "N": 300, "p": 100}
 CHECKMATE = 100000
 STALEMATE = 0
-DEPTH = 4
+DEPTH = 3
 nextMove = None
 counter = 0
 threatCost = 2
@@ -75,20 +75,18 @@ def negaMaxWithPruningMoveAI(gameState: Engine.GameState, validMoves: list, retu
     # random.shuffle(validMoves)
     # validMoves.sort(key=lambda move: move.isCapture, reverse=True)
     # validMoves.sort(key=lambda move: move.isCastle, reverse=True)
-    print(validMoves)
     counter = 0
     start = time.perf_counter()
-    negaMaxWithPruningAI(gameState, validMoves, -CHECKMATE - 1, CHECKMATE + 1, 1 if gameState.whiteTurn else -1, DEPTH)
+    if validMoves is not None:
+        negaMaxWithPruningAI(gameState, validMoves, -CHECKMATE - 1, CHECKMATE + 1, 1 if gameState.whiteTurn else -1, DEPTH)
     thinkingTime = time.perf_counter() - start
-    print(f"Thinking time: {thinkingTime} s")
-    print(f"Positions calculated: {counter}")
     returnQ.put((nextMove, thinkingTime, counter))
 
 
 def oneDepthSearch(gameState: Engine.GameState, validMoves: list, turn: int):
     for move in validMoves:
         gameState.makeMove(move)
-        move.moveScore = turn * scoreBoard(gameState, validMoves)
+        move.estimatedScore = turn * scoreBoard(gameState, validMoves)
         gameState.undoMove()
 
 
@@ -105,7 +103,7 @@ def negaMaxWithPruningAI(gameState: Engine.GameState, validMoves: list, alpha: i
     # validMoves.sort(key=lambda mov: mov.isCapture, reverse=True)
     # validMoves.sort(key=lambda mov: mov.isCastle, reverse=True)
     oneDepthSearch(gameState, validMoves, turn)
-    validMoves.sort(key=lambda mov: mov.moveScore, reverse=True)
+    validMoves.sort(key=lambda mov: mov.estimatedScore, reverse=True)
     for move in validMoves:
         gameState.makeMove(move)
         nextMoves = gameState.getValidMoves()
@@ -116,6 +114,7 @@ def negaMaxWithPruningAI(gameState: Engine.GameState, validMoves: list, alpha: i
         if score > alpha:
             alpha = score
             if depth == DEPTH:
+                move.exactScore = score
                 nextMove = move
                 print(move, score)
     return alpha

@@ -695,30 +695,32 @@ class Move:
                   "bKs": 0b0000001000000000000000000000000000000000000000000000000000000000,
                   "bQs": 0b0010000000000000000000000000000000000000000000000000000000000000}
 
-    def __init__(self, startSq: int, endSq: int, gameState: GameState, movedPiece=None, isEnpassant=False,
+    def __init__(self, startSq=0, endSq=0, gameState: GameState = None, movedPiece: str = None, isEnpassant=False,
                  isCastle=False, isFirst=False):
-        self.startSquare = startSq
-        self.endSquare = endSq
-        self.startLoc = getPower(self.startSquare)
-        self.endLoc = getPower(self.endSquare)
-        self.movedPiece = movedPiece
-        if self.movedPiece is None:
-            self.movedPiece = gameState.getPieceBySquare(self.startSquare)
-        self.isEnpassant = isEnpassant
-        if not self.isEnpassant:
-            self.capturedPiece = gameState.getPieceBySquare(self.endSquare)
-        else:
-            self.capturedPiece = "bp" if self.movedPiece == "wp" else "wp"
-        self.moveID = self.startLoc * 100 + self.endLoc
-        self.isPawnPromotion = (self.movedPiece == "wp" and not self.endSquare & bbOfCorrections["8"]) or (
-                self.movedPiece == "bp" and not self.endSquare & bbOfCorrections["1"])
-        self.isCapture = False
-        if self.capturedPiece is not None and self.movedPiece is not None:
-            if self.capturedPiece[0] != self.movedPiece[0]:
-                self.isCapture = True
-        self.isCastle = isCastle
-        self.isFirst = isFirst
-        self.moveScore = 0
+        if gameState is not None:
+            self.startSquare = startSq
+            self.endSquare = endSq
+            self.startLoc = getPower(self.startSquare)
+            self.endLoc = getPower(self.endSquare)
+            self.movedPiece = movedPiece
+            if self.movedPiece is None:
+                self.movedPiece = gameState.getPieceBySquare(self.startSquare)
+            self.isEnpassant = isEnpassant
+            if not self.isEnpassant:
+                self.capturedPiece = gameState.getPieceBySquare(self.endSquare)
+            else:
+                self.capturedPiece = "bp" if self.movedPiece == "wp" else "wp"
+            self.moveID = self.startLoc * 100 + self.endLoc
+            self.isPawnPromotion = (self.movedPiece == "wp" and not self.endSquare & bbOfCorrections["8"]) or (
+                    self.movedPiece == "bp" and not self.endSquare & bbOfCorrections["1"])
+            self.isCapture = False
+            if self.capturedPiece is not None and self.movedPiece is not None:
+                if self.capturedPiece[0] != self.movedPiece[0]:
+                    self.isCapture = True
+            self.isCastle = isCastle
+            self.isFirst = isFirst
+            self.estimatedScore = 0
+            self.exactScore = 0
 
     def __eq__(self, other):
         if isinstance(other, Move):
