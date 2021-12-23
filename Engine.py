@@ -1,9 +1,12 @@
 import ctypes
+import random
 
+MAX_INT = 9223372036854775807
 ONE = 0b1000000000000000000000000000000000000000000000000000000000000000
 COLORS = ("w", "b")
 PIECES = ("K", "Q", "R", "B", "N", "p")
 COLORED_PIECES = [color + piece for color in COLORS for piece in PIECES]
+COLORED_PIECES_CODES = {COLORED_PIECES[i]: i for i in range(len(COLORED_PIECES))}
 CASTLE_SIDES = {"wKs": 8, "wQs": 4, "bKs": 2, "bQs": 1}
 DIMENSION = 8
 bbOfPawnStarts = {"w": 0b0000000000000000000000000000000000000000000000001111111100000000,
@@ -96,21 +99,21 @@ class GameState:
         self.bbOfOccupiedSquares = {"w": 0b0000000000000000000000000000000000000000000000001111111111111111,
                                     "b": 0b1111111111111111000000000000000000000000000000000000000000000000,
                                     "a": 0b1111111111111111000000000000000000000000000000001111111111111111}
-        # self.bbOfPieces = {"wK": 0b0000000000000000010000000000000000000000000000000000000000000000,
+        # self.bbOfPieces = {"wK": 0b0000000000000000000000010000000000000000000000000000000000000000,
         #                    "wQ": 0b0000000000000000000000000000000000000000000000000000000000000000,
-        #                    "wR": 0b0000000000000000000000000000000000000000000000000000000000000000,
-        #                    "wB": 0b0000000000000000000000000000000000000000000000000000000000000000,
-        #                    "wN": 0b0000000000000000000000000000000000000000000000000000000000000000,
-        #                    "wp": 0b0000000000100000000000000000000000000000000000000000000000000000,
-        #                    "bK": 0b1000000000000000000000000000000000000000000000000000000000000000,
-        #                    "bQ": 0b0000000000000000000000000000000000000000000000000000000000000000,
-        #                    "bR": 0b0000000000000000000000000000000000000000000000000000000000000000,
-        #                    "bB": 0b0000000000000000000000000000000000000000000000000000000000000000,
-        #                    "bN": 0b0000000000000000000000000000000000000000000000000000000000000000,
-        #                    "bp": 0b0000000000000000000000000000000000000000000000000000000000000000}
-        # self.bbOfOccupiedSquares = {"w": 0b0000000000100000010000000000000000000000000000000000000000000000,
-        #                             "b": 0b1000000000000000000000000000000000000000000000000000000000000000,
-        #                             "a": 0b1000000000100000010000000000000000000000000000000000000000000000}
+        #                    "wR": 0b0000000000000000000000000000000000000000000000000000000010000001,
+        #                    "wB": 0b0000000000000000000000000100000000000001000000000000000000000000,
+        #                    "wN": 0b0000000000000000000000000000000000000000000000010000000001000000,
+        #                    "wp": 0b0000000000000000000000000001000000000000001000001000001100000000,
+        #                    "bK": 0b0000001000000000000000000000000000000000000000000000000000000000,
+        #                    "bQ": 0b0000000000000100000000000000000000000000000000000000000000000000,
+        #                    "bR": 0b1000010000000000000000000000000000000000000000000000000000000000,
+        #                    "bB": 0b0010000000000000000000000010000000000000000000000000000000000000,
+        #                    "bN": 0b0000000000000000000000000000000000000000000000000100000000000000,
+        #                    "bp": 0b0000000011110001000001000000000000000000000000000000000000000000}
+        # self.bbOfOccupiedSquares = {"w": self.bbOfPieces["wK"] | self.bbOfPieces["wQ"] | self.bbOfPieces["wR"] | self.bbOfPieces["wB"] | self.bbOfPieces["wN"] | self.bbOfPieces["wp"],
+        #                             "b": self.bbOfPieces["bK"] | self.bbOfPieces["bQ"] | self.bbOfPieces["bR"] | self.bbOfPieces["bB"] | self.bbOfPieces["bN"] | self.bbOfPieces["bp"],
+        #                             "a": self.bbOfPieces["wK"] | self.bbOfPieces["wQ"] | self.bbOfPieces["wR"] | self.bbOfPieces["wB"] | self.bbOfPieces["wN"] | self.bbOfPieces["wp"] | self.bbOfPieces["bK"] | self.bbOfPieces["bQ"] | self.bbOfPieces["bR"] | self.bbOfPieces["bB"] | self.bbOfPieces["bN"] | self.bbOfPieces["bp"]}
         self.bbOfThreats = {"w": 0, "b": 0}
         self.moveFunc = {"p": self.getPawnMoves, "R": self.getRookMoves, "N": self.getKnightMoves,
                          "B": self.getBishopMoves, "Q": self.getQueenMoves, "K": self.getKingMoves}
@@ -129,6 +132,41 @@ class GameState:
         self.isBlackCastled = False
         self.isWhiteInCheck = False
         self.isBlackInCheck = False
+        self.zobristTable = []
+        self.boardHashLog = []
+        self.boardHash = 0
+        self.hashBoard()
+
+    def hashBoard(self):
+        for i in range(64):
+            newList = []
+            for j in range(12):
+                newList.append(random.randint(0, MAX_INT))
+            self.zobristTable.append(newList)
+        for piece in COLORED_PIECES:
+            splitPositions = numSplit(self.bbOfPieces[piece])
+            for position in splitPositions:
+                pos = getPower(position)
+                self.boardHash ^= self.zobristTable[pos][COLORED_PIECES_CODES[piece]]
+
+    def updateHash(self, move):
+        self.boardHashLog.append(self.boardHash)
+        if move.capturedPiece is not None and not move.isEnpassant:
+            self.boardHash ^= self.zobristTable[move.endLoc][COLORED_PIECES_CODES[move.capturedPiece]]
+        if move.capturedPiece is not None and move.isEnpassant:
+            self.boardHash ^= self.zobristTable[self.enpassantSqLog[-1]][COLORED_PIECES_CODES[move.capturedPiece]]
+        if not move.isPawnPromotion:
+            self.boardHash ^= self.zobristTable[move.endLoc][COLORED_PIECES_CODES[move.movedPiece]]
+        else:
+            self.boardHash ^= self.zobristTable[move.endLoc][COLORED_PIECES_CODES[f"{move.movedPiece[0]}Q"]]
+        self.boardHash ^= self.zobristTable[move.startLoc][COLORED_PIECES_CODES[move.movedPiece]]
+        if move.isCastle:
+            if move.endSquare & move.bbOfCastle["wKs"] or move.endSquare & move.bbOfCastle["bKs"]:
+                self.boardHash ^= self.zobristTable[move.endLoc - 1][COLORED_PIECES_CODES[f"{move.movedPiece[0]}R"]]
+                self.boardHash ^= self.zobristTable[move.endLoc + 1][COLORED_PIECES_CODES[f"{move.movedPiece[0]}R"]]
+            elif move.endSquare & move.bbOfCastle["wQs"] or move.endSquare & move.bbOfCastle["bQs"]:
+                self.boardHash ^= self.zobristTable[move.endLoc + 1][COLORED_PIECES_CODES[f"{move.movedPiece[0]}R"]]
+                self.boardHash ^= self.zobristTable[move.endLoc - 2][COLORED_PIECES_CODES[f"{move.movedPiece[0]}R"]]
 
     def createThreatTable(self):
         self.bbOfThreats["w"] = 0
@@ -281,6 +319,7 @@ class GameState:
         else:
             self.setSqState(f"{move.movedPiece[0]}Q", move.endSquare)
         self.updateCastleRights(move)
+        self.updateHash(move)
         self.castleRightsLog.append(self.currentCastlingRight)
         self.whiteTurn = not self.whiteTurn
         self.createThreatTable()
@@ -289,6 +328,7 @@ class GameState:
     def undoMove(self):
         if len(self.gameLog) != 0:
             move = self.gameLog.pop()
+            self.boardHash = self.boardHashLog.pop()
             if move.isPawnPromotion:
                 self.unsetSqState(f"{move.movedPiece[0]}Q", move.endSquare)
             else:
@@ -627,6 +667,13 @@ class GameState:
         else:
             self.checkmate = False
             self.stalemate = False
+        if len(self.gameLog) >= 12:
+            pos1 = self.gameLog[-4:]
+            pos2 = self.gameLog[-8:-4]
+            if pos1 == pos2:
+                self.stalemate = True
+            else:
+                self.stalemate = False
         self.enpassantSq = enpassantSq
         self.currentCastlingRight = currentCastlingRight
         return moves
@@ -721,6 +768,7 @@ class Move:
             self.isFirst = isFirst
             self.estimatedScore = 0
             self.exactScore = 0
+            self.goodScore = False
 
     def __eq__(self, other):
         if isinstance(other, Move):

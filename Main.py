@@ -42,7 +42,7 @@ def main():
     moveMade = False
     gameOver = False
     AIThinking = False
-    threadsAmount = 4
+    threadsAmount = 2
     AIProcess = [Process()] * threadsAmount
     returnQ = [Queue()] * threadsAmount
 
@@ -72,7 +72,7 @@ def main():
                 print(f"Moves: {moveCountCeil}")
                 print(f"Overall thinking time: {AIThinkingTime}")
                 print(f"Overall positions calculated: {AIPositionCounter}")
-                if moveCountFloor != 0:
+                if moveCountFloor != 0 and AIPositionCounter != 0:
                     print(f"Average time per move: {AIThinkingTime / moveCountFloor}")
                     print(f"Average calculated positions per move: {AIPositionCounter / moveCountFloor}")
                     print(f"Average time per position: {AIThinkingTime / AIPositionCounter}")
@@ -137,8 +137,8 @@ def main():
                 AIThinking = True
                 divider = ceil(len(validMoves) / threadsAmount)
                 for i in range(threadsAmount):
-                    AIProcess[i] = Process(target=AI.negaMaxWithPruningMoveAI,
-                                           args=(gameState, validMoves[divider * i:divider * (i + 1)], returnQ[i]))
+                    part = validMoves[divider * i:divider * (i + 1)]
+                    AIProcess[i] = Process(target=AI.negaScoutMoveAI, args=(gameState, part, returnQ[i]))
                     AIProcess[i].start()
             if areProcessesDead(AIProcess):
                 AIMove = [Engine.Move()] * threadsAmount
@@ -154,12 +154,11 @@ def main():
                 if not isListNone(AIMove):
                     bestScores = []
                     bestMoves = {}
-                    for i in range(threadsAmount):
-                        if AIMove[i] is not None:
-                            bestScores.append(AIMove[i].exactScore)
-                            bestMoves[AIMove[i].exactScore] = AIMove[i]
+                    for move in AIMove:
+                        if move is not None:
+                            bestScores.append(move.exactScore)
+                            bestMoves[move.exactScore] = move
                     bestMove = bestMoves[max(bestScores)]
-                    print(bestScores)
                     print(bestMoves)
                     print(bestMove)
                 else:
