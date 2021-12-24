@@ -30,14 +30,14 @@ bishopPositionScore = [[2, 2, 2, 1, 1, 2, 2, 2],
                        [2, 3, 3, 3, 3, 3, 3, 2],
                        [2, 4, 3, 3, 3, 3, 4, 2],
                        [2, 2, 2, 1, 1, 2, 2, 2]]
-queenPositionScore = [[1, 2, 2, 2, 1, 1, 1, 1],
-                      [1, 2, 3, 2, 2, 1, 1, 1],
-                      [1, 3, 2, 2, 2, 2, 2, 1],
-                      [2, 2, 2, 2, 2, 2, 2, 2],
-                      [2, 2, 2, 2, 2, 2, 2, 2],
-                      [1, 3, 2, 2, 2, 2, 2, 1],
-                      [1, 2, 3, 2, 2, 1, 1, 1],
-                      [1, 2, 2, 2, 1, 1, 1, 1]]
+queenPositionScore = [[1, 1, 1, 2, 1, 1, 1, 1],
+                      [1, 1, 2, 2, 1, 1, 1, 1],
+                      [1, 2, 1, 2, 1, 1, 1, 1],
+                      [1, 1, 1, 2, 1, 1, 1, 1],
+                      [1, 1, 1, 2, 1, 1, 1, 1],
+                      [1, 2, 1, 2, 1, 1, 1, 1],
+                      [1, 1, 2, 2, 1, 1, 1, 1],
+                      [1, 1, 1, 2, 1, 1, 1, 1]]
 rookPositionScore = [[3, 3, 3, 3, 3, 3, 3, 3],
                      [2, 2, 2, 2, 2, 2, 2, 2],
                      [2, 2, 2, 2, 2, 2, 2, 2],
@@ -106,6 +106,8 @@ def negaScoutAI(gameState: Engine.GameState, validMoves: list, alpha: int, beta:
     validMoves.sort(key=lambda mov: mov.estimatedScore, reverse=True)
     silentMoveCounter = 19
     for move in validMoves:
+        if not silentMoveCounter:
+            break
         gameState.makeMove(move)
         inTable = False
         score = 0
@@ -117,7 +119,7 @@ def negaScoutAI(gameState: Engine.GameState, validMoves: list, alpha: int, beta:
             nextMoves = gameState.getValidMoves()
             if depth == DEPTH or move.isCapture or gameState.isWhiteInCheck or gameState.isBlackInCheck:
                 score = -negaScoutAI(gameState, nextMoves, -beta, -alpha, -turn, depth - 1, globalDepth)
-            elif globalDepth != DEPTH or (globalDepth == DEPTH and silentMoveCounter):
+            else:
                 silentMoveCounter -= 1
                 score = -negaScoutAI(gameState, nextMoves, -alpha - 1, -alpha, -turn, depth - R, globalDepth)
                 if alpha < score < beta:
@@ -312,25 +314,25 @@ def scoreBishopPositioning(gameState: Engine.GameState):
                     score += diffCount
                     break
                 score += diffCount
-    return score * 3
+    return score * 4
 
 
 def scoreKingSafety(gameState: Engine.GameState):
     score = 0
     if gameState.isWhiteCastled:
-        score += 40
+        score += 60
     if gameState.isBlackCastled:
-        score -= 40
+        score -= 60
     if gameState.isWhiteInCheck:
         score -= 20
     if gameState.isBlackInCheck:
         score += 20
     for key, value in Engine.CASTLE_SIDES.items():
         if not gameState.getCastleRight(value):
-            if key[0] == "w":
-                score -= 30
-            else:
-                score += 30
+            if key[0] == "w" and not gameState.isWhiteCastled:
+                score -= 80
+            elif key[0] == "b" and not gameState.isBlackCastled:
+                score += 80
     for value in Engine.bbOfColumns.values():
         whiteKingPos = value & gameState.bbOfPieces["wK"]
         blackKingPos = value & gameState.bbOfPieces["bK"]
@@ -369,8 +371,25 @@ def scorePawnPositioning(gameState: Engine.GameState):
     return score
 
 
-pieceAdditionalPositionScores = {"Ks": scoreKingSafety, "R": scoreRookPositioning, "K": scoreKnightPositioning,
-                                 "B": scoreBishopPositioning, "p": scorePawnPositioning}
+def scoreQueenPositioning(gameState: Engine.GameState):
+    score = 0
+    if len(gameState.gameLog) < 20 and gameState.gameLog[-1].movedPiece[1] == "Q":
+        if gameState.whiteTurn:
+            score += 20
+        else:
+            score -= 20
+    return score
+
+
+def scoreCenterControl(gameState: Engine.GameState):
+    whiteCenterControl = Engine.bbOfCenter & gameState.bbOfOccupiedSquares["w"]
+    blackCenterControl = Engine.bbOfCenter & gameState.bbOfOccupiedSquares["b"]
+    return (Engine.getBitsCount(whiteCenterControl) - Engine.getBitsCount(blackCenterControl)) * 30
+
+
+pieceAdditionalPositionScores = {"Ks": scoreKingSafety, "Q": scoreQueenPositioning, "R": scoreRookPositioning,
+                                 "K": scoreKnightPositioning, "B": scoreBishopPositioning, "p": scorePawnPositioning,
+                                 "Cs": scoreCenterControl}
 
 
 def scoreBoard(gameState: Engine.GameState, validMoves: list):
