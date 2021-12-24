@@ -5,6 +5,7 @@ MAX_INT = 9223372036854775807
 ONE = 0b1000000000000000000000000000000000000000000000000000000000000000
 COLORS = ("w", "b")
 PIECES = ("K", "Q", "R", "B", "N", "p")
+pieceScores = {"K": 0, "Q": 1200, "R": 600, "B": 400, "N": 400, "p": 100}
 COLORED_PIECES = [color + piece for color in COLORS for piece in PIECES]
 COLORED_PIECES_CODES = {COLORED_PIECES[i]: i for i in range(len(COLORED_PIECES))}
 CASTLE_SIDES = {"wKs": 8, "wQs": 4, "bKs": 2, "bQs": 1}
@@ -133,6 +134,7 @@ class GameState:
         self.isBlackCastled = False
         self.isWhiteInCheck = False
         self.isBlackInCheck = False
+        self.pieceScoreDiff = 0
         self.zobristTable = []
         self.boardHashLog = []
         self.boardHash = 0
@@ -283,6 +285,9 @@ class GameState:
         self.createRookThreatTable(color, True)
 
     def makeMove(self, move):
+        if move.capturedPiece is not None:
+            color = 1 if self.whiteTurn else -1
+            self.pieceScoreDiff += color * pieceScores[move.capturedPiece[1]]
         self.unsetSqState(move.capturedPiece, move.endSquare)
         self.unsetSqState(move.movedPiece, move.startSquare)
         self.gameLog.append(move)
@@ -329,6 +334,9 @@ class GameState:
     def undoMove(self):
         if len(self.gameLog) != 0:
             move = self.gameLog.pop()
+            if move.capturedPiece is not None:
+                color = 1 if self.whiteTurn else -1
+                self.pieceScoreDiff += color * pieceScores[move.capturedPiece[1]]
             self.boardHash = self.boardHashLog.pop()
             if move.isPawnPromotion:
                 self.unsetSqState(f"{move.movedPiece[0]}Q", move.endSquare)
