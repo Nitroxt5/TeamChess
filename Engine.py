@@ -1,7 +1,8 @@
 import ctypes
 import random
+from copy import deepcopy
 
-MAX_INT = 9223372036854775807
+MAX_INT = 18446744073709551615
 ONE = 0b1000000000000000000000000000000000000000000000000000000000000000
 COLORS = ("w", "b")
 PIECES = ("K", "Q", "R", "B", "N", "p")
@@ -117,6 +118,7 @@ class GameState:
         #                             "b": self.bbOfPieces["bK"] | self.bbOfPieces["bQ"] | self.bbOfPieces["bR"] | self.bbOfPieces["bB"] | self.bbOfPieces["bN"] | self.bbOfPieces["bp"],
         #                             "a": self.bbOfPieces["wK"] | self.bbOfPieces["wQ"] | self.bbOfPieces["wR"] | self.bbOfPieces["wB"] | self.bbOfPieces["wN"] | self.bbOfPieces["wp"] | self.bbOfPieces["bK"] | self.bbOfPieces["bQ"] | self.bbOfPieces["bR"] | self.bbOfPieces["bB"] | self.bbOfPieces["bN"] | self.bbOfPieces["bp"]}
         self.bbOfThreats = {"w": 0, "b": 0}
+        self.bbOfThreatsLog = []
         self.moveFunc = {"p": self.getPawnMoves, "R": self.getRookMoves, "N": self.getKnightMoves,
                          "B": self.getBishopMoves, "Q": self.getQueenMoves, "K": self.getKingMoves}
         self.threatTableFunc = {"p": self.createPawnThreatTable, "R": self.createRookThreatTable,
@@ -329,6 +331,7 @@ class GameState:
         self.castleRightsLog.append(self.currentCastlingRight)
         self.whiteTurn = not self.whiteTurn
         self.createThreatTable()
+        self.bbOfThreatsLog.append(deepcopy(self.bbOfThreats))
         self.inCheck()
 
     def undoMove(self):
@@ -374,7 +377,7 @@ class GameState:
             self.checkmate = False
             self.stalemate = False
             self.whiteTurn = not self.whiteTurn
-            self.createThreatTable()
+            self.bbOfThreats = self.bbOfThreatsLog.pop()
             self.inCheck()
 
     def updateCastleRights(self, move):
@@ -778,6 +781,7 @@ class Move:
             self.estimatedScore = 0
             self.exactScore = 0
             self.goodScore = False
+            self.isKiller = False
 
     def __eq__(self, other):
         if isinstance(other, Move):

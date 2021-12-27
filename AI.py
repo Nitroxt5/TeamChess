@@ -3,7 +3,6 @@ import time
 import Engine
 from multiprocessing import Queue
 
-pieceScores = {"K": 0, "Q": 1200, "R": 600, "B": 400, "N": 400, "p": 100}
 CHECKMATE = 100000
 STALEMATE = 0
 DEPTH = 4
@@ -12,7 +11,10 @@ nextMove = None
 counter = 0
 threatCost = 2
 protectionCost = 2
-hashTable = {}
+hashTableForBestMoves = {}
+hashTableForValidMoves = {}
+killerMoves = {}
+
 
 knightPositionScore = [[1, 2, 1, 1, 1, 1, 2, 1],
                        [1, 2, 2, 2, 2, 2, 2, 1],
@@ -22,14 +24,14 @@ knightPositionScore = [[1, 2, 1, 1, 1, 1, 2, 1],
                        [1, 2, 3, 3, 3, 3, 2, 1],
                        [1, 2, 2, 2, 2, 2, 2, 1],
                        [1, 2, 1, 1, 1, 1, 2, 1]]
-bishopPositionScore = [[2, 2, 2, 1, 1, 2, 2, 2],
+bishopPositionScore = [[3, 2, 2, 1, 1, 2, 2, 3],
                        [2, 4, 3, 3, 3, 3, 4, 2],
                        [2, 3, 3, 3, 3, 3, 3, 2],
                        [2, 3, 3, 3, 3, 3, 3, 2],
                        [2, 3, 3, 3, 3, 3, 3, 2],
                        [2, 3, 3, 3, 3, 3, 3, 2],
                        [2, 4, 3, 3, 3, 3, 4, 2],
-                       [2, 2, 2, 1, 1, 2, 2, 2]]
+                       [3, 2, 2, 1, 1, 2, 2, 3]]
 queenPositionScore = [[1, 1, 1, 2, 1, 1, 1, 1],
                       [1, 1, 2, 2, 1, 1, 1, 1],
                       [1, 2, 1, 2, 1, 1, 1, 1],
@@ -89,8 +91,11 @@ def negaScoutMoveAI(gameState: Engine.GameState, validMoves: list, returnQ: Queu
     returnQ.put((nextMove, thinkingTime, counter))
 
 
-def oneDepthSearch(gameState: Engine.GameState, validMoves: list, turn: int):
+def oneDepthSearch(gameState: Engine.GameState, validMoves: list, turn: int, depth: int):
     for move in validMoves:
+        if depth in killerMoves:
+            if move.moveID == killerMoves[depth]:
+                move.isKiller = True
         if not move.goodScore:
             gameState.makeMove(move)
             move.estimatedScore = turn * scoreBoard(gameState, validMoves)
@@ -102,8 +107,9 @@ def negaScoutAI(gameState: Engine.GameState, validMoves: list, alpha: int, beta:
     counter += 1
     if depth <= 0 or gameState.checkmate:
         return turn * scoreBoard(gameState, validMoves)
-    oneDepthSearch(gameState, validMoves, turn)
+    oneDepthSearch(gameState, validMoves, turn, depth)
     validMoves.sort(key=lambda mov: mov.estimatedScore, reverse=True)
+    validMoves.sort(key=lambda mov: mov.isKiller, reverse=True)
     silentMoveCounter = 19
     for move in validMoves:
         if not silentMoveCounter:
@@ -111,12 +117,17 @@ def negaScoutAI(gameState: Engine.GameState, validMoves: list, alpha: int, beta:
         gameState.makeMove(move)
         inTable = False
         score = 0
-        if gameState.boardHash in hashTable:
-            if hashTable[gameState.boardHash][0] >= depth:
-                score = hashTable[gameState.boardHash][1]
+        if gameState.boardHash in hashTableForBestMoves:
+            if hashTableForBestMoves[gameState.boardHash][0] >= depth:
+                score = hashTableForBestMoves[gameState.boardHash][1]
                 inTable = True
         if not inTable:
-            nextMoves = gameState.getValidMoves()
+            tupleGameLog = tuple([mov.moveID for mov in gameState.gameLog])
+            if tupleGameLog in hashTableForValidMoves:
+                nextMoves = hashTableForValidMoves[tupleGameLog]
+            else:
+                nextMoves = gameState.getValidMoves()
+                hashTableForValidMoves[tupleGameLog] = nextMoves
             if depth == DEPTH or move.isCapture or gameState.isWhiteInCheck or gameState.isBlackInCheck:
                 score = -negaScoutAI(gameState, nextMoves, -beta, -alpha, -turn, depth - 1, globalDepth)
             else:
@@ -127,13 +138,13 @@ def negaScoutAI(gameState: Engine.GameState, validMoves: list, alpha: int, beta:
         gameState.undoMove()
         if score > alpha:
             alpha = score
-            if gameState.boardHash in hashTable:
-                if depth > hashTable[gameState.boardHash][0]:
-                    hashTable[gameState.boardHash] = (depth, score)
-                if depth == hashTable[gameState.boardHash][0] and score > hashTable[gameState.boardHash][1]:
-                    hashTable[gameState.boardHash] = (depth, score)
+            if gameState.boardHash in hashTableForBestMoves:
+                if depth > hashTableForBestMoves[gameState.boardHash][0]:
+                    hashTableForBestMoves[gameState.boardHash] = (depth, score)
+                if depth == hashTableForBestMoves[gameState.boardHash][0] and score > hashTableForBestMoves[gameState.boardHash][1]:
+                    hashTableForBestMoves[gameState.boardHash] = (depth, score)
             else:
-                hashTable[gameState.boardHash] = (depth, score)
+                hashTableForBestMoves[gameState.boardHash] = (depth, score)
             if depth == globalDepth:
                 move.exactScore = score
                 move.estimatedScore = score
@@ -142,62 +153,9 @@ def negaScoutAI(gameState: Engine.GameState, validMoves: list, alpha: int, beta:
                 if depth == DEPTH:
                     print(move, score)
         if alpha >= beta:
+            killerMoves[depth] = move.moveID
             break
     return alpha
-
-
-# def negaScoutAI(gameState: Engine.GameState, validMoves: list, alpha: int, beta: int, turn: int, depth: int):
-#     global nextMove, counter
-#     counter += 1
-#     if depth <= 0 or gameState.checkmate:
-#         return turn * scoreBoard(gameState, validMoves)
-#     oneDepthSearch(gameState, validMoves, turn)
-#     validMoves.sort(key=lambda mov: mov.estimatedScore, reverse=True)
-#     for move in validMoves:
-#         gameState.makeMove(move)
-#         nextMoves = gameState.getValidMoves()
-#         if depth == DEPTH or move.isCapture or gameState.isWhiteInCheck or gameState.isBlackInCheck:
-#             score = -negaScoutAI(gameState, nextMoves, -beta, -alpha, -turn, depth - 1)
-#         else:
-#             score = -negaScoutAI(gameState, nextMoves, -alpha - 1, -alpha, -turn, depth - R)
-#             if alpha < score < beta:
-#                 score = -negaScoutAI(gameState, nextMoves, -beta, -score, -turn, depth - 1)
-#         gameState.undoMove()
-#         if score > alpha:
-#             alpha = score
-#             if depth == DEPTH:
-#                 move.exactScore = score
-#                 nextMove = move
-#                 print(move, score)
-#         if alpha >= beta:
-#             break
-#     return alpha
-
-
-# def negaMaxWithPruningAI(gameState: Engine.GameState, validMoves: list, alpha: int, beta: int, turn: int, depth: int):
-#     global nextMove, counter
-#     counter += 1
-#     if depth == 0:
-#         return turn * scoreBoard(gameState, validMoves)
-#     maxScore = -CHECKMATE
-#     oneDepthSearch(gameState, validMoves, turn)
-#     validMoves.sort(key=lambda mov: mov.estimatedScore, reverse=True)
-#     for move in validMoves:
-#         gameState.makeMove(move)
-#         nextMoves = gameState.getValidMoves()
-#         score = -negaMaxWithPruningAI(gameState, nextMoves, -beta, -alpha, -turn, depth - 1)
-#         gameState.undoMove()
-#         if score > maxScore:
-#             maxScore = score
-#             if depth == DEPTH:
-#                 move.exactScore = score
-#                 nextMove = move
-#                 print(move, score)
-#         if maxScore > alpha:
-#             alpha = maxScore
-#         if alpha >= beta:
-#             break
-#     return maxScore
 
 
 def scoreProtectionsAndThreats(gameState: Engine.GameState):
@@ -207,7 +165,7 @@ def scoreProtectionsAndThreats(gameState: Engine.GameState):
     blackProtections = gameState.bbOfThreats["b"] & gameState.bbOfOccupiedSquares["b"]
     threatsDifference = Engine.getBitsCount(whiteThreats) - Engine.getBitsCount(blackThreats)
     protectionsDifference = Engine.getBitsCount(whiteProtections) - Engine.getBitsCount(blackProtections)
-    return threatsDifference, protectionsDifference
+    return threatsDifference * threatCost + protectionsDifference * protectionCost
 
 
 def scoreRookPositioning(gameState: Engine.GameState):
@@ -221,20 +179,18 @@ def scoreRookPositioning(gameState: Engine.GameState):
             whitePawnsCount = Engine.getBitsCount(whitePawnsPos)
             blackPawnsCount = Engine.getBitsCount(blackPawnsPos)
             if whiteRookPos:
-                if whitePawnsCount + blackPawnsCount == 1:
-                    if whitePawnsCount == 1:
-                        score += 15
-                    if blackPawnsCount == 1:
-                        score += 20
-                if whitePawnsCount + blackPawnsCount == 0:
+                if blackPawnsCount == 0 and whitePawnsCount == 1:
+                    score += 15
+                elif whitePawnsCount == 0 and blackPawnsCount >= 1:
+                    score += 20
+                elif whitePawnsCount + blackPawnsCount == 0:
                     score += 30
             if blackRookPos:
-                if whitePawnsCount + blackPawnsCount == 1:
-                    if whitePawnsCount == 1:
-                        score -= 20
-                    if blackPawnsCount == 1:
-                        score -= 15
-                if whitePawnsCount + blackPawnsCount == 0:
+                if whitePawnsCount == 0 and blackPawnsCount == 1:
+                    score -= 15
+                elif blackPawnsCount == 0 and whitePawnsCount >= 1:
+                    score -= 20
+                elif whitePawnsCount + blackPawnsCount == 0:
                     score -= 30
     whiteRookRowPos = Engine.bbOfRows["7"] & gameState.bbOfPieces["wR"]
     blackRookRowPos = Engine.bbOfRows["2"] & gameState.bbOfPieces["bR"]
@@ -431,7 +387,7 @@ def scoreCenterControl(gameState: Engine.GameState):
 
 pieceAdditionalPositionScores = {"Ks": scoreKingSafety, "Q": scoreQueenPositioning, "R": scoreRookPositioning,
                                  "K": scoreKnightPositioning, "B": scoreBishopPositioning, "p": scorePawnPositioning,
-                                 "Cs": scoreCenterControl}
+                                 "Cs": scoreCenterControl, "PT": scoreProtectionsAndThreats}
 
 
 def scoreBoard(gameState: Engine.GameState, validMoves: list):
@@ -442,8 +398,7 @@ def scoreBoard(gameState: Engine.GameState, validMoves: list):
             return CHECKMATE
     elif gameState.stalemate:
         return STALEMATE
-    threatsDifference, protectionsDifference = scoreProtectionsAndThreats(gameState)
-    score = threatsDifference * threatCost + protectionsDifference * protectionCost
+    score = 0
     if gameState.whiteTurn:
         score += len(validMoves)
     else:
