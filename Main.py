@@ -4,39 +4,48 @@ import pygame as pg
 import AI
 from math import ceil, floor
 from multiprocessing import Process, Queue
+from copy import deepcopy
 
 pg.init()
-# SCREEN_WIDTH, SCREEN_HEIGHT = pg.display.Info().current_w, pg.display.Info().current_h
-SCREEN_WIDTH, SCREEN_HEIGHT = 960, 540
-BOARD_HEIGHT = 600 * SCREEN_HEIGHT // 1080
-MARGIN = (SCREEN_HEIGHT - BOARD_HEIGHT) // 2
-SQ_SIZE = BOARD_HEIGHT // Engine.DIMENSION
-BOARD_WIDTH = BOARD_HEIGHT = SQ_SIZE * Engine.DIMENSION
+SCREEN_WIDTH, SCREEN_HEIGHT = pg.display.Info().current_w, pg.display.Info().current_h
+# SCREEN_WIDTH, SCREEN_HEIGHT = 960, 540
+BOARD_SIZE = 600 * SCREEN_HEIGHT // 1080
+MARGIN = (SCREEN_HEIGHT - BOARD_SIZE) // 2
+SQ_SIZE = BOARD_SIZE // Engine.DIMENSION
+BOARD_SIZE = SQ_SIZE * Engine.DIMENSION
+MARGIN_LEFT = SCREEN_WIDTH - BOARD_SIZE - MARGIN
+RESERVE_MARGIN = (BOARD_SIZE - 5 * SQ_SIZE) // 2
+FONT_SIZE = 25 * SCREEN_HEIGHT // 1080
+EMPTY_PIECES = ["e" + piece for piece in Engine.PIECES if piece != "K"]
+SKIN_PACK = 2
 FPS = 30
 IMAGES = {}
-BOARD_COLORS = (pg.Color((240, 217, 181)), pg.Color((181, 136, 99)), pg.Color("black"))
 
 
 def loadImages():
     for piece in Engine.COLORED_PIECES:
-        IMAGES[piece] = pg.transform.scale(pg.image.load(f"images/2/{piece}.png"), (SQ_SIZE, SQ_SIZE))
+        IMAGES[piece] = pg.transform.scale(pg.image.load(f"images/{SKIN_PACK}/{piece}.png"), (SQ_SIZE, SQ_SIZE))
         # IMAGES[piece] = pg.image.load(f"images/{piece}.png")
+    for piece in EMPTY_PIECES:
+        IMAGES[piece] = pg.transform.scale(pg.image.load(f"images/{SKIN_PACK}/{piece}.png"), (SQ_SIZE, SQ_SIZE))
     IMAGES["icon"] = pg.image.load("images/icon.png")
-    IMAGES["BG"] = pg.transform.scale(pg.image.load("images/BG.png"), (SCREEN_WIDTH, SCREEN_HEIGHT))
-    # IMAGES["BG"] = pg.image.load("images/BG.png")
+    IMAGES["board"] = pg.transform.scale(pg.image.load("images/board.png"), (BOARD_SIZE, BOARD_SIZE))
+    IMAGES["frame"] = pg.transform.scale(pg.image.load("images/frame.png"), (SQ_SIZE, SQ_SIZE))
+    IMAGES["frame"].set_alpha(200)
+    # IMAGES["BG"] = pg.transform.scale(pg.image.load("images/BG.png"), (SCREEN_WIDTH, SCREEN_HEIGHT))
 
 
 def main():
-    loadImages()
     screen = pg.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-    # screen = pg.display.set_mode((BOARD_HEIGHT, BOARD_HEIGHT))
+    # screen = pg.display.set_mode((BOARD_SIZE, BOARD_SIZE))
+    loadImages()
+    clock = pg.time.Clock()
     boardPlayers = [(True, True), (True, True)]
     gameStates = [Engine.GameState(), Engine.GameState()]
     pg.display.set_caption("SwiChess")
     pg.display.set_icon(IMAGES["icon"])
     working = True
     validMoves = [gameStates[0].getValidMoves(), gameStates[1].getValidMoves()]
-    print(validMoves)
     moveMade = [False, False]
     gameOver = False
     AIThinking = [False, False]
@@ -47,7 +56,7 @@ def main():
     selectedSq = [(), ()]
     clicks = [[], []]
     while working:
-        pg.clock.tick(FPS)
+        clock.tick(FPS)
         playerTurn = [(gameStates[0].whiteTurn and boardPlayers[0][0]) or (not gameStates[0].whiteTurn and boardPlayers[0][1]),
                       (gameStates[1].whiteTurn and boardPlayers[1][0]) or (not gameStates[1].whiteTurn and boardPlayers[1][1])]
         for e in pg.event.get():
@@ -74,57 +83,122 @@ def main():
                         print(f"Average time per position: {AIThinkingTime[i] / AIPositionCounter[i]}")
                 working = False
             elif e.type == pg.MOUSEBUTTONDOWN:
-                if not gameOver:
-                    location = pg.mouse.get_pos()
-                    if MARGIN < location[0] < MARGIN + BOARD_WIDTH and MARGIN < location[1] < MARGIN + BOARD_HEIGHT:
-                        column = (location[0] - MARGIN) // SQ_SIZE
-                        row = (location[1] - MARGIN) // SQ_SIZE
-                        if selectedSq[0] == (column, row):
-                            selectedSq[0] = ()
-                            clicks[0] = []
+                if e.button == 1:
+                    if not gameOver:
+                        location = pg.mouse.get_pos()
+                        if MARGIN < location[0] < MARGIN + BOARD_SIZE and MARGIN < location[1] < MARGIN + BOARD_SIZE:
+                            column = (location[0] - MARGIN) // SQ_SIZE
+                            row = (location[1] - MARGIN) // SQ_SIZE
+                            if selectedSq[0] == (column, row):
+                                selectedSq[0] = ()
+                                clicks[0] = []
+                            else:
+                                selectedSq[0] = (column, row)
+                                clicks[0].append(deepcopy(selectedSq[0]))
+                            if len(clicks[0]) == 2 and playerTurn[0]:
+                                isReserve = False
+                                movedPiece = None
+                                color = "w" if clicks[0][0][1] == 8 else "b"
+                                if clicks[0][0][1] == -1 or clicks[0][0][1] == 8:
+                                    startSq = -clicks[0][0][0] if clicks[0][0][1] == -1 else clicks[0][0][0]
+                                    isReserve = True
+                                    movedPiece = color + Engine.PIECES[clicks[0][0][0]]
+                                else:
+                                    startSq = Engine.ONE >> (8 * clicks[0][0][1] + clicks[0][0][0])
+                                if 0 <= clicks[0][1][1] <= 7:
+                                    endSq = Engine.ONE >> (8 * clicks[0][1][1] + clicks[0][1][0])
+                                elif clicks[0][1][1] == -1 or clicks[0][1][1] == 8:
+                                    endSq = -1
+                                else:
+                                    endSq = 0
+                                move = Engine.Move(startSq, endSq, gameStates[0], movedPiece=movedPiece, isReserve=isReserve)
+                                if move.isPawnPromotion:
+                                    pos, piece = getPromotion(screen, gameStates, 0)
+                                    move = Engine.Move(startSq, endSq, gameStates[0], movedPiece=movedPiece, isReserve=isReserve, promotedTo=None if piece is None else piece[1], promotedPiecePosition=pos)
+                                if not (move.isPawnPromotion and move.promotedTo is None):
+                                    for part in validMoves[0]:
+                                        for validMove in part:
+                                            if move == validMove:
+                                                gameStates[0].makeMove(move, gameStates[1])
+                                                if move.isPawnPromotion:
+                                                    validMoves[1] = gameStates[1].getValidMoves()
+                                                else:
+                                                    gameStates[1].getReserveMoves(validMoves[1])
+                                                moveMade[0] = True
+                                                selectedSq[0] = ()
+                                                clicks[0] = []
+                                                break
+                                if not moveMade[0]:
+                                    clicks[0] = [deepcopy(selectedSq[0])]
+                        elif MARGIN_LEFT < location[0] < SCREEN_WIDTH - MARGIN and MARGIN < location[1] < MARGIN + BOARD_SIZE:
+                            column = (location[0] - MARGIN_LEFT) // SQ_SIZE
+                            row = (location[1] - MARGIN) // SQ_SIZE
+                            column = Engine.DIMENSION - column - 1
+                            row = Engine.DIMENSION - row - 1
+                            if selectedSq[1] == (column, row):
+                                selectedSq[1] = ()
+                                clicks[1] = []
+                            else:
+                                selectedSq[1] = (column, row)
+                                clicks[1].append(deepcopy(selectedSq[1]))
+                            if len(clicks[1]) == 2 and playerTurn[1]:
+                                isReserve = False
+                                movedPiece = None
+                                color = "w" if clicks[1][0][1] == -1 else "b"
+                                if clicks[1][0][1] == -1 or clicks[1][0][1] == 8:
+                                    startSq = clicks[1][0][0] if clicks[1][0][1] == -1 else -clicks[1][0][0]
+                                    isReserve = True
+                                    movedPiece = color + Engine.PIECES[clicks[1][0][0]]
+                                else:
+                                    startSq = Engine.ONE >> (8 * clicks[1][0][1] + clicks[1][0][0])
+                                if 0 <= clicks[1][1][1] <= 7:
+                                    endSq = Engine.ONE >> (8 * clicks[1][1][1] + clicks[1][1][0])
+                                else:
+                                    endSq = 0
+                                move = Engine.Move(startSq, endSq, gameStates[1], movedPiece=movedPiece, isReserve=isReserve)
+                                if move.isPawnPromotion:
+                                    pos, piece = getPromotion(screen, gameStates, 1)
+                                    move = Engine.Move(startSq, endSq, gameStates[1], movedPiece=movedPiece, isReserve=isReserve, promotedTo=None if piece is None else piece[1], promotedPiecePosition=pos)
+                                if not (move.isPawnPromotion and move.promotedTo is None):
+                                    for part in validMoves[1]:
+                                        for validMove in part:
+                                            if move == validMove:
+                                                gameStates[1].makeMove(move, gameStates[0])
+                                                if move.isPawnPromotion:
+                                                    validMoves[0] = gameStates[0].getValidMoves()
+                                                else:
+                                                    gameStates[0].getReserveMoves(validMoves[0])
+                                                moveMade[1] = True
+                                                selectedSq[1] = ()
+                                                clicks[1] = []
+                                                break
+                                if not moveMade[1]:
+                                    clicks[1] = [deepcopy(selectedSq[1])]
+                        elif MARGIN + RESERVE_MARGIN < location[0] < MARGIN + BOARD_SIZE - RESERVE_MARGIN and (MARGIN - SQ_SIZE < location[1] < MARGIN or MARGIN + BOARD_SIZE < location[1] < MARGIN + BOARD_SIZE + SQ_SIZE):
+                            column = (location[0] - MARGIN - RESERVE_MARGIN) // SQ_SIZE + 1
+                            row = (location[1] - MARGIN) // SQ_SIZE
+                            if selectedSq[0] == (column, row):
+                                selectedSq[0] = ()
+                                clicks[0] = []
+                            else:
+                                selectedSq[0] = (column, row)
+                                clicks[0].append(deepcopy(selectedSq[0]))
+                            if not moveMade[0] and len(clicks[0]) == 2:
+                                clicks[0] = [deepcopy(selectedSq[0])]
+                        elif MARGIN_LEFT + RESERVE_MARGIN < location[0] < MARGIN_LEFT + BOARD_SIZE - RESERVE_MARGIN and (MARGIN - SQ_SIZE < location[1] < MARGIN or MARGIN + BOARD_SIZE < location[1] < MARGIN + BOARD_SIZE + SQ_SIZE):
+                            column = (location[0] - MARGIN_LEFT - RESERVE_MARGIN) // SQ_SIZE + 1
+                            row = (location[1] - MARGIN) // SQ_SIZE
+                            if selectedSq[1] == (column, row):
+                                selectedSq[1] = ()
+                                clicks[1] = []
+                            else:
+                                selectedSq[1] = (column, row)
+                                clicks[1].append(deepcopy(selectedSq[1]))
+                            if not moveMade[1] and len(clicks[1]) == 2:
+                                clicks[1] = [deepcopy(selectedSq[1])]
                         else:
-                            selectedSq[0] = (column, row)
-                            clicks[0].append(selectedSq[0])
-                        if len(clicks[0]) == 2 and playerTurn[0]:
-                            startSq = Engine.ONE >> (8 * clicks[0][0][1] + clicks[0][0][0])
-                            endSq = Engine.ONE >> (8 * clicks[0][1][1] + clicks[0][1][0])
-                            move = Engine.Move(startSq, endSq, gameStates[0])
-                            for validMove in validMoves[0]:
-                                if move == validMove:
-                                    gameStates[0].makeMove(validMove, gameStates[1])
-                                    moveMade[0] = True
-                                    selectedSq[0] = ()
-                                    clicks[0] = []
-                                    break
-                            if not moveMade[0]:
-                                clicks[0] = [selectedSq[0]]
-                    elif SCREEN_WIDTH - MARGIN - BOARD_WIDTH < location[0] < SCREEN_WIDTH - MARGIN and MARGIN < location[1] < MARGIN + BOARD_HEIGHT:
-                        column = (location[0] - (SCREEN_WIDTH - MARGIN - BOARD_WIDTH)) // SQ_SIZE
-                        row = (location[1] - MARGIN) // SQ_SIZE
-                        column = Engine.DIMENSION - column - 1
-                        row = Engine.DIMENSION - row - 1
-                        if selectedSq[1] == (column, row):
-                            selectedSq[1] = ()
-                            clicks[1] = []
-                        else:
-                            selectedSq[1] = (column, row)
-                            clicks[1].append(selectedSq[1])
-                        if len(clicks[1]) == 2 and playerTurn[1]:
-                            startSq = Engine.ONE >> (8 * clicks[1][0][1] + clicks[1][0][0])
-                            endSq = Engine.ONE >> (8 * clicks[1][1][1] + clicks[1][1][0])
-                            move = Engine.Move(startSq, endSq, gameStates[1])
-                            for validMove in validMoves[1]:
-                                if move == validMove:
-                                    gameStates[1].makeMove(validMove, gameStates[0])
-                                    moveMade[1] = True
-                                    selectedSq[1] = ()
-                                    clicks[1] = []
-                                    break
-                            if not moveMade[1]:
-                                clicks[1] = [selectedSq[1]]
-                    else:
-                        selectedSq = [(), ()]
-                        clicks = [[], []]
+                            selectedSq = [(), ()]
+                            clicks = [[], []]
             elif e.type == pg.KEYDOWN:
                 if e.key == pg.K_r:
                     for i in range(2):
@@ -163,6 +237,7 @@ def main():
                         AIMove = AI.randomMoveAI(validMoves)
                         print(f"Board {i + 1} AI made a random move")
                     gameStates[i].makeMove(AIMove, gameStates[1 - i])
+                    gameStates[1 - i].getReserveMoves(validMoves[1 - i])
                     moveMade[i] = True
                     AIThinking[i] = False
                     selectedSq[i] = ()
@@ -174,7 +249,7 @@ def main():
         if (gameStates[0].checkmate and not gameStates[0].whiteTurn) or (gameStates[1].checkmate and gameStates[1].whiteTurn):
             gameOver = True
             drawText(screen, "Team 1 wins")
-        elif gameStates[0].stalemate or gameStates[1].stalemate:
+        elif gameStates[0].stalemate and gameStates[1].stalemate:
             gameOver = True
             drawText(screen, "Draw")
         elif (gameStates[0].checkmate and gameStates[0].whiteTurn) or (gameStates[1].checkmate and not gameStates[1].whiteTurn):
@@ -186,84 +261,203 @@ def main():
 
 
 def highlightSq(screen: pg.Surface, gameStates: list, validMoves: list, selectedSq: list):
-    marginLeft = SCREEN_WIDTH - BOARD_WIDTH - MARGIN
     for i in range(2):
         if selectedSq[i] != ():
-            square = Engine.ONE >> (8 * selectedSq[i][1] + selectedSq[i][0])
-            piece = gameStates[i].getPieceBySquare(square)
+            if i == 0:
+                color = "w" if selectedSq[i][1] == 8 else "b"
+            else:
+                color = "w" if selectedSq[i][1] == -1 else "b"
+            isReserve = True if selectedSq[i][1] == -1 or selectedSq[i][1] == 8 else False
+            square = Engine.ONE >> (8 * selectedSq[i][1] + selectedSq[i][0]) if not isReserve else -1
+            piece = gameStates[i].getPieceBySquare(square) if not isReserve else color + Engine.PIECES[selectedSq[i][0]]
             if piece is not None:
                 s = pg.Surface((SQ_SIZE, SQ_SIZE))
                 s.fill(pg.Color(110, 90, 0))
-                if i == 0:
-                    screen.blit(s, (selectedSq[i][0] * SQ_SIZE + MARGIN, selectedSq[i][1] * SQ_SIZE + MARGIN))
+                if not isReserve:
+                    if i == 0:
+                        screen.blit(s, (selectedSq[i][0] * SQ_SIZE + MARGIN, selectedSq[i][1] * SQ_SIZE + MARGIN))
+                    else:
+                        screen.blit(s, ((Engine.DIMENSION - 1 - selectedSq[i][0]) * SQ_SIZE + MARGIN_LEFT,
+                                        (Engine.DIMENSION - 1 - selectedSq[i][1]) * SQ_SIZE + MARGIN))
                 else:
-                    screen.blit(s, ((Engine.DIMENSION - 1 - selectedSq[i][0]) * SQ_SIZE + marginLeft,
-                                    (Engine.DIMENSION - 1 - selectedSq[i][1]) * SQ_SIZE + MARGIN))
+                    if i == 0:
+                        screen.blit(s, ((selectedSq[i][0] - 1) * SQ_SIZE + MARGIN + RESERVE_MARGIN, selectedSq[i][1] * SQ_SIZE + MARGIN))
+                    else:
+                        screen.blit(s, ((selectedSq[i][0] - 1) * SQ_SIZE + MARGIN_LEFT + RESERVE_MARGIN,
+                                        selectedSq[i][1] * SQ_SIZE + MARGIN))
                 s.set_alpha(100)
                 s.fill(pg.Color("yellow"))
-                if piece[0] == ("w" if gameStates[i].whiteTurn else "b"):
-                    for move in validMoves[i]:
-                        if move.startSquare == square:
-                            if i == 0:
-                                screen.blit(s, (move.endLoc % 8 * SQ_SIZE + MARGIN, move.endLoc // 8 * SQ_SIZE + MARGIN))
-                            else:
-                                r = Engine.DIMENSION - 1 - move.endLoc // 8
-                                c = Engine.DIMENSION - 1 - move.endLoc % 8
-                                screen.blit(s, (c * SQ_SIZE + marginLeft, r * SQ_SIZE + MARGIN))
+                endSquares = []
+                if not isReserve or (isReserve and gameStates[i].reserve[color][piece[1]] > 0):
+                    if piece[0] == ("w" if gameStates[i].whiteTurn else "b"):
+                        for part in validMoves[i]:
+                            for move in part:
+                                if move.startSquare == square and move.endSquare not in endSquares:
+                                    endSquares.append(move.endSquare)
+                                    if i == 0:
+                                        screen.blit(s, (move.endLoc % 8 * SQ_SIZE + MARGIN, move.endLoc // 8 * SQ_SIZE + MARGIN))
+                                    else:
+                                        r = Engine.DIMENSION - 1 - move.endLoc // 8
+                                        c = Engine.DIMENSION - 1 - move.endLoc % 8
+                                        screen.blit(s, (c * SQ_SIZE + MARGIN_LEFT, r * SQ_SIZE + MARGIN))
 
 
-def highlightLastMove(screen: pg.Surface, gameStates: list):
-    marginLeft = SCREEN_WIDTH - BOARD_WIDTH - MARGIN
+def highlightLastMove(screen: pg.Surface, gameStates: list, selectedSq: list):
     for i in range(2):
-        if len(gameStates[i].gameLog) != 0:
-            lastMove = gameStates[i].gameLog[-1]
-            s = pg.Surface((SQ_SIZE, SQ_SIZE))
-            s.set_alpha(100)
-            s.fill(pg.Color(0, 0, 255))
+        piece = None
+        if selectedSq[i] != ():
             if i == 0:
-                screen.blit(s, (lastMove.startLoc % 8 * SQ_SIZE + MARGIN, lastMove.startLoc // 8 * SQ_SIZE + MARGIN))
-                screen.blit(s, (lastMove.endLoc % 8 * SQ_SIZE + MARGIN, lastMove.endLoc // 8 * SQ_SIZE + MARGIN))
+                color = "w" if selectedSq[i][1] == 8 else "b"
             else:
-                screen.blit(s, ((Engine.DIMENSION - 1 - lastMove.startLoc % 8) * SQ_SIZE + marginLeft,
-                                (Engine.DIMENSION - 1 - lastMove.startLoc // 8) * SQ_SIZE + MARGIN))
-                screen.blit(s, ((Engine.DIMENSION - 1 - lastMove.endLoc % 8) * SQ_SIZE + marginLeft,
-                                (Engine.DIMENSION - 1 - lastMove.endLoc // 8) * SQ_SIZE + MARGIN))
+                color = "w" if selectedSq[i][1] == -1 else "b"
+            isReserve = True if selectedSq[i][1] == -1 or selectedSq[i][1] == 8 else False
+            square = Engine.ONE >> (8 * selectedSq[i][1] + selectedSq[i][0]) if not isReserve else -1
+            piece = gameStates[i].getPieceBySquare(square) if not isReserve else color + Engine.PIECES[selectedSq[i][0]]
+            if isReserve and (gameStates[i].reserve[color][Engine.PIECES[selectedSq[i][0]]] == 0 or color == ("b" if gameStates[i].whiteTurn else "w")):
+                piece = None
+        if piece is None or selectedSq[i] == ():
+            if len(gameStates[i].gameLog) != 0:
+                lastMove = gameStates[i].gameLog[-1]
+                s = pg.Surface((SQ_SIZE, SQ_SIZE))
+                s.set_alpha(100)
+                s.fill(pg.Color(0, 0, 255))
+                if not lastMove.isReserve:
+                    if i == 0:
+                        screen.blit(s, (lastMove.startLoc % 8 * SQ_SIZE + MARGIN, lastMove.startLoc // 8 * SQ_SIZE + MARGIN))
+                        screen.blit(s, (lastMove.endLoc % 8 * SQ_SIZE + MARGIN, lastMove.endLoc // 8 * SQ_SIZE + MARGIN))
+                    else:
+                        screen.blit(s, ((Engine.DIMENSION - 1 - lastMove.startLoc % 8) * SQ_SIZE + MARGIN_LEFT,
+                                        (Engine.DIMENSION - 1 - lastMove.startLoc // 8) * SQ_SIZE + MARGIN))
+                        screen.blit(s, ((Engine.DIMENSION - 1 - lastMove.endLoc % 8) * SQ_SIZE + MARGIN_LEFT,
+                                        (Engine.DIMENSION - 1 - lastMove.endLoc // 8) * SQ_SIZE + MARGIN))
+                else:
+                    if i == 0:
+                        marginTop = MARGIN - SQ_SIZE if lastMove.startLoc < 0 else MARGIN + BOARD_SIZE
+                        screen.blit(s, ((abs(lastMove.startLoc) - 1) * SQ_SIZE + MARGIN + RESERVE_MARGIN, marginTop))
+                        screen.blit(s, (lastMove.endLoc % 8 * SQ_SIZE + MARGIN, lastMove.endLoc // 8 * SQ_SIZE + MARGIN))
+                    else:
+                        marginTop = MARGIN - SQ_SIZE if lastMove.startLoc > 0 else MARGIN + BOARD_SIZE
+                        screen.blit(s, ((abs(lastMove.startLoc) - 1) * SQ_SIZE + MARGIN_LEFT + RESERVE_MARGIN, marginTop))
+                        screen.blit(s, ((Engine.DIMENSION - 1 - lastMove.endLoc % 8) * SQ_SIZE + MARGIN_LEFT,
+                                        (Engine.DIMENSION - 1 - lastMove.endLoc // 8) * SQ_SIZE + MARGIN))
 
 
-def drawGameState(screen: pg.Surface, gameStates: list, validMoves: list, selectedSq: list):
-    screen.fill((237, 235, 233))
+def calculatePossiblePromotions(gameStates: list, promotion: int):
+    possiblePromotions = {}
+    possiblePiecesToPromote = ["Q", "R", "B", "N"]
+    if promotion == 0:
+        color = "w" if gameStates[0].whiteTurn else "b"
+        for piece in possiblePiecesToPromote:
+            splitPositions = Engine.numSplit(gameStates[1].bbOfPieces[color + piece])
+            for position in splitPositions:
+                if gameStates[1].canBeRemoved(position, "w" if gameStates[0].whiteTurn else "b"):
+                    pos = Engine.getPower(position)
+                    possiblePromotions[(pos % 8, pos // 8)] = color + piece
+    elif promotion == 1:
+        color = "w" if gameStates[1].whiteTurn else "b"
+        for piece in possiblePiecesToPromote:
+            splitPositions = Engine.numSplit(gameStates[0].bbOfPieces[color + piece])
+            for position in splitPositions:
+                if gameStates[0].canBeRemoved(position, "w" if gameStates[1].whiteTurn else "b"):
+                    pos = Engine.getPower(position)
+                    possiblePromotions[(pos % 8, pos // 8)] = color + piece
+    return possiblePromotions
+
+
+def highlightPossiblePromotions(screen: pg.Surface, possiblePromotions: dict, promotion: int):
+    if possiblePromotions != {}:
+        if promotion == 0:
+            for column, row in possiblePromotions.keys():
+                screen.blit(IMAGES["frame"], pg.Rect((Engine.DIMENSION - 1 - column) * SQ_SIZE + MARGIN_LEFT, (Engine.DIMENSION - 1 - row) * SQ_SIZE + MARGIN, SQ_SIZE, SQ_SIZE))
+        elif promotion == 1:
+            for column, row in possiblePromotions.keys():
+                screen.blit(IMAGES["frame"], pg.Rect(column * SQ_SIZE + MARGIN, row * SQ_SIZE + MARGIN, SQ_SIZE, SQ_SIZE))
+
+
+def drawGameState(screen: pg.Surface, gameStates: list, validMoves: list, selectedSq: list, promotion=-1, possiblePromotions=None):
+    screen.fill((181, 136, 99))
+    # screen.blit(IMAGES["BG"], (0, 0, SCREEN_WIDTH, SCREEN_HEIGHT))
     drawBoard(screen)
-    highlightLastMove(screen, gameStates)
-    highlightSq(screen, gameStates, validMoves, selectedSq)
+    highlightPossiblePromotions(screen, possiblePromotions, promotion)
+    if promotion == -1:
+        highlightLastMove(screen, gameStates, selectedSq)
+        highlightSq(screen, gameStates, validMoves, selectedSq)
     drawPieces(screen, gameStates)
 
 
 def drawBoard(screen: pg.Surface):
-    marginLeft = SCREEN_WIDTH - BOARD_WIDTH - MARGIN
-    pg.draw.rect(screen, BOARD_COLORS[2], pg.Rect(MARGIN - 1, MARGIN - 1, BOARD_WIDTH + 2, BOARD_HEIGHT + 2))
-    pg.draw.rect(screen, BOARD_COLORS[2], pg.Rect(marginLeft - 1, MARGIN - 1, BOARD_WIDTH + 2, BOARD_HEIGHT + 2))
-    for column in range(Engine.DIMENSION):
-        for row in range(Engine.DIMENSION):
-            color = BOARD_COLORS[(row + column) % 2]
-            pg.draw.rect(screen, color, pg.Rect(column * SQ_SIZE + MARGIN, row * SQ_SIZE + MARGIN, SQ_SIZE, SQ_SIZE))
-            pg.draw.rect(screen, color, pg.Rect(column * SQ_SIZE + marginLeft, row * SQ_SIZE + MARGIN, SQ_SIZE, SQ_SIZE))
+    s2 = pg.Surface((BOARD_SIZE, BOARD_SIZE))
+    s2.set_alpha(80)
+    s2.fill(pg.Color("black"))
+    screen.blit(s2, pg.Rect(MARGIN + 3, MARGIN + 3, BOARD_SIZE, BOARD_SIZE))
+    screen.blit(IMAGES["board"], pg.Rect(MARGIN, MARGIN, BOARD_SIZE, BOARD_SIZE))
+    screen.blit(s2, pg.Rect(MARGIN_LEFT + 3, MARGIN + 3, BOARD_SIZE, BOARD_SIZE))
+    screen.blit(IMAGES["board"], pg.Rect(MARGIN_LEFT, MARGIN, BOARD_SIZE, BOARD_SIZE))
 
 
 def drawPieces(screen: pg.Surface, gameStates: list):
+    marginTop1 = MARGIN - SQ_SIZE
+    marginTop2 = MARGIN + BOARD_SIZE
+    font = pg.font.SysFont("Helvetica", FONT_SIZE, True, False)
     for i in range(2):
-        marginLeft = MARGIN if i == 0 else SCREEN_WIDTH - BOARD_WIDTH - MARGIN
+        k = {"w": 0, "b": 0}
+        marginLeft = MARGIN if i == 0 else MARGIN_LEFT
         for piece in Engine.COLORED_PIECES:
             splitPositions = Engine.numSplit(gameStates[i].bbOfPieces[piece])
             for position in splitPositions:
                 pos = Engine.getPower(position) if i == 0 else 63 - Engine.getPower(position)
                 screen.blit(IMAGES[piece], pg.Rect(pos % 8 * SQ_SIZE + marginLeft, pos // 8 * SQ_SIZE + MARGIN, SQ_SIZE, SQ_SIZE))
+            if piece != "wK" and piece != "bK":
+                marginTop = marginTop1 if (piece[0] == "b" and i == 0) or (piece[0] == "w" and i == 1) else marginTop2
+                marginTextTop = -5 if (piece[0] == "b" and i == 0) or (piece[0] == "w" and i == 1) else SQ_SIZE + 5
+                marg = marginLeft + k[piece[0]] * SQ_SIZE + RESERVE_MARGIN
+                if gameStates[i].reserve[piece[0]][piece[1]] > 0:
+                    screen.blit(IMAGES[piece], pg.Rect(marg, marginTop, SQ_SIZE, SQ_SIZE))
+                    textObj = font.render(f"{gameStates[i].reserve[piece[0]][piece[1]]}", False, pg.Color("black"))
+                    text_rect = textObj.get_rect(center=(marg + SQ_SIZE // 2, marginTop + marginTextTop))
+                    screen.blit(textObj, text_rect)
+                elif gameStates[i].reserve[piece[0]][piece[1]] == 0:
+                    screen.blit(IMAGES[f"e{piece[1]}"], pg.Rect(marg, marginTop, SQ_SIZE, SQ_SIZE))
+                k[piece[0]] += 1
+
+
+def getPromotion(screen: pg.Surface, gameStates: list, boardNum: int):
+    possiblePromotions = calculatePossiblePromotions(gameStates, boardNum)
+    if possiblePromotions == {}:
+        return 0, None
+    drawGameState(screen, gameStates, [], [], promotion=boardNum, possiblePromotions=possiblePromotions)
+    drawText(screen, "Choose a piece to promote")
+    pg.display.flip()
+    working = True
+    while working:
+        for e in pg.event.get():
+            if e.type == pg.QUIT:
+                pg.event.post(pg.event.Event(256))
+                return 0, None
+            if e.type == pg.MOUSEBUTTONDOWN:
+                if e.button == 1:
+                    location = pg.mouse.get_pos()
+                    if boardNum == 1:
+                        if MARGIN < location[0] < MARGIN + BOARD_SIZE and MARGIN < location[1] < MARGIN + BOARD_SIZE:
+                            column = (location[0] - MARGIN) // SQ_SIZE
+                            row = (location[1] - MARGIN) // SQ_SIZE
+                            if (column, row) in possiblePromotions:
+                                return Engine.ONE >> (8 * row + column), possiblePromotions[(column, row)]
+                    if boardNum == 0:
+                        if MARGIN_LEFT < location[0] < MARGIN_LEFT + BOARD_SIZE and MARGIN < location[1] < MARGIN + BOARD_SIZE:
+                            column = (location[0] - MARGIN_LEFT) // SQ_SIZE
+                            row = (location[1] - MARGIN) // SQ_SIZE
+                            column = Engine.DIMENSION - column - 1
+                            row = Engine.DIMENSION - row - 1
+                            if (column, row) in possiblePromotions:
+                                return Engine.ONE >> (8 * row + column), possiblePromotions[(column, row)]
 
 
 def drawText(screen: pg.Surface, text: str):
-    font = pg.font.SysFont("Helvetica", 32, True, False)
+    font = pg.font.SysFont("Helvetica", FONT_SIZE * 2, True, False)
     textObj = font.render(text, False, pg.Color("gray"))
     textLocation = pg.Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT).move(SCREEN_WIDTH / 2 - textObj.get_width() / 2,
-                                                                   SCREEN_HEIGHT / 2 - textObj.get_height() / 2)
+                                                                   textObj.get_height() / 2)
     screen.blit(textObj, textLocation)
     textObj = font.render(text, False, pg.Color("black"))
     screen.blit(textObj, textLocation.move(2, 2))
