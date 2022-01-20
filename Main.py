@@ -120,8 +120,9 @@ def main():
                                         for validMove in part:
                                             if move == validMove:
                                                 gameStates[0].makeMove(move, gameStates[1])
-                                                if move.isPawnPromotion:
+                                                if move.isPawnPromotion or move.isReserve:
                                                     validMoves[1] = gameStates[1].getValidMoves()
+                                                    gameStates[1].updatePawnPromotionMoves(validMoves[1], gameStates[0])
                                                 else:
                                                     gameStates[1].getReserveMoves(validMoves[1])
                                                 moveMade[0] = True
@@ -164,8 +165,9 @@ def main():
                                         for validMove in part:
                                             if move == validMove:
                                                 gameStates[1].makeMove(move, gameStates[0])
-                                                if move.isPawnPromotion:
+                                                if move.isPawnPromotion or move.isReserve:
                                                     validMoves[0] = gameStates[0].getValidMoves()
+                                                    gameStates[0].updatePawnPromotionMoves(validMoves[0], gameStates[1])
                                                 else:
                                                     gameStates[0].getReserveMoves(validMoves[0])
                                                 moveMade[1] = True
@@ -244,6 +246,7 @@ def main():
                     clicks[i] = []
             if moveMade[i]:
                 validMoves[i] = gameStates[i].getValidMoves()
+                gameStates[i].updatePawnPromotionMoves(validMoves[i], gameStates[1 - i])
                 moveMade[i] = False
         drawGameState(screen, gameStates, validMoves, selectedSq)
         if (gameStates[0].checkmate and not gameStates[0].whiteTurn) or (gameStates[1].checkmate and gameStates[1].whiteTurn):
@@ -287,9 +290,9 @@ def highlightSq(screen: pg.Surface, gameStates: list, validMoves: list, selected
                                         selectedSq[i][1] * SQ_SIZE + MARGIN))
                 s.set_alpha(100)
                 s.fill(pg.Color("yellow"))
-                endSquares = []
                 if not isReserve or (isReserve and gameStates[i].reserve[color][piece[1]] > 0):
                     if piece[0] == ("w" if gameStates[i].whiteTurn else "b"):
+                        endSquares = []
                         for part in validMoves[i]:
                             for move in part:
                                 if move.startSquare == square and move.endSquare not in endSquares:
@@ -344,10 +347,9 @@ def highlightLastMove(screen: pg.Surface, gameStates: list, selectedSq: list):
 
 def calculatePossiblePromotions(gameStates: list, promotion: int):
     possiblePromotions = {}
-    possiblePiecesToPromote = ["Q", "R", "B", "N"]
     if promotion == 0:
         color = "w" if gameStates[0].whiteTurn else "b"
-        for piece in possiblePiecesToPromote:
+        for piece in Engine.POSSIBLE_PIECES_TO_PROMOTE:
             splitPositions = Engine.numSplit(gameStates[1].bbOfPieces[color + piece])
             for position in splitPositions:
                 if gameStates[1].canBeRemoved(position, "w" if gameStates[0].whiteTurn else "b"):
@@ -355,7 +357,7 @@ def calculatePossiblePromotions(gameStates: list, promotion: int):
                     possiblePromotions[(pos % 8, pos // 8)] = color + piece
     elif promotion == 1:
         color = "w" if gameStates[1].whiteTurn else "b"
-        for piece in possiblePiecesToPromote:
+        for piece in Engine.POSSIBLE_PIECES_TO_PROMOTE:
             splitPositions = Engine.numSplit(gameStates[0].bbOfPieces[color + piece])
             for position in splitPositions:
                 if gameStates[0].canBeRemoved(position, "w" if gameStates[1].whiteTurn else "b"):

@@ -6,6 +6,7 @@ MAX_INT = 18446744073709551615
 ONE = 0b1000000000000000000000000000000000000000000000000000000000000000
 COLORS = ("w", "b")
 PIECES = ("K", "Q", "R", "B", "N", "p")
+POSSIBLE_PIECES_TO_PROMOTE = ("Q", "R", "B", "N")
 RESERVE_PIECES = {"Q": 1, "R": 2, "B": 3, "N": 4, "p": 5}
 pieceScores = {"K": 0, "Q": 1200, "R": 600, "B": 400, "N": 400, "p": 100}
 COLORED_PIECES = [color + piece for color in COLORS for piece in PIECES]
@@ -748,6 +749,23 @@ class GameState:
                     if not ((sq & bbOfRows["1"] or sq & bbOfRows["8"]) and piece == "p"):
                         reserveMoves.append(Move(mul * RESERVE_PIECES[piece], sq, self, movedPiece=allyColor + piece, isReserve=True))
         moves[1] = reserveMoves
+
+    def updatePawnPromotionMoves(self, moves: list, other):
+        if isinstance(other, GameState):
+            color = "w" if self.whiteTurn else "b"
+            badPieces = []
+            for piece in POSSIBLE_PIECES_TO_PROMOTE:
+                isValidMove = False
+                splitPositions = numSplit(other.bbOfPieces[color + piece])
+                for position in splitPositions:
+                    if other.canBeRemoved(position, color):
+                        isValidMove = True
+                        break
+                if not isValidMove:
+                    badPieces.append(piece)
+            for i in range(len(moves[2]) - 1, -1, -1):
+                if moves[2][i].promotedTo in badPieces:
+                    moves[2].remove(moves[2][i])
 
     def getValidMoves(self):
         enpassantSq = self.enpassantSq
