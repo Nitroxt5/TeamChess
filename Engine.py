@@ -1,5 +1,5 @@
 import ctypes
-import random
+from random import randint, seed
 from copy import deepcopy
 
 MAX_INT = 18446744073709551615
@@ -31,7 +31,6 @@ bbOfRows = {"1": 0b0000000000000000000000000000000000000000000000000000000011111
             "6": 0b0000000000000000111111110000000000000000000000000000000000000000,
             "7": 0b0000000011111111000000000000000000000000000000000000000000000000,
             "8": 0b1111111100000000000000000000000000000000000000000000000000000000}
-# bbOfSquares = {col + row: val1 & val2 for col, val1 in bbOfColumns.items() for row, val2 in bbOfRows.items()}
 bbOfSquares = [val1 & val2 for val1 in bbOfColumns.values() for val2 in bbOfRows.values()]
 bbOfCenter = 0b0000000000000000000000000001100000011000000000000000000000000000
 bbOfCorrections = {"a": 0b0111111101111111011111110111111101111111011111110111111101111111,
@@ -54,19 +53,12 @@ def powTo(x: int, n: int):
     return y
 
 
-def numSplit(number: int):
-    num1 = number
-    num2 = num1
+def numSplit(number):
     result = []
-    counter = 0
-    while num1:
-        if num2 % 2 == 1:
-            num2 = num1 - powTo(2, counter)
-            num1 = num2
-            result.append(powTo(2, counter))
-            counter = 0
-        num2 >>= 1
-        counter += 1
+    while number:
+        tmp = number & -number
+        result.append(tmp)
+        number -= tmp
     return result
 
 
@@ -106,18 +98,18 @@ class GameState:
         self.bbOfOccupiedSquares = {"w": 0b0000000000000000000000000000000000000000000000001111111111111111,
                                     "b": 0b1111111111111111000000000000000000000000000000000000000000000000,
                                     "a": 0b1111111111111111000000000000000000000000000000001111111111111111}
-        # self.bbOfPieces = {"wK": 0b0000000000000000000000010000000000000000000000000000000000000000,
-        #                    "wQ": 0b0000000000000000000000000000000000000000000000000000000000000000,
-        #                    "wR": 0b0000000000000000000000000000000000000000000000000000000010000001,
-        #                    "wB": 0b0000000000000000000000000100000000000001000000000000000000000000,
-        #                    "wN": 0b0000000000000000000000000000000000000000000000010000000001000000,
-        #                    "wp": 0b0000000000000000000000000001000000000000001000001000001100000000,
-        #                    "bK": 0b0000001000000000000000000000000000000000000000000000000000000000,
-        #                    "bQ": 0b0000000000000100000000000000000000000000000000000000000000000000,
-        #                    "bR": 0b1000010000000000000000000000000000000000000000000000000000000000,
-        #                    "bB": 0b0010000000000000000000000010000000000000000000000000000000000000,
-        #                    "bN": 0b0000000000000000000000000000000000000000000000000100000000000000,
-        #                    "bp": 0b0000000011110001000001000000000000000000000000000000000000000000}
+        # self.bbOfPieces = {"wK": 0b0000000000000000001000000000000000000000000000000000000000000000,
+        #                    "wQ": 0b0000000000000000000000000000000000000000000000000000000000000010,
+        #                    "wR": 0b0000000000000000000000000000000000000000000000000000000000000001,
+        #                    "wB": 0b0000000000000000000000000000000000000000000000000000000000000100,
+        #                    "wN": 0b0000000000000000000000000000000000000000000000000000000000000000,
+        #                    "wp": 0b0000000000100000000000000000000000010000000110100000111100000000,
+        #                    "bK": 0b0000000010000000000000000000000000000000000000000000000000000000,
+        #                    "bQ": 0b0000000000000000000000000000000000000000000000000000000000000000,
+        #                    "bR": 0b0000000000000000000000000000000000000000000000000000000000000000,
+        #                    "bB": 0b0000000000000000000000000000000000000000000000000000000000000000,
+        #                    "bN": 0b0000000000000000000000000000000000000000000000000000000000000000,
+        #                    "bp": 0b0000000000000000000000000000000000000000000000000000000000000000}
         # self.bbOfOccupiedSquares = {"w": self.bbOfPieces["wK"] | self.bbOfPieces["wQ"] | self.bbOfPieces["wR"] | self.bbOfPieces["wB"] | self.bbOfPieces["wN"] | self.bbOfPieces["wp"],
         #                             "b": self.bbOfPieces["bK"] | self.bbOfPieces["bQ"] | self.bbOfPieces["bR"] | self.bbOfPieces["bB"] | self.bbOfPieces["bN"] | self.bbOfPieces["bp"],
         #                             "a": self.bbOfPieces["wK"] | self.bbOfPieces["wQ"] | self.bbOfPieces["wR"] | self.bbOfPieces["wB"] | self.bbOfPieces["wN"] | self.bbOfPieces["wp"] | self.bbOfPieces["bK"] | self.bbOfPieces["bQ"] | self.bbOfPieces["bR"] | self.bbOfPieces["bB"] | self.bbOfPieces["bN"] | self.bbOfPieces["bp"]}
@@ -134,6 +126,7 @@ class GameState:
         self.stalemate = False
         self.enpassantSq = 0
         self.enpassantSqLog = [self.enpassantSq]
+        # self.currentCastlingRight = 0b0
         self.currentCastlingRight = 0b1111
         self.castleRightsLog = [self.currentCastlingRight]
         self.isWhiteCastled = False
@@ -147,20 +140,20 @@ class GameState:
         self.zobristReserveTable = []
         self.boardHashLog = []
         self.boardHash = 0
-        self.boardReserveHash = {"w": 0, "b": 0}
+        self.boardReserveHash = 0
         self.hashBoard()
 
     def hashBoard(self):
-        random.seed(1)
+        seed(1)
         for i in range(64):
             newList = []
             for j in range(12):
-                newList.append(random.randint(0, MAX_INT))
+                newList.append(randint(0, MAX_INT))
             self.zobristTable.append(newList)
         for i in range(17):
             newList = []
             for j in range(12):
-                newList.append(random.randint(0, MAX_INT))
+                newList.append(randint(0, MAX_INT))
             self.zobristReserveTable.append(newList)
         for piece in COLORED_PIECES:
             splitPositions = numSplit(self.bbOfPieces[piece])
@@ -189,10 +182,10 @@ class GameState:
                 self.boardHash ^= self.zobristTable[move.endLoc - 2][COLORED_PIECES_CODES[f"{move.movedPiece[0]}R"]]
 
     def updateReserveHash(self):
-        self.boardReserveHash = {"w": 0, "b": 0}
+        self.boardReserveHash = 0
         for color, value in self.reserve.items():
             for piece, count in value.items():
-                self.boardReserveHash[color] ^= self.zobristReserveTable[count][COLORED_PIECES_CODES[color + piece]]
+                self.boardReserveHash ^= self.zobristReserveTable[count][COLORED_PIECES_CODES[color + piece]]
 
     def createThreatTable(self):
         self.bbOfThreats["w"] = 0
@@ -768,8 +761,6 @@ class GameState:
                     moves[2].remove(moves[2][i])
 
     def getValidMoves(self):
-        enpassantSq = self.enpassantSq
-        currentCastlingRight = self.currentCastlingRight
         moves = self.getPossibleMoves()
         if self.whiteTurn:
             self.getCastleMoves(self.bbOfPieces["wK"], moves)
@@ -800,8 +791,6 @@ class GameState:
                 self.stalemate = True
             else:
                 self.stalemate = False
-        self.enpassantSq = enpassantSq
-        self.currentCastlingRight = currentCastlingRight
         return moves
 
     def inCheck(self):
@@ -893,7 +882,7 @@ class Move:
                   "bQs": 0b0010000000000000000000000000000000000000000000000000000000000000}
 
     def __init__(self, startSq=0, endSq=0, gameState: GameState = None, movedPiece: str = None, isEnpassant=False,
-                 isCastle=False, isFirst=False, isReserve=False, promotedTo=None, promotedPiecePosition=0):
+                 isCastle=False, isFirst=False, isReserve=False, promotedTo="Q", promotedPiecePosition=0):
         if gameState is not None:
             self.isReserve = isReserve
             if self.isReserve:
@@ -912,6 +901,7 @@ class Move:
                     self.moveID = 0
                 else:
                     self.moveID = (70 + self.startLoc) * 100 + self.endLoc
+                self.promotionMoveID = 0
                 self.promotedTo = None
                 self.promotedPiecePosition = 0
             else:
@@ -934,8 +924,9 @@ class Move:
                 self.isPawnPromotion = (self.movedPiece == "wp" and not self.endSquare & bbOfCorrections["8"]) or (
                         self.movedPiece == "bp" and not self.endSquare & bbOfCorrections["1"])
                 self.promotedTo = promotedTo
+                self.promotionMoveID = 0
                 if self.isPawnPromotion and self.promotedTo is not None:
-                    self.moveID += RESERVE_PIECES[self.promotedTo] * 10
+                    self.promotionMoveID = RESERVE_PIECES[self.promotedTo] * 10
                 self.promotedPiecePosition = promotedPiecePosition
                 self.isCapture = False
                 if self.capturedPiece is not None and self.movedPiece is not None:
@@ -950,7 +941,7 @@ class Move:
 
     def __eq__(self, other):
         if isinstance(other, Move):
-            return self.moveID == other.moveID
+            return self.moveID == other.moveID and self.promotionMoveID == other.promotionMoveID
         return False
 
     def __repr__(self):
