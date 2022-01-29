@@ -196,13 +196,10 @@ def main():
                     moveMade = [False, False]
         if (gameStates[0].checkmate and not gameStates[0].whiteTurn) or (gameStates[1].checkmate and gameStates[1].whiteTurn):
             gameOver = True
-            drawTopText(screen, "Team 1 wins")
         elif gameStates[0].stalemate and gameStates[1].stalemate:
             gameOver = True
-            drawTopText(screen, "Draw")
         elif (gameStates[0].checkmate and gameStates[0].whiteTurn) or (gameStates[1].checkmate and not gameStates[1].whiteTurn):
             gameOver = True
-            drawTopText(screen, "Team 2 wins")
         for i in range(2):
             if not gameOver and not playerTurn[i]:
                 if AIExists and activeBoard == i:
@@ -225,7 +222,8 @@ def main():
                         if AIMove.isPawnPromotion:
                             possiblePromotions = calculatePossiblePromotions(gameStates, i)
                             possibleRequiredPromotions = [Engine.ONE >> (8 * key[1] + key[0]) for key, value in possiblePromotions.items() if value[1] == AIMove.promotedTo]
-                            AIMove = Engine.Move(AIMove.startSquare, AIMove.endSquare, gameStates[i], movedPiece=AIMove.movedPiece, promotedTo=AIMove.promotedTo, promotedPiecePosition=possibleRequiredPromotions[randint(0, len(possibleRequiredPromotions) - 1)])
+                            promotion = possibleRequiredPromotions[0] if len(possibleRequiredPromotions) == 1 else possibleRequiredPromotions[randint(0, len(possibleRequiredPromotions) - 1)]
+                            AIMove = Engine.Move(AIMove.startSquare, AIMove.endSquare, gameStates[i], movedPiece=AIMove.movedPiece, promotedTo=AIMove.promotedTo, promotedPiecePosition=promotion)
                         gameStates[i].makeMove(AIMove, gameStates[1 - i])
                         for j in range(2):
                             validMoves[j] = gameStates[j].getValidMoves()

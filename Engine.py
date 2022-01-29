@@ -133,8 +133,6 @@ class GameState:
         self.isBlackCastled = False
         self.isWhiteInCheck = False
         self.isBlackInCheck = False
-        self.pieceScoreDiff = 0
-        self.pieceScoreDiffLog = []
         self.reserve = {"w": {"Q": 0, "R": 0, "B": 0, "N": 0, "p": 0}, "b": {"Q": 0, "R": 0, "B": 0, "N": 0, "p": 0}}
         self.zobristTable = []
         self.zobristReserveTable = []
@@ -301,18 +299,13 @@ class GameState:
         self.createRookThreatTable(color, True)
 
     def makeMove(self, move, other=None):
-        color = 1 if self.whiteTurn else -1
-        self.pieceScoreDiffLog.append(self.pieceScoreDiff)
         if move.capturedPiece is not None:
-            self.pieceScoreDiff += color * pieceScores[move.capturedPiece[1]]
             if isinstance(other, GameState):
                 other.reserve[move.capturedPiece[0]][move.capturedPiece[1]] += 1
                 other.updateReserveHash()
         if move.isReserve:
             self.reserve[move.movedPiece[0]][move.movedPiece[1]] -= 1
             self.updateReserveHash()
-            self.pieceScoreDiffLog.append(self.pieceScoreDiff)
-            self.pieceScoreDiff += color * pieceScores[move.movedPiece[1]] / 5
         if not move.isReserve:
             self.unsetSqState(move.capturedPiece, move.endSquare)
             self.unsetSqState(move.movedPiece, move.startSquare)
@@ -352,7 +345,6 @@ class GameState:
             self.setSqState(f"{move.movedPiece[0] + move.promotedTo}", move.endSquare)
             if isinstance(other, GameState):
                 other.unsetSqState(f"{move.movedPiece[0] + move.promotedTo}", move.promotedPiecePosition)
-                other.pieceScoreDiff -= color * pieceScores[move.promotedTo]
                 other.boardHash ^= other.zobristTable[getPower(move.promotedPiecePosition)][COLORED_PIECES_CODES[move.movedPiece[0] + move.promotedTo]]
                 other.reserve[move.movedPiece[0]][move.movedPiece[1]] += 1
                 other.updateReserveHash()
@@ -367,7 +359,6 @@ class GameState:
     def undoMove(self):
         if len(self.gameLog) != 0:
             move = self.gameLog.pop()
-            self.pieceScoreDiff = self.pieceScoreDiffLog.pop()
             self.boardHash = self.boardHashLog.pop()
             if move.isReserve:
                 self.reserve[move.movedPiece[0]][move.movedPiece[1]] += 1

@@ -200,6 +200,8 @@ def scoreRookPositioning(gameState: Engine.GameState):
         score += rooksCount * 20
     whiteSplitPositions = Engine.numSplit(gameState.bbOfPieces["wR"])
     blackSplitPositions = Engine.numSplit(gameState.bbOfPieces["bR"])
+    score += (len(whiteSplitPositions) - len(blackSplitPositions)) * Engine.pieceScores["R"]
+    score += int((gameState.reserve["w"]["R"] - gameState.reserve["b"]["R"]) * Engine.pieceScores["R"] * 0.8)
     for position in whiteSplitPositions:
         pos = Engine.getPower(position)
         score += piecePositionScores["R"][pos // 8][pos % 8] * 10
@@ -232,6 +234,8 @@ def scoreKnightPositioning(gameState: Engine.GameState):
     score = (Engine.getBitsCount(knightMoves["w"]) - Engine.getBitsCount(knightMoves["b"])) * 3
     whiteSplitPositions = Engine.numSplit(gameState.bbOfPieces["wN"])
     blackSplitPositions = Engine.numSplit(gameState.bbOfPieces["bN"])
+    score += (len(whiteSplitPositions) - len(blackSplitPositions)) * Engine.pieceScores["N"]
+    score += int((gameState.reserve["w"]["N"] - gameState.reserve["b"]["N"]) * Engine.pieceScores["N"] * 0.8)
     for position in whiteSplitPositions:
         pos = Engine.getPower(position)
         score += piecePositionScores["N"][pos // 8][pos % 8] * 10
@@ -288,6 +292,8 @@ def scoreBishopPositioning(gameState: Engine.GameState):
     whiteSplitPositions = Engine.numSplit(gameState.bbOfPieces["wB"])
     blackSplitPositions = Engine.numSplit(gameState.bbOfPieces["bB"])
     score *= 4
+    score += (len(whiteSplitPositions) - len(blackSplitPositions)) * Engine.pieceScores["B"]
+    score += int((gameState.reserve["w"]["B"] - gameState.reserve["b"]["B"]) * Engine.pieceScores["B"] * 0.8)
     for position in whiteSplitPositions:
         pos = Engine.getPower(position)
         score += piecePositionScores["B"][pos // 8][pos % 8] * 10
@@ -350,6 +356,8 @@ def scorePawnPositioning(gameState: Engine.GameState):
             score += 30
     whiteSplitPositions = Engine.numSplit(gameState.bbOfPieces["wp"])
     blackSplitPositions = Engine.numSplit(gameState.bbOfPieces["bp"])
+    score += (len(whiteSplitPositions) - len(blackSplitPositions)) * Engine.pieceScores["p"]
+    score += int((gameState.reserve["w"]["p"] - gameState.reserve["b"]["p"]) * Engine.pieceScores["p"] * 0.8)
     for position in whiteSplitPositions:
         pos = Engine.getPower(position)
         score += piecePositionScores["wp"][pos // 8][pos % 8] * 10
@@ -368,6 +376,8 @@ def scoreQueenPositioning(gameState: Engine.GameState):
             score -= 20
     whiteSplitPositions = Engine.numSplit(gameState.bbOfPieces["wQ"])
     blackSplitPositions = Engine.numSplit(gameState.bbOfPieces["bQ"])
+    score += (len(whiteSplitPositions) - len(blackSplitPositions)) * Engine.pieceScores["Q"]
+    score += int((gameState.reserve["w"]["Q"] - gameState.reserve["b"]["Q"]) * Engine.pieceScores["Q"] * 0.8)
     for position in whiteSplitPositions:
         pos = Engine.getPower(position)
         score += piecePositionScores["Q"][pos // 8][pos % 8] * 10
@@ -403,5 +413,4 @@ def scoreBoard(gameState: Engine.GameState, validMoves: list):
         score -= len(validMoves)
     for value in pieceAdditionalPositionScores.values():
         score += value(gameState)
-    score += gameState.pieceScoreDiff
     return score
