@@ -111,7 +111,10 @@ def negaScoutAI(gameState: Engine.GameState, otherGameState: Engine.GameState, v
     oneDepthSearch(gameState, moves, turn, depth)
     moves.sort(key=lambda mov: mov.estimatedScore, reverse=True)
     moves.sort(key=lambda mov: mov.isKiller, reverse=True)
+    silentMoveCounter = 19 + len(validMoves[1]) * 2 // 3
     for move in moves:
+        if not silentMoveCounter:
+            break
         gameState.makeMove(move)
         inTable = False
         score = 0
@@ -130,6 +133,7 @@ def negaScoutAI(gameState: Engine.GameState, otherGameState: Engine.GameState, v
             if depth == DEPTH or move.isCapture or gameState.isWhiteInCheck or gameState.isBlackInCheck:
                 score = -negaScoutAI(gameState, otherGameState, nextMoves, -beta, -alpha, -turn, depth - 1, globalDepth)
             else:
+                silentMoveCounter -= 1
                 score = -negaScoutAI(gameState, otherGameState, nextMoves, -alpha - 1, -alpha, -turn, depth - R, globalDepth)
                 if alpha < score < beta:
                     score = -negaScoutAI(gameState, otherGameState, nextMoves, -beta, -score, -turn, depth - 1, globalDepth)

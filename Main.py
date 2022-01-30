@@ -52,11 +52,11 @@ def main():
     validMoves = [gameStates[0].getValidMoves(), gameStates[1].getValidMoves()]
     moveMade = [False, False]
     gameOver = False
-    AIThinking = [False, False]
+    AIThinking = False
     AIThinkingTime = [0, 0]
     AIPositionCounter = [0, 0]
-    AIProcess = [Process(), Process()]
-    returnQ = [Queue(), Queue()]
+    AIProcess = Process()
+    returnQ = Queue()
     selectedSq = [(), ()]
     clicks = [[], []]
     while working:
@@ -66,12 +66,12 @@ def main():
         for e in pg.event.get():
             if e.type == pg.QUIT:
                 gameOver = True
+                if AIThinking:
+                    AIProcess.terminate()
+                    AIProcess.join()
+                    AIProcess.close()
+                    AIThinking = False
                 for i in range(2):
-                    if AIThinking[i]:
-                        AIProcess[i].terminate()
-                        AIProcess[i].join()
-                        AIProcess[i].close()
-                        AIThinking[i] = False
                     print(f"Board {i + 1}:")
                     print(gameStates[i].gameLog)
                     if not boardPlayers[i][0] and not boardPlayers[i][1]:
@@ -176,41 +176,35 @@ def main():
                             clicks = [[], []]
             elif e.type == pg.KEYDOWN:
                 if e.key == pg.K_r:
-                    for i in range(2):
-                        if AIThinking[i]:
-                            AIThinking[i] = False
-                            AIProcess[i].terminate()
-                            AIProcess[i].join()
-                            AIProcess[i].close()
-                            playerTurn[i] = (gameStates[i].whiteTurn and boardPlayers[i][0]) or (not gameStates[i].whiteTurn and boardPlayers[i][1])
+                    if AIThinking:
+                        AIProcess.terminate()
+                        AIProcess.join()
+                        AIProcess.close()
+                        AIThinking = False
                     gameStates = [Engine.GameState(), Engine.GameState()]
                     validMoves = [gameStates[0].getValidMoves(), gameStates[1].getValidMoves()]
                     AIThinkingTime = [0, 0]
                     AIPositionCounter = [0, 0]
-                    if gameOver:
-                        gameOver = False
-                        playerTurn = [(gameStates[0].whiteTurn and boardPlayers[0][0]) or (not gameStates[0].whiteTurn and boardPlayers[0][1]),
-                                      (gameStates[1].whiteTurn and boardPlayers[1][0]) or (not gameStates[1].whiteTurn and boardPlayers[1][1])]
+                    activeBoard = 0
+                    gameOver = False
                     selectedSq = [(), ()]
                     clicks = [[], []]
                     moveMade = [False, False]
-        if (gameStates[0].checkmate and not gameStates[0].whiteTurn) or (gameStates[1].checkmate and gameStates[1].whiteTurn):
-            gameOver = True
-        elif gameStates[0].stalemate and gameStates[1].stalemate:
-            gameOver = True
-        elif (gameStates[0].checkmate and gameStates[0].whiteTurn) or (gameStates[1].checkmate and not gameStates[1].whiteTurn):
-            gameOver = True
+                    playerTurn = [(gameStates[0].whiteTurn and boardPlayers[0][0]) or (not gameStates[0].whiteTurn and boardPlayers[0][1]),
+                                  (gameStates[1].whiteTurn and boardPlayers[1][0]) or (not gameStates[1].whiteTurn and boardPlayers[1][1])]
+        if not gameOver:
+            gameOver = gameOverCheck(gameStates, AIExists)
         for i in range(2):
             if not gameOver and not playerTurn[i]:
                 if AIExists and activeBoard == i:
                     playerName = getPlayerName(gameStates[i], playerNames[i * 2:(i + 1) * 2])
-                    if not AIThinking[i]:
+                    if not AIThinking:
                         print(f"{playerName} AI is thinking...")
-                        AIThinking[i] = True
-                        AIProcess[i] = Process(target=AI.negaScoutMoveAI, args=(gameStates[i], gameStates[1 - i], validMoves[i], returnQ[i]))
-                        AIProcess[i].start()
-                    if not AIProcess[i].is_alive():
-                        AIMove, thinkingTime, positionCounter = returnQ[i].get()
+                        AIThinking = True
+                        AIProcess = Process(target=AI.negaScoutMoveAI, args=(gameStates[i], gameStates[1 - i], validMoves[i], returnQ))
+                        AIProcess.start()
+                    if not AIProcess.is_alive():
+                        AIMove, thinkingTime, positionCounter = returnQ.get()
                         AIThinkingTime[i] += thinkingTime
                         AIPositionCounter[i] += positionCounter
                         print(f"{playerName} AI came up with a move")
@@ -222,32 +216,45 @@ def main():
                         if AIMove.isPawnPromotion:
                             possiblePromotions = calculatePossiblePromotions(gameStates, i)
                             possibleRequiredPromotions = [Engine.ONE >> (8 * key[1] + key[0]) for key, value in possiblePromotions.items() if value[1] == AIMove.promotedTo]
-                            promotion = possibleRequiredPromotions[0] if len(possibleRequiredPromotions) == 1 else possibleRequiredPromotions[randint(0, len(possibleRequiredPromotions) - 1)]
+                            promotion = possibleRequiredPromotions[0] if len(possibleRequiredPromotions) <= 1 else possibleRequiredPromotions[randint(0, len(possibleRequiredPromotions) - 1)]
                             AIMove = Engine.Move(AIMove.startSquare, AIMove.endSquare, gameStates[i], movedPiece=AIMove.movedPiece, promotedTo=AIMove.promotedTo, promotedPiecePosition=promotion)
                         gameStates[i].makeMove(AIMove, gameStates[1 - i])
                         for j in range(2):
                             validMoves[j] = gameStates[j].getValidMoves()
                             gameStates[j].updatePawnPromotionMoves(validMoves[j], gameStates[1 - j])
+                        if not gameOver:
+                            gameOver = gameOverCheck(gameStates, AIExists)
                         moveMade[i] = True
                         activeBoard = 1 - activeBoard
-                        AIThinking[i] = False
+                        AIThinking = False
                         selectedSq[i] = ()
                         clicks[i] = []
             if moveMade[i]:
                 moveMade[i] = False
         drawGameState(screen, gameStates, validMoves, playerNames, selectedSq)
         if (gameStates[0].checkmate and not gameStates[0].whiteTurn) or (gameStates[1].checkmate and gameStates[1].whiteTurn):
-            gameOver = True
             drawTopText(screen, "Team 1 wins")
         elif gameStates[0].stalemate and gameStates[1].stalemate:
-            gameOver = True
+            drawTopText(screen, "Draw")
+        elif AIExists and (gameStates[0].stalemate or gameStates[1].stalemate):
             drawTopText(screen, "Draw")
         elif (gameStates[0].checkmate and gameStates[0].whiteTurn) or (gameStates[1].checkmate and not gameStates[1].whiteTurn):
-            gameOver = True
             drawTopText(screen, "Team 2 wins")
         # if len(gameState.gameLog) == 40:
         #     gameOver = True
         pg.display.flip()
+
+
+def gameOverCheck(gameStates: list, AIExists: bool):
+    if (gameStates[0].checkmate and not gameStates[0].whiteTurn) or (gameStates[1].checkmate and gameStates[1].whiteTurn):
+        return True
+    elif gameStates[0].stalemate and gameStates[1].stalemate:
+        return True
+    elif AIExists and (gameStates[0].stalemate or gameStates[1].stalemate):
+        return True
+    elif (gameStates[0].checkmate and gameStates[0].whiteTurn) or (gameStates[1].checkmate and not gameStates[1].whiteTurn):
+        return True
+    return False
 
 
 def highlightSq(screen: pg.Surface, gameStates: list, validMoves: list, selectedSq: list):
