@@ -140,6 +140,7 @@ class GameState:
         self.boardHash = 0
         self.boardReserveHash = 0
         self.hashBoard()
+        self.updateReserveHash()
 
     def hashBoard(self):
         seed(1)
@@ -803,6 +804,7 @@ class GameState:
         piece = self.getPieceBySquare(square)
         whiteInCheck = self.isWhiteInCheck
         blackInCheck = self.isBlackInCheck
+        currentThreatTable = deepcopy(self.bbOfThreats)
         if piece is not None:
             if piece[0] == otherTurn:
                 if piece[1] != "p" and piece[1] != "K":
@@ -812,15 +814,15 @@ class GameState:
                     self.whiteTurn = not self.whiteTurn
                     self.inCheck()
                     self.setSqState(piece, square)
-                    self.createThreatTable()
+                    self.bbOfThreats = deepcopy(currentThreatTable)
                     if whiteInCheck == self.isWhiteInCheck and blackInCheck == self.isBlackInCheck:
-                        self.inCheck()
+                        self.isWhiteInCheck = whiteInCheck
+                        self.isBlackInCheck = blackInCheck
                         self.whiteTurn = not self.whiteTurn
-                        self.inCheck()
                         return True
-                    self.inCheck()
                     self.whiteTurn = not self.whiteTurn
-                    self.inCheck()
+                    self.isWhiteInCheck = whiteInCheck
+                    self.isBlackInCheck = blackInCheck
         return False
 
     def setSqState(self, piece: str, piecePosition: int):

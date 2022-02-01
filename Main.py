@@ -193,6 +193,7 @@ def main():
                     selectedSq = [(), ()]
                     clicks = [[], []]
                     moveMade = [False, False]
+                    hourglass = Hourglass(0)
                     playerTurn = [(gameStates[0].whiteTurn and boardPlayers[0][0]) or (not gameStates[0].whiteTurn and boardPlayers[0][1]),
                                   (gameStates[1].whiteTurn and boardPlayers[1][0]) or (not gameStates[1].whiteTurn and boardPlayers[1][1])]
         if not gameOver:
@@ -236,7 +237,8 @@ def main():
             if moveMade[i]:
                 moveMade[i] = False
         drawGameState(screen, gameStates, validMoves, playerNames, selectedSq)
-        hourglass.update(screen)
+        if not gameOver:
+            hourglass.update(screen)
         if (gameStates[0].checkmate and not gameStates[0].whiteTurn) or (gameStates[1].checkmate and gameStates[1].whiteTurn):
             drawTopText(screen, "Team 1 wins")
         elif gameStates[0].stalemate and gameStates[1].stalemate:
@@ -245,7 +247,7 @@ def main():
             drawTopText(screen, "Draw")
         elif (gameStates[0].checkmate and gameStates[0].whiteTurn) or (gameStates[1].checkmate and not gameStates[1].whiteTurn):
             drawTopText(screen, "Team 2 wins")
-        # if len(gameState.gameLog) == 40:
+        # if len(gameStates[0].gameLog) == 1:
         #     gameOver = True
         pg.display.flip()
 
