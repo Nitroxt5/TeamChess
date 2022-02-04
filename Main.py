@@ -21,12 +21,12 @@ EMPTY_PIECES = ["e" + piece for piece in Engine.PIECES if piece != "K"]
 SKIN_PACK = 2
 FPS = 60
 IMAGES = {}
+SOUNDS = {}
 
 
-def loadImages():
+def loadResources():
     for piece in Engine.COLORED_PIECES:
         IMAGES[piece] = pg.transform.scale(pg.image.load(f"images/{SKIN_PACK}/{piece}.png"), (SQ_SIZE, SQ_SIZE))
-        # IMAGES[piece] = pg.image.load(f"images/{piece}.png")
     for piece in EMPTY_PIECES:
         IMAGES[piece] = pg.transform.scale(pg.image.load(f"images/{SKIN_PACK}/{piece}.png"), (SQ_SIZE, SQ_SIZE))
     IMAGES["icon"] = pg.image.load("images/icon.png")
@@ -34,15 +34,16 @@ def loadImages():
     IMAGES["frame"] = pg.transform.scale(pg.image.load("images/frame.png"), (SQ_SIZE, SQ_SIZE))
     IMAGES["frame"].set_alpha(200)
     IMAGES["hourglass"] = pg.transform.scale(pg.image.load("images/hourglass.png"), (SQ_SIZE, SQ_SIZE))
+    SOUNDS["move"] = pg.mixer.Sound("sounds/move.wav")
     # IMAGES["BG"] = pg.transform.scale(pg.image.load("images/BG.png"), (SCREEN_WIDTH, SCREEN_HEIGHT))
 
 
 def main():
     screen = pg.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-    loadImages()
+    loadResources()
     clock = pg.time.Clock()
     # boardPlayers = [(True, True), (True, True)]
-    boardPlayers = [(False, False), (False, False)]
+    boardPlayers = [(True, False), (False, False)]
     playerNames = ["Player 1", "Player 2", "Player 3", "Player 4"]
     AIExists = not (boardPlayers[0][0] and boardPlayers[0][1] and boardPlayers[1][0] and boardPlayers[1][1])
     activeBoard = 0
@@ -61,10 +62,18 @@ def main():
     selectedSq = [(), ()]
     clicks = [[], []]
     hourglass = Hourglass(0)
+    noAIActivePlayer = [0, 2]
+    hourglasses = [Hourglass(noAIActivePlayer[0]), Hourglass(noAIActivePlayer[1])]
     while working:
         clock.tick(FPS)
         playerTurn = [(gameStates[0].whiteTurn and boardPlayers[0][0]) or (not gameStates[0].whiteTurn and boardPlayers[0][1]),
                       (gameStates[1].whiteTurn and boardPlayers[1][0]) or (not gameStates[1].whiteTurn and boardPlayers[1][1])]
+        drawGameState(screen, gameStates, validMoves, playerNames, selectedSq)
+        if not gameOver and AIExists:
+            hourglass.update(screen)
+        elif not gameOver and not AIExists:
+            hourglasses[0].update(screen)
+            hourglasses[1].update(screen)
         for e in pg.event.get():
             if e.type == pg.QUIT:
                 gameOver = True
@@ -129,9 +138,9 @@ def main():
                                         isReserve = True
                                         movedPiece = color + Engine.PIECES[clicks[boardNum][0][0]]
                                     else:
-                                        startSq = Engine.ONE >> (8 * clicks[boardNum][0][1] + clicks[boardNum][0][0])
+                                        startSq = Engine.bbOfSquares[clicks[boardNum][0][1]][clicks[boardNum][0][0]]
                                     if 0 <= clicks[boardNum][1][1] <= 7:
-                                        endSq = Engine.ONE >> (8 * clicks[boardNum][1][1] + clicks[boardNum][1][0])
+                                        endSq = Engine.bbOfSquares[clicks[boardNum][1][1]][clicks[boardNum][1][0]]
                                     elif clicks[boardNum][1][1] == -1 or clicks[boardNum][1][1] == 8:
                                         endSq = -1
                                     else:
@@ -153,7 +162,11 @@ def main():
                                                     selectedSq[boardNum] = ()
                                                     clicks[boardNum] = []
                                                     activeBoard = 1 - activeBoard
-                                                    hourglass = Hourglass(getCurrentPlayer(gameStates, activeBoard))
+                                                    if AIExists:
+                                                        hourglass = Hourglass(getCurrentPlayer(gameStates, activeBoard))
+                                                    else:
+                                                        noAIActivePlayer[boardNum] = 5 - (1 - boardNum) * 4 - noAIActivePlayer[boardNum]
+                                                        hourglasses[boardNum] = Hourglass(noAIActivePlayer[boardNum])
                                                 break
                                     if not moveMade[boardNum]:
                                         clicks[boardNum] = [deepcopy(selectedSq[boardNum])]
@@ -177,6 +190,8 @@ def main():
                         else:
                             selectedSq = [(), ()]
                             clicks = [[], []]
+                        drawGameState(screen, gameStates, validMoves, playerNames, selectedSq)
+                        pg.display.flip()
             elif e.type == pg.KEYDOWN:
                 if e.key == pg.K_r:
                     if AIThinking:
@@ -194,8 +209,11 @@ def main():
                     clicks = [[], []]
                     moveMade = [False, False]
                     hourglass = Hourglass(0)
+                    hourglasses = [Hourglass(noAIActivePlayer[0]), Hourglass(noAIActivePlayer[1])]
                     playerTurn = [(gameStates[0].whiteTurn and boardPlayers[0][0]) or (not gameStates[0].whiteTurn and boardPlayers[0][1]),
                                   (gameStates[1].whiteTurn and boardPlayers[1][0]) or (not gameStates[1].whiteTurn and boardPlayers[1][1])]
+                    drawGameState(screen, gameStates, validMoves, playerNames, selectedSq)
+                    pg.display.flip()
         if not gameOver:
             gameOver = gameOverCheck(gameStates, AIExists)
         for i in range(2):
@@ -219,7 +237,7 @@ def main():
                             print(f"{playerName} AI made a random move")
                         if AIMove.isPawnPromotion:
                             possiblePromotions = calculatePossiblePromotions(gameStates, i)
-                            possibleRequiredPromotions = [Engine.ONE >> (8 * key[1] + key[0]) for key, value in possiblePromotions.items() if value[1] == AIMove.promotedTo]
+                            possibleRequiredPromotions = [Engine.bbOfSquares[key[1]][key[0]] for key, value in possiblePromotions.items() if value[1] == AIMove.promotedTo]
                             promotion = possibleRequiredPromotions[randint(0, len(possibleRequiredPromotions) - 1)]
                             AIMove = Engine.Move(AIMove.startSquare, AIMove.endSquare, gameStates[i], movedPiece=AIMove.movedPiece, promotedTo=AIMove.promotedTo, promotedPiecePosition=promotion)
                         gameStates[i].makeMove(AIMove, gameStates[1 - i])
@@ -235,10 +253,10 @@ def main():
                         selectedSq[i] = ()
                         clicks[i] = []
             if moveMade[i]:
+                drawGameState(screen, gameStates, validMoves, playerNames, selectedSq)
+                SOUNDS["move"].play()
+                pg.display.flip()
                 moveMade[i] = False
-        drawGameState(screen, gameStates, validMoves, playerNames, selectedSq)
-        if not gameOver:
-            hourglass.update(screen)
         if (gameStates[0].checkmate and not gameStates[0].whiteTurn) or (gameStates[1].checkmate and gameStates[1].whiteTurn):
             drawTopText(screen, "Team 1 wins")
         elif gameStates[0].stalemate and gameStates[1].stalemate:
@@ -280,7 +298,7 @@ def highlightSq(screen: pg.Surface, gameStates: list, validMoves: list, selected
         if selectedSq[i] != ():
             color = "w" if selectedSq[i][1] == 8 else "b"
             isReserve = True if selectedSq[i][1] == -1 or selectedSq[i][1] == 8 else False
-            square = Engine.ONE >> (8 * selectedSq[i][1] + selectedSq[i][0]) if not isReserve else -1
+            square = Engine.bbOfSquares[selectedSq[i][1]][selectedSq[i][0]] if not isReserve else -abs(selectedSq[i][0])
             piece = gameStates[i].getPieceBySquare(square) if not isReserve else color + Engine.PIECES[selectedSq[i][0]]
             if piece is not None:
                 s = pg.Surface((SQ_SIZE, SQ_SIZE))
@@ -320,7 +338,7 @@ def highlightLastMove(screen: pg.Surface, gameStates: list, selectedSq: list):
         if selectedSq[i] != ():
             color = "w" if selectedSq[i][1] == 8 else "b"
             isReserve = True if selectedSq[i][1] == -1 or selectedSq[i][1] == 8 else False
-            square = Engine.ONE >> (8 * selectedSq[i][1] + selectedSq[i][0]) if not isReserve else -1
+            square = Engine.bbOfSquares[selectedSq[i][1]][selectedSq[i][0]] if not isReserve else -1
             piece = gameStates[i].getPieceBySquare(square) if not isReserve else color + Engine.PIECES[selectedSq[i][0]]
             if isReserve and (gameStates[i].reserve[color][Engine.PIECES[selectedSq[i][0]]] == 0 or color == ("b" if gameStates[i].whiteTurn else "w")):
                 piece = None
@@ -459,7 +477,7 @@ def getPromotion(screen: pg.Surface, gameStates: list, playerNames: list, boardN
                             column = (location[0] - MARGIN) // SQ_SIZE
                             row = (location[1] - MARGIN) // SQ_SIZE
                             if (column, row) in possiblePromotions:
-                                return Engine.ONE >> (8 * row + column), possiblePromotions[(column, row)]
+                                return Engine.bbOfSquares[row][column], possiblePromotions[(column, row)]
                     if boardNum == 0:
                         if MARGIN_LEFT < location[0] < MARGIN_LEFT + BOARD_SIZE and MARGIN < location[1] < MARGIN + BOARD_SIZE:
                             column = (location[0] - MARGIN_LEFT) // SQ_SIZE
@@ -467,7 +485,7 @@ def getPromotion(screen: pg.Surface, gameStates: list, playerNames: list, boardN
                             column = Engine.DIMENSION - column - 1
                             row = Engine.DIMENSION - row - 1
                             if (column, row) in possiblePromotions:
-                                return Engine.ONE >> (8 * row + column), possiblePromotions[(column, row)]
+                                return Engine.bbOfSquares[row][column], possiblePromotions[(column, row)]
 
 
 def drawTopText(screen: pg.Surface, text: str):
@@ -509,26 +527,6 @@ class Hourglass:
 def drawPlayersNames(screen: pg.Surface, names: list):
     font = pg.font.SysFont("Helvetica", int(FONT_SIZE * 1.5), True, False)
     textObj = font.render(names[0], False, pg.Color("gray"))
-
-    # if currentPlayer == 0:
-    #     rect = pg.Rect(MARGIN + (BOARD_SIZE - textObj.get_width()) // 2, SCREEN_HEIGHT - (MARGIN + textObj.get_height()) // 2, textObj.get_width() + 2, textObj.get_height() + 2)
-    # elif currentPlayer == 1:
-    #     rect = pg.Rect(MARGIN + (BOARD_SIZE - textObj.get_width()) // 2, (MARGIN - textObj.get_height()) // 2, textObj.get_width() + 2, textObj.get_height() + 2)
-    # elif currentPlayer == 2:
-    #     rect = pg.Rect(MARGIN_LEFT + (BOARD_SIZE - textObj.get_width()) // 2, (MARGIN - textObj.get_height()) // 2, textObj.get_width() + 2, textObj.get_height() + 2)
-    # else:
-    #     rect = pg.Rect(MARGIN_LEFT + (BOARD_SIZE - textObj.get_width()) // 2, SCREEN_HEIGHT - (MARGIN + textObj.get_height()) // 2, textObj.get_width() + 2, textObj.get_height() + 2)
-    # pg.draw.rect(screen, pg.Color("red"), rect)
-
-    # if currentPlayer == 0:
-    #     rect = pg.Rect(MARGIN + (BOARD_SIZE - textObj.get_width()) // 2 - SQ_SIZE, SCREEN_HEIGHT - (MARGIN + SQ_SIZE) // 2, SQ_SIZE, SQ_SIZE)
-    # elif currentPlayer == 1:
-    #     rect = pg.Rect(MARGIN + (BOARD_SIZE - textObj.get_width()) // 2 - SQ_SIZE, (MARGIN - SQ_SIZE) // 2, SQ_SIZE, SQ_SIZE)
-    # elif currentPlayer == 2:
-    #     rect = pg.Rect(MARGIN_LEFT + (BOARD_SIZE - textObj.get_width()) // 2 - SQ_SIZE, (MARGIN - SQ_SIZE) // 2, SQ_SIZE, SQ_SIZE)
-    # else:
-    #     rect = pg.Rect(MARGIN_LEFT + (BOARD_SIZE - textObj.get_width()) // 2 - SQ_SIZE, SCREEN_HEIGHT - (MARGIN + SQ_SIZE) // 2, SQ_SIZE, SQ_SIZE)
-    # screen.blit(IMAGES["hourglass"], rect)
 
     textLocation = pg.Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT).move(MARGIN + (BOARD_SIZE - textObj.get_width()) // 2,
                                                                    SCREEN_HEIGHT - (MARGIN + textObj.get_height()) // 2)
