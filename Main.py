@@ -43,7 +43,7 @@ def main():
     loadResources()
     clock = pg.time.Clock()
     # boardPlayers = [(True, True), (True, True)]
-    boardPlayers = [(True, False), (False, False)]
+    boardPlayers = [(False, False), (False, True)]
     playerNames = ["Player 1", "Player 2", "Player 3", "Player 4"]
     AIExists = not (boardPlayers[0][0] and boardPlayers[0][1] and boardPlayers[1][0] and boardPlayers[1][1])
     activeBoard = 0
@@ -53,6 +53,7 @@ def main():
     working = True
     validMoves = [gameStates[0].getValidMoves(), gameStates[1].getValidMoves()]
     moveMade = [False, False]
+    soundPlayed = False
     gameOver = False
     AIThinking = False
     AIThinkingTime = [0, 0]
@@ -167,6 +168,9 @@ def main():
                                                     else:
                                                         noAIActivePlayer[boardNum] = 5 - (1 - boardNum) * 4 - noAIActivePlayer[boardNum]
                                                         hourglasses[boardNum] = Hourglass(noAIActivePlayer[boardNum])
+                                                    if not soundPlayed:
+                                                        SOUNDS["move"].play()
+                                                        soundPlayed = True
                                                 break
                                     if not moveMade[boardNum]:
                                         clicks[boardNum] = [deepcopy(selectedSq[boardNum])]
@@ -254,7 +258,9 @@ def main():
                         clicks[i] = []
             if moveMade[i]:
                 drawGameState(screen, gameStates, validMoves, playerNames, selectedSq)
-                SOUNDS["move"].play()
+                if not soundPlayed:
+                    SOUNDS["move"].play()
+                soundPlayed = False
                 pg.display.flip()
                 moveMade[i] = False
         if (gameStates[0].checkmate and not gameStates[0].whiteTurn) or (gameStates[1].checkmate and gameStates[1].whiteTurn):
