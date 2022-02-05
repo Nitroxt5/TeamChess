@@ -73,8 +73,24 @@ def randomMoveAI(validMoves: list) -> Engine.Move:
     return validMoves[randint(0, len(validMoves) - 1)]
 
 
-def negaScoutMoveAI(gameState: Engine.GameState, otherGameState: Engine.GameState, validMoves: list, returnQ: Queue):
-    global nextMove, counter
+def predictionAI(gameState: Engine.GameState, otherGameState: Engine.GameState, validMoves: list, returnQ: Queue):
+    if validMoves is not None:
+        if len(validMoves[0]) + len(validMoves[1]) + len(validMoves[2]) > 8:
+            for d in range(DEPTH):
+                currentDepth = d + 1
+                score = negaScoutAI(gameState, otherGameState, validMoves, -CHECKMATE - 1, CHECKMATE + 1, 1 if gameState.whiteTurn else -1, currentDepth, currentDepth)
+                if score == CHECKMATE:
+                    break
+        else:
+            negaScoutAI(gameState, otherGameState, validMoves, -CHECKMATE - 1, CHECKMATE + 1, 1 if gameState.whiteTurn else -1, DEPTH, DEPTH)
+    returnQ.put(hashTableForBestMoves)
+
+
+def negaScoutMoveAI(gameState: Engine.GameState, otherGameState: Engine.GameState, validMoves: list, returnQ: Queue, hashTable=None):
+    if hashTable is None:
+        hashTable = {}
+    global nextMove, counter, hashTableForBestMoves
+    hashTableForBestMoves = hashTable
     nextMove = None
     counter = 0
     start = perf_counter()

@@ -8,8 +8,8 @@ from copy import deepcopy
 from random import randint
 
 pg.init()
-SCREEN_WIDTH, SCREEN_HEIGHT = pg.display.Info().current_w, pg.display.Info().current_h
-# SCREEN_WIDTH, SCREEN_HEIGHT = 960, 540
+# SCREEN_WIDTH, SCREEN_HEIGHT = pg.display.Info().current_w, pg.display.Info().current_h
+SCREEN_WIDTH, SCREEN_HEIGHT = 960, 540
 BOARD_SIZE = 600 * SCREEN_HEIGHT // 1080
 MARGIN = (SCREEN_HEIGHT - BOARD_SIZE) // 2
 SQ_SIZE = BOARD_SIZE // Engine.DIMENSION
@@ -38,12 +38,10 @@ def loadResources():
     # IMAGES["BG"] = pg.transform.scale(pg.image.load("images/BG.png"), (SCREEN_WIDTH, SCREEN_HEIGHT))
 
 
-def main():
-    screen = pg.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-    loadResources()
+def main(screen: pg.Surface):
     clock = pg.time.Clock()
-    # boardPlayers = [(True, True), (True, True)]
-    boardPlayers = [(False, False), (False, True)]
+    boardPlayers = [(True, True), (True, True)]
+    # boardPlayers = [(False, False), (False, False)]
     playerNames = ["Player 1", "Player 2", "Player 3", "Player 4"]
     AIExists = not (boardPlayers[0][0] and boardPlayers[0][1] and boardPlayers[1][0] and boardPlayers[1][1])
     activeBoard = 0
@@ -59,6 +57,8 @@ def main():
     AIThinkingTime = [0, 0]
     AIPositionCounter = [0, 0]
     AIProcess = Process()
+    AIPrediction = Process()
+    hashTable = {}
     returnQ = Queue()
     selectedSq = [(), ()]
     clicks = [[], []]
@@ -207,12 +207,14 @@ def main():
                     validMoves = [gameStates[0].getValidMoves(), gameStates[1].getValidMoves()]
                     AIThinkingTime = [0, 0]
                     AIPositionCounter = [0, 0]
+                    returnQ = Queue()
                     activeBoard = 0
                     gameOver = False
                     selectedSq = [(), ()]
                     clicks = [[], []]
                     moveMade = [False, False]
                     hourglass = Hourglass(0)
+                    noAIActivePlayer = [0, 2]
                     hourglasses = [Hourglass(noAIActivePlayer[0]), Hourglass(noAIActivePlayer[1])]
                     playerTurn = [(gameStates[0].whiteTurn and boardPlayers[0][0]) or (not gameStates[0].whiteTurn and boardPlayers[0][1]),
                                   (gameStates[1].whiteTurn and boardPlayers[1][0]) or (not gameStates[1].whiteTurn and boardPlayers[1][1])]
@@ -563,5 +565,12 @@ def drawPlayersNames(screen: pg.Surface, names: list):
 
 
 if __name__ == "__main__":
-    main()
+    mainScreen = pg.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+    loadResources()
+    # menu = pgm.Menu('SwiChess', SCREEN_WIDTH, SCREEN_HEIGHT, theme=pgm.themes.THEME_BLUE)
+    #
+    # menu.add.button('Play', main, mainScreen)
+    # menu.add.button('Quit', pgm.events.EXIT)
+    # menu.mainloop(mainScreen)
+    main(mainScreen)
     pg.quit()
