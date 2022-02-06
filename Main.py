@@ -8,8 +8,8 @@ from copy import deepcopy
 from random import randint
 
 pg.init()
-# SCREEN_WIDTH, SCREEN_HEIGHT = pg.display.Info().current_w, pg.display.Info().current_h
-SCREEN_WIDTH, SCREEN_HEIGHT = 960, 540
+SCREEN_WIDTH, SCREEN_HEIGHT = pg.display.Info().current_w, pg.display.Info().current_h
+# SCREEN_WIDTH, SCREEN_HEIGHT = 960, 540
 BOARD_SIZE = 600 * SCREEN_HEIGHT // 1080
 MARGIN = (SCREEN_HEIGHT - BOARD_SIZE) // 2
 SQ_SIZE = BOARD_SIZE // Engine.DIMENSION
@@ -40,8 +40,8 @@ def loadResources():
 
 def main(screen: pg.Surface):
     clock = pg.time.Clock()
-    boardPlayers = [(True, True), (True, True)]
-    # boardPlayers = [(False, False), (False, False)]
+    # boardPlayers = [(True, True), (True, True)]
+    boardPlayers = [(False, False), (False, False)]
     playerNames = ["Player 1", "Player 2", "Player 3", "Player 4"]
     AIExists = not (boardPlayers[0][0] and boardPlayers[0][1] and boardPlayers[1][0] and boardPlayers[1][1])
     activeBoard = 0
@@ -57,8 +57,6 @@ def main(screen: pg.Surface):
     AIThinkingTime = [0, 0]
     AIPositionCounter = [0, 0]
     AIProcess = Process()
-    AIPrediction = Process()
-    hashTable = {}
     returnQ = Queue()
     selectedSq = [(), ()]
     clicks = [[], []]

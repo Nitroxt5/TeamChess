@@ -775,11 +775,17 @@ class GameState:
         return moves
 
     def inCheck(self):
-        self.isWhiteInCheck = self.isSquareAttacked(self.bbOfPieces["wK"])
-        self.isBlackInCheck = self.isSquareAttacked(self.bbOfPieces["bK"])
         if self.whiteTurn:
+            self.isWhiteInCheck = self.isSquareAttacked(self.bbOfPieces["wK"])
+            self.whiteTurn = not self.whiteTurn
+            self.isBlackInCheck = self.isSquareAttacked(self.bbOfPieces["bK"])
+            self.whiteTurn = not self.whiteTurn
             return self.isWhiteInCheck
         else:
+            self.isBlackInCheck = self.isSquareAttacked(self.bbOfPieces["bK"])
+            self.whiteTurn = not self.whiteTurn
+            self.isWhiteInCheck = self.isSquareAttacked(self.bbOfPieces["wK"])
+            self.whiteTurn = not self.whiteTurn
             return self.isBlackInCheck
 
     def isSquareAttacked(self, square: int):
@@ -803,8 +809,6 @@ class GameState:
                     self.setSqState(piece, square)
                     self.bbOfThreats = deepcopy(currentThreatTable)
                     if whiteInCheck == self.isWhiteInCheck and blackInCheck == self.isBlackInCheck:
-                        self.isWhiteInCheck = whiteInCheck
-                        self.isBlackInCheck = blackInCheck
                         return True
                     self.isWhiteInCheck = whiteInCheck
                     self.isBlackInCheck = blackInCheck
