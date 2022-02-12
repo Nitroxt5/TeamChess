@@ -9,8 +9,8 @@ from copy import deepcopy
 from random import randint
 
 pg.init()
-# SCREEN_WIDTH, SCREEN_HEIGHT = pg.display.Info().current_w, pg.display.Info().current_h
-SCREEN_WIDTH, SCREEN_HEIGHT = 960, 540
+SCREEN_WIDTH, SCREEN_HEIGHT = pg.display.Info().current_w, pg.display.Info().current_h
+# SCREEN_WIDTH, SCREEN_HEIGHT = 960, 540
 BOARD_SIZE = 600 * SCREEN_HEIGHT // 1080
 MARGIN = (SCREEN_HEIGHT - BOARD_SIZE) // 2
 SQ_SIZE = BOARD_SIZE // DIMENSION
@@ -272,8 +272,6 @@ def main(screen: pg.Surface):
             drawTopText(screen, "Draw")
         elif (gameStates[0].checkmate and gameStates[0].whiteTurn) or (gameStates[1].checkmate and not gameStates[1].whiteTurn):
             drawTopText(screen, "Team 2 wins")
-        # if len(gameStates[1].gameLog) == 20:
-        #     gameOver = True
         pg.display.flip()
 
 
@@ -286,6 +284,10 @@ def gameOverCheck(gameStates: list, AIExists: bool):
         return True
     elif (gameStates[0].checkmate and gameStates[0].whiteTurn) or (gameStates[1].checkmate and not gameStates[1].whiteTurn):
         return True
+    # if len(gameStates[1].gameLog) == 20:
+    #     return True
+    # if len(gameStates[0].gameLog) == 1:
+    #     return True
     return False
 
 

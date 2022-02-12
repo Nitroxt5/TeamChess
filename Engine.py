@@ -96,6 +96,7 @@ class GameState:
         self.isWhiteInCheck = False
         self.isBlackInCheck = False
         self.reserve = {"w": {"Q": 0, "R": 0, "B": 0, "N": 0, "p": 0}, "b": {"Q": 0, "R": 0, "B": 0, "N": 0, "p": 0}}
+        # self.reserve = {"w": {"Q": 16, "R": 16, "B": 16, "N": 16, "p": 16}, "b": {"Q": 16, "R": 16, "B": 16, "N": 16, "p": 16}}
         self.zobristTable = []
         self.zobristReserveTable = []
         self.boardHashLog = []
@@ -103,6 +104,7 @@ class GameState:
         self.boardReserveHash = 0
         self.hashBoard()
         self.updateReserveHash()
+        self.currentValidMovesCount = 0
 
     def hashBoard(self):
         seed(1)
