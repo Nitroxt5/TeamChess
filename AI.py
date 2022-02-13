@@ -15,59 +15,6 @@ hashTableForValidMoves = {}
 killerMoves = {}
 
 
-knightPositionScore = [[1, 2, 1, 1, 1, 1, 2, 1],
-                       [1, 2, 2, 2, 2, 2, 2, 1],
-                       [1, 2, 3, 3, 3, 3, 2, 1],
-                       [1, 2, 3, 4, 4, 3, 2, 1],
-                       [1, 2, 3, 4, 4, 3, 2, 1],
-                       [1, 2, 3, 3, 3, 3, 2, 1],
-                       [1, 2, 2, 2, 2, 2, 2, 1],
-                       [1, 2, 1, 1, 1, 1, 2, 1]]
-bishopPositionScore = [[3, 2, 2, 1, 1, 2, 2, 3],
-                       [2, 4, 3, 3, 3, 3, 4, 2],
-                       [2, 3, 3, 3, 3, 3, 3, 2],
-                       [2, 3, 3, 3, 3, 3, 3, 2],
-                       [2, 3, 3, 3, 3, 3, 3, 2],
-                       [2, 3, 3, 3, 3, 3, 3, 2],
-                       [2, 4, 3, 3, 3, 3, 4, 2],
-                       [3, 2, 2, 1, 1, 2, 2, 3]]
-queenPositionScore = [[1, 1, 1, 2, 1, 1, 1, 1],
-                      [1, 1, 2, 2, 1, 1, 1, 1],
-                      [1, 2, 1, 2, 1, 1, 1, 1],
-                      [1, 1, 1, 2, 1, 1, 1, 1],
-                      [1, 1, 1, 2, 1, 1, 1, 1],
-                      [1, 2, 1, 2, 1, 1, 1, 1],
-                      [1, 1, 2, 2, 1, 1, 1, 1],
-                      [1, 1, 1, 2, 1, 1, 1, 1]]
-rookPositionScore = [[3, 3, 3, 3, 3, 3, 3, 3],
-                     [2, 2, 2, 2, 2, 2, 2, 2],
-                     [2, 2, 2, 2, 2, 2, 2, 2],
-                     [1, 2, 2, 2, 2, 2, 2, 1],
-                     [1, 2, 2, 2, 2, 2, 2, 1],
-                     [2, 2, 2, 2, 2, 2, 2, 2],
-                     [2, 2, 2, 2, 2, 2, 2, 2],
-                     [3, 3, 3, 3, 3, 3, 3, 3]]
-whitePawnPositionScore = [[6, 6, 6, 6, 6, 6, 6, 6],
-                          [5, 5, 5, 5, 5, 5, 5, 5],
-                          [4, 4, 4, 4, 4, 4, 4, 4],
-                          [3, 3, 3, 4, 4, 3, 3, 3],
-                          [1, 2, 2, 4, 4, 2, 2, 1],
-                          [2, 1, 2, 3, 3, 1, 1, 2],
-                          [1, 1, 1, 0, 0, 1, 1, 1],
-                          [0, 0, 0, 0, 0, 0, 0, 0]]
-blackPawnPositionScore = [[0, 0, 0, 0, 0, 0, 0, 0],
-                          [1, 1, 1, 0, 0, 1, 1, 1],
-                          [2, 1, 2, 3, 3, 1, 1, 2],
-                          [1, 2, 2, 4, 4, 2, 2, 1],
-                          [3, 3, 3, 4, 4, 3, 3, 3],
-                          [4, 4, 4, 4, 4, 4, 4, 4],
-                          [5, 5, 5, 5, 5, 5, 5, 5],
-                          [6, 6, 6, 6, 6, 6, 6, 6]]
-
-piecePositionScores = {"Q": queenPositionScore, "R": rookPositionScore, "B": bishopPositionScore,
-                       "N": knightPositionScore, "bp": blackPawnPositionScore, "wp": whitePawnPositionScore}
-
-
 def randomMoveAI(validMoves: list) -> Move:
     return validMoves[randint(0, len(validMoves) - 1)]
 
@@ -112,7 +59,7 @@ def negaScoutAI(gameState: GameState, otherGameState: GameState, validMoves: lis
     oneDepthSearch(gameState, moves, turn, depth)
     moves.sort(key=lambda mov: mov.estimatedScore, reverse=True)
     moves.sort(key=lambda mov: mov.isKiller, reverse=True)
-    silentMoveCounter = 19 + len(validMoves[1]) * 2 // 3
+    silentMoveCounter = 19 + len(validMoves[1]) // 5
     for move in moves:
         if not silentMoveCounter:
             break
