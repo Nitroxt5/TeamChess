@@ -1,30 +1,32 @@
 import pygame as pg
 
+BACK_COLOR = "gray"
+TOP_COLOR = "black"
+
 
 class Button:
-    def __init__(self, image: pg.image, pos: tuple, text_input: str, font: [pg.font.SysFont, None], base_color: [tuple, str, pg.Color, None], hovering_color: [tuple, str, pg.Color, None]):
+    def __init__(self, image: pg.image, center: tuple, text: str, font: [pg.font.SysFont, None]):
         self.image = image
-        self.x_pos = pos[0]
-        self.y_pos = pos[1]
+        self.xPos = center[0]
+        self.yPos = center[1]
         self.font = font
-        self.base_color, self.hovering_color = base_color, hovering_color
-        self.text_input = text_input
+        self.textInput = text
         if self.font is not None:
-            self.text1 = self.font.render(self.text_input, True, self.base_color)
-            self.text2 = self.font.render(self.text_input, True, self.hovering_color)
+            self.text1 = self.font.render(self.textInput, True, BACK_COLOR)
+            self.text2 = self.font.render(self.textInput, True, TOP_COLOR)
         if self.image is None:
             self.image = self.text1
-        self.rect = self.image.get_rect(center=(self.x_pos, self.y_pos))
+        self.rect = self.image.get_rect(center=(self.xPos, self.yPos))
         if self.font is not None:
-            self.text_rect1 = self.text1.get_rect(center=(self.x_pos, self.y_pos))
-            self.text_rect2 = self.text2.get_rect(center=(self.x_pos + 2, self.y_pos + 2))
+            self.textRect1 = self.text1.get_rect(center=(self.xPos, self.yPos))
+            self.textRect2 = self.text2.get_rect(center=(self.xPos + 2, self.yPos + 2))
 
     def update(self, screen: pg.Surface):
         if self.image is not None:
             screen.blit(self.image, self.rect)
         if self.font is not None:
-            screen.blit(self.text1, self.text_rect1)
-            screen.blit(self.text2, self.text_rect2)
+            screen.blit(self.text1, self.textRect1)
+            screen.blit(self.text2, self.textRect2)
 
     def checkForInput(self, position: tuple):
         if self.rect.left < position[0] < self.rect.right and self.rect.top < position[1] < self.rect.bottom:
@@ -34,11 +36,97 @@ class Button:
     def changeColor(self, position: tuple):
         if self.font is not None:
             if position[0] in range(self.rect.left, self.rect.right) and position[1] in range(self.rect.top, self.rect.bottom):
-                self.text1 = self.font.render(self.text_input, True, self.hovering_color)
-                self.text2 = self.font.render(self.text_input, True, self.base_color)
+                self.text1 = self.font.render(self.textInput, True, TOP_COLOR)
+                self.text2 = self.font.render(self.textInput, True, BACK_COLOR)
             else:
-                self.text1 = self.font.render(self.text_input, True, self.base_color)
-                self.text2 = self.font.render(self.text_input, True, self.hovering_color)
+                self.text1 = self.font.render(self.textInput, True, BACK_COLOR)
+                self.text2 = self.font.render(self.textInput, True, TOP_COLOR)
+
+
+class RadioButton:
+    def __init__(self, topleft: tuple, enabled: bool, onImage: pg.Surface, offImage: pg.Surface):
+        self.xPos = topleft[0]
+        self.yPos = topleft[1]
+        self.enabled = enabled
+        self.onImage = onImage
+        self.offImage = offImage
+        self.onRect = self.onImage.get_rect(topleft=(self.xPos, self.yPos))
+        self.offRect = self.offImage.get_rect(topleft=(self.xPos, self.yPos))
+
+    def switch(self):
+        self.enabled = not self.enabled
+
+    def update(self, screen: pg.Surface):
+        if self.enabled:
+            screen.blit(self.onImage, self.onRect)
+        else:
+            screen.blit(self.offImage, self.offRect)
+
+    def checkForInput(self, position: tuple):
+        if self.onRect.left < position[0] < self.onRect.right and self.onRect.top < position[1] < self.onRect.bottom:
+            self.switch()
+            return True
+        return False
+
+
+class Label:
+    def __init__(self, text: str, center: tuple, font: pg.font.SysFont):
+        self.textInput = text
+        self.xPos = center[0]
+        self.yPos = center[1]
+        self.font = font
+        self.text1 = self.font.render(self.textInput, True, BACK_COLOR)
+        self.text2 = self.font.render(self.textInput, True, TOP_COLOR)
+        self.textRect1 = self.text1.get_rect(center=(self.xPos, self.yPos))
+        self.textRect2 = self.text2.get_rect(center=(self.xPos + 2, self.yPos + 2))
+
+    def update(self, screen: pg.Surface):
+        screen.blit(self.text1, self.textRect1)
+        screen.blit(self.text2, self.textRect2)
+
+
+class RadioLabel:
+    def __init__(self, text1: str, text2: str, state: bool, topleft: tuple, font: pg.font.SysFont):
+        self.textInput1 = text1
+        self.textInput2 = text2
+        self.state = state
+        self.xPos = topleft[0]
+        self.yPos = topleft[1]
+        self.font = font
+        self.text1 = (self.font.render(self.textInput1, True, BACK_COLOR), self.font.render(self.textInput1, True, TOP_COLOR))
+        self.text2 = (self.font.render(self.textInput2, True, BACK_COLOR), self.font.render(self.textInput2, True, TOP_COLOR))
+        self.textRect1 = (self.text1[0].get_rect(topleft=(self.xPos, self.yPos)), self.text1[1].get_rect(topleft=(self.xPos + 2, self.yPos + 2)))
+        self.textRect2 = (self.text2[0].get_rect(topleft=(self.xPos, self.yPos)), self.text2[1].get_rect(topleft=(self.xPos + 2, self.yPos + 2)))
+
+    def switch(self):
+        self.state = not self.state
+
+    def update(self, screen: pg.Surface):
+        if self.state:
+            screen.blit(self.text1[0], self.textRect1[0])
+            screen.blit(self.text1[1], self.textRect1[1])
+        else:
+            screen.blit(self.text2[0], self.textRect2[0])
+            screen.blit(self.text2[1], self.textRect2[1])
+
+
+class DialogWindow:
+    def __init__(self, text: str, SCREEN_HEIGHT: int, SCREEN_WIDTH: int, FONT_SIZE: int):
+        self.textInput = text
+        self.window = pg.Surface((SCREEN_WIDTH // 3, SCREEN_HEIGHT // 4))
+        self.window.fill((127, 97, 70))
+        self.windowRect = self.window.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2))
+        self.font = pg.font.SysFont("Helvetica", FONT_SIZE * 2, True, False)
+        self.question = Label(text, (SCREEN_WIDTH // 2, (SCREEN_HEIGHT - self.windowRect.height // 2) // 2), self.font)
+        self.yes_btn = Button(None, ((SCREEN_WIDTH - self.windowRect.width // 2) // 2, (SCREEN_HEIGHT + self.windowRect.height // 2) // 2), "Yes", self.font)
+        self.no_btn = Button(None, ((SCREEN_WIDTH + self.windowRect.width // 2) // 2, (SCREEN_HEIGHT + self.windowRect.height // 2) // 2), "No", self.font)
+
+    def update(self, screen: pg.Surface, position: tuple):
+        screen.blit(self.window, self.windowRect)
+        self.question.update(screen)
+        for btn in [self.yes_btn, self.no_btn]:
+            btn.update(screen)
+            btn.changeColor(position)
 
 
 class Hourglass:
