@@ -35,7 +35,7 @@ class Button:
 
     def changeColor(self, position: tuple):
         if self.font is not None:
-            if position[0] in range(self.rect.left, self.rect.right) and position[1] in range(self.rect.top, self.rect.bottom):
+            if self.checkForInput(position):
                 self.text1 = self.font.render(self.textInput, True, TOP_COLOR)
                 self.text2 = self.font.render(self.textInput, True, BACK_COLOR)
             else:
@@ -44,29 +44,39 @@ class Button:
 
 
 class RadioButton:
-    def __init__(self, topleft: tuple, enabled: bool, onImage: pg.Surface, offImage: pg.Surface):
-        self.xPos = topleft[0]
-        self.yPos = topleft[1]
-        self.enabled = enabled
+    def __init__(self, center: tuple, state: bool, onImage: pg.Surface, offImage: pg.Surface):
         self.onImage = onImage
         self.offImage = offImage
-        self.onRect = self.onImage.get_rect(topleft=(self.xPos, self.yPos))
-        self.offRect = self.offImage.get_rect(topleft=(self.xPos, self.yPos))
+        self.state = state
+        if self.state:
+            self.activeImage = self.onImage
+        else:
+            self.activeImage = self.offImage
+        self.xPos = center[0]
+        self.yPos = center[1]
+        self.rect = self.activeImage.get_rect(center=(self.xPos, self.yPos))
 
-    def switch(self):
-        self.enabled = not self.enabled
+    def switch(self, position: tuple):
+        if self.checkForInput(position):
+            self.state = not self.state
+            if self.state:
+                self.activeImage = self.onImage
+            else:
+                self.activeImage = self.offImage
 
     def update(self, screen: pg.Surface):
-        if self.enabled:
-            screen.blit(self.onImage, self.onRect)
-        else:
-            screen.blit(self.offImage, self.offRect)
+        screen.blit(self.activeImage, self.rect)
 
     def checkForInput(self, position: tuple):
-        if self.onRect.left < position[0] < self.onRect.right and self.onRect.top < position[1] < self.onRect.bottom:
-            self.switch()
+        if self.rect.left < position[0] < self.rect.right and self.rect.top < position[1] < self.rect.bottom:
             return True
         return False
+
+    def changeColor(self, position: tuple):
+        if self.checkForInput(position):
+            self.activeImage = self.onImage
+        else:
+            self.activeImage = self.offImage
 
 
 class Label:
@@ -127,6 +137,20 @@ class DialogWindow:
         for btn in [self.yes_btn, self.no_btn]:
             btn.update(screen)
             btn.changeColor(position)
+
+
+class Image:
+    def __init__(self, image: pg.Surface, topleft: tuple, imageSize: [tuple, None]):
+        self.xPos = topleft[0]
+        self.yPos = topleft[1]
+        if imageSize is not None:
+            self.width = imageSize[0]
+            self.height = imageSize[1]
+            self.image = pg.transform.scale(image, (self.width, self.height))
+        self.rect = self.image.get_rect(topleft=(self.xPos, self.yPos))
+
+    def update(self, screen: pg.Surface):
+        screen.blit(self.image, self.rect)
 
 
 class Hourglass:
