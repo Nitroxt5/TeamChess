@@ -8,6 +8,7 @@ from copy import deepcopy
 from random import randint
 from UI import Button, Hourglass, DialogWindow, RadioButton, RadioLabel, Image
 import json
+from os.path import isfile
 
 pg.init()
 SCREEN_WIDTH, SCREEN_HEIGHT = pg.display.Info().current_w, pg.display.Info().current_h
@@ -40,12 +41,15 @@ def loadResources():
     IMAGES["frame"].set_alpha(200)
     SOUNDS["move"] = pg.mixer.Sound("sounds/move.wav")
     global SETTINGS
-    SETTINGS = json.load(open("SETTINGS.json", "r"))
+    if isfile("SETTINGS.json"):
+        with open("SETTINGS.json", "r", encoding="utf-8") as f:
+            SETTINGS = json.load(f)
     # IMAGES["BG"] = pg.transform.scale(pg.image.load("images/BG.png"), (SCREEN_WIDTH, SCREEN_HEIGHT))
 
 
 def saveResources():
-    json.dump(SETTINGS, open("SETTINGS.json", "w"))
+    with open("SETTINGS.json", "w", encoding="utf-8") as f:
+        json.dump(SETTINGS, f)
 
 
 def main(screen: pg.Surface):
