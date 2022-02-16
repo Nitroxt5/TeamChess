@@ -5,10 +5,10 @@ TOP_COLOR = "black"
 
 
 class Button:
-    def __init__(self, image: pg.image, center: tuple, text: str, font: [pg.font.SysFont, None]):
+    def __init__(self, image: pg.image, pos: tuple, text: str, font: [pg.font.SysFont, None], topleft=False):
         self.image = image
-        self.xPos = center[0]
-        self.yPos = center[1]
+        self.xPos = pos[0]
+        self.yPos = pos[1]
         self.font = font
         self.textInput = text
         if self.font is not None:
@@ -16,10 +16,17 @@ class Button:
             self.text2 = self.font.render(self.textInput, True, TOP_COLOR)
         if self.image is None:
             self.image = self.text1
-        self.rect = self.image.get_rect(center=(self.xPos, self.yPos))
+        if topleft:
+            self.rect = self.image.get_rect(topleft=(self.xPos, self.yPos))
+        else:
+            self.rect = self.image.get_rect(center=(self.xPos, self.yPos))
         if self.font is not None:
-            self.textRect1 = self.text1.get_rect(center=(self.xPos, self.yPos))
-            self.textRect2 = self.text2.get_rect(center=(self.xPos + 2, self.yPos + 2))
+            if topleft:
+                self.textRect1 = self.text1.get_rect(topleft=pos)
+                self.textRect2 = self.text2.get_rect(topleft=(self.xPos + 2, self.yPos + 2))
+            else:
+                self.textRect1 = self.text1.get_rect(center=pos)
+                self.textRect2 = self.text2.get_rect(center=(self.xPos + 2, self.yPos + 2))
 
     def update(self, screen: pg.Surface):
         if self.image is not None:
@@ -54,7 +61,7 @@ class RadioButton:
             self.activeImage = self.offImage
         self.xPos = center[0]
         self.yPos = center[1]
-        self.rect = self.activeImage.get_rect(center=(self.xPos, self.yPos))
+        self.rect = self.activeImage.get_rect(center=center)
 
     def switch(self, position: tuple):
         if self.checkForInput(position):
@@ -80,15 +87,19 @@ class RadioButton:
 
 
 class Label:
-    def __init__(self, text: str, center: tuple, font: pg.font.SysFont):
+    def __init__(self, text: str, pos: tuple, font: pg.font.SysFont, topleft=False):
         self.textInput = text
-        self.xPos = center[0]
-        self.yPos = center[1]
+        self.xPos = pos[0]
+        self.yPos = pos[1]
         self.font = font
         self.text1 = self.font.render(self.textInput, True, BACK_COLOR)
         self.text2 = self.font.render(self.textInput, True, TOP_COLOR)
-        self.textRect1 = self.text1.get_rect(center=(self.xPos, self.yPos))
-        self.textRect2 = self.text2.get_rect(center=(self.xPos + 2, self.yPos + 2))
+        if topleft:
+            self.textRect1 = self.text1.get_rect(topleft=pos)
+            self.textRect2 = self.text2.get_rect(topleft=(self.xPos + 2, self.yPos + 2))
+        else:
+            self.textRect1 = self.text1.get_rect(center=pos)
+            self.textRect2 = self.text2.get_rect(center=(self.xPos + 2, self.yPos + 2))
 
     def update(self, screen: pg.Surface):
         screen.blit(self.text1, self.textRect1)
@@ -105,8 +116,8 @@ class RadioLabel:
         self.font = font
         self.text1 = (self.font.render(self.textInput1, True, BACK_COLOR), self.font.render(self.textInput1, True, TOP_COLOR))
         self.text2 = (self.font.render(self.textInput2, True, BACK_COLOR), self.font.render(self.textInput2, True, TOP_COLOR))
-        self.textRect1 = (self.text1[0].get_rect(topleft=(self.xPos, self.yPos)), self.text1[1].get_rect(topleft=(self.xPos + 2, self.yPos + 2)))
-        self.textRect2 = (self.text2[0].get_rect(topleft=(self.xPos, self.yPos)), self.text2[1].get_rect(topleft=(self.xPos + 2, self.yPos + 2)))
+        self.textRect1 = (self.text1[0].get_rect(topleft=topleft), self.text1[1].get_rect(topleft=(self.xPos + 2, self.yPos + 2)))
+        self.textRect2 = (self.text2[0].get_rect(topleft=topleft), self.text2[1].get_rect(topleft=(self.xPos + 2, self.yPos + 2)))
 
     def switch(self):
         self.state = not self.state
@@ -118,6 +129,53 @@ class RadioLabel:
         else:
             screen.blit(self.text2[0], self.textRect2[0])
             screen.blit(self.text2[1], self.textRect2[1])
+
+
+class DropDownMenu:
+    def __init__(self, center: tuple, text: list, font: pg.font.SysFont, BOARD_SIZE: int, SQ_SIZE: int):
+        self.xPos = center[0]
+        self.yPos = center[1]
+        self.headText = text[0]
+        self.bodyText = text[1:]
+        self.font = font
+        self.state = False
+        self.head = pg.Surface((BOARD_SIZE // 4, SQ_SIZE // 2))
+        self.head.fill((127, 97, 70))
+        self.body = pg.Surface((BOARD_SIZE // 4, SQ_SIZE // 2))
+        self.body.fill((255, 0, 0))
+        self.rects = [self.head.get_rect(center=center)]
+        self.buttons = [Button(None, center, self.headText, font)]
+        for i in range(1, len(text)):
+            self.rects.append(self.body.get_rect(center=(self.xPos, self.yPos + i * SQ_SIZE // 2)))
+            self.buttons.append(Button(None, (self.xPos, self.yPos + i * SQ_SIZE // 2), self.bodyText[i - 1], font))
+
+    def switch(self):
+        self.state = not self.state
+
+    def checkForInput(self, position: tuple):
+        return self.buttons[0].checkForInput(position)
+
+    def checkForChoice(self, position: tuple):
+        if self.state:
+            for i in range(1, len(self.buttons)):
+                if self.buttons[i].checkForInput(position):
+                    self.changeHead(i)
+                    self.switch()
+                    return i
+        return 0
+
+    def update(self, screen: pg.Surface):
+        screen.blit(self.head, self.rects[0])
+        self.buttons[0].update(screen)
+        if self.state:
+            for i in range(1, len(self.rects)):
+                screen.blit(self.body, self.rects[i])
+                self.buttons[i].update(screen)
+
+    def changeHead(self, index: int):
+        if index != 0:
+            self.headText = self.bodyText[index - 1]
+            self.buttons[0] = Button(None, (self.xPos, self.yPos), self.headText, self.font)
 
 
 class DialogWindow:
@@ -140,14 +198,14 @@ class DialogWindow:
 
 
 class Image:
-    def __init__(self, image: pg.Surface, topleft: tuple, imageSize: [tuple, None]):
-        self.xPos = topleft[0]
-        self.yPos = topleft[1]
+    def __init__(self, image: pg.Surface, center: tuple, imageSize: [tuple, None]):
+        self.xPos = center[0]
+        self.yPos = center[1]
         if imageSize is not None:
             self.width = imageSize[0]
             self.height = imageSize[1]
             self.image = pg.transform.scale(image, (self.width, self.height))
-        self.rect = self.image.get_rect(topleft=(self.xPos, self.yPos))
+        self.rect = self.image.get_rect(center=(self.xPos, self.yPos))
 
     def update(self, screen: pg.Surface):
         screen.blit(self.image, self.rect)

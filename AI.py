@@ -19,8 +19,9 @@ def randomMoveAI(validMoves: list) -> Move:
     return validMoves[randint(0, len(validMoves) - 1)]
 
 
-def negaScoutMoveAI(gameState: GameState, otherGameState: GameState, validMoves: list, returnQ: Queue):
-    global nextMove, counter
+def negaScoutMoveAI(gameState: GameState, otherGameState: GameState, validMoves: list, requiredDepth: int, returnQ: Queue):
+    global nextMove, counter, DEPTH
+    DEPTH = requiredDepth
     nextMove = None
     counter = 0
     start = perf_counter()
