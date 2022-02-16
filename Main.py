@@ -9,10 +9,13 @@ from random import randint
 from UI import Button, Hourglass, DialogWindow, RadioButton, RadioLabel, Image, DropDownMenu
 import json
 from os.path import isfile
+import sys
 
 pg.init()
 SCREEN_WIDTH, SCREEN_HEIGHT = pg.display.Info().current_w, pg.display.Info().current_h
 # SCREEN_WIDTH, SCREEN_HEIGHT = 960, 540
+if __name__ != "__main__":
+    pg.quit()
 BOARD_SIZE = 600 * SCREEN_HEIGHT // 1080
 MARGIN = (SCREEN_HEIGHT - BOARD_SIZE) // 2
 SQ_SIZE = BOARD_SIZE // DIMENSION
@@ -25,16 +28,17 @@ SKIN_PACK = 2
 FPS = 60
 IMAGES = {}
 SOUNDS = {}
-SETTINGS = {"sounds": True, "language": "en"}
-SQ_SIZE_IMAGES = ("frame", "hourglass", "home_button_on", "home_button_off", "radio_button_on", "radio_button_off")
+SETTINGS = {"sounds": True, "language": True}
 boardPlayers = [True, True, True, True]
 difficulties = [0, 0, 0, 0]
-difficultiesNames = {2: "Easy", 3: "Medium", 4: "Hard"}
+difficultiesNames = {2: "Easy", 3: "Normal", 4: "Hard"}
 constNames = ["Player 1", "Player 2", "Player 3", "Player 4"]
 names = ["Player 1", "Player 2", "Player 3", "Player 4"]
 
 
 def loadResources():
+    SQ_SIZE_IMAGES = ("frame", "hourglass", "home_button_on", "home_button_off", "radio_button_on", "radio_button_off",
+                      "restart_button_on", "restart_button_off", "ru_flag", "en_flag")
     for piece in COLORED_PIECES:
         IMAGES[piece] = pg.transform.scale(pg.image.load(f"images/{SKIN_PACK}/{piece}.png"), (SQ_SIZE, SQ_SIZE))
     for piece in EMPTY_PIECES:
@@ -43,6 +47,8 @@ def loadResources():
         IMAGES[img] = pg.transform.scale(pg.image.load(f"images/{img}.png"), (SQ_SIZE, SQ_SIZE))
     IMAGES["icon"] = pg.image.load("images/icon.png")
     IMAGES["board"] = pg.transform.scale(pg.image.load("images/board.png"), (BOARD_SIZE, BOARD_SIZE))
+    IMAGES["board_with_pieces1"] = pg.transform.scale(pg.image.load("images/board_with_pieces1.png"), (BOARD_SIZE // 2, BOARD_SIZE // 2))
+    IMAGES["board_with_pieces2"] = pg.transform.scale(pg.image.load("images/board_with_pieces2.png"), (BOARD_SIZE // 2, BOARD_SIZE // 2))
     IMAGES["frame"].set_alpha(200)
     SOUNDS["move"] = pg.mixer.Sound("sounds/move.wav")
     global SETTINGS
@@ -58,7 +64,7 @@ def saveResources():
 
 
 def main(screen: pg.Surface):
-    print(difficulties)
+    global difficulties, boardPlayers, names
     clock = pg.time.Clock()
     AIExists = not (boardPlayers[0] and boardPlayers[1] and boardPlayers[2] and boardPlayers[3])
     activeBoard = 0
@@ -80,20 +86,26 @@ def main(screen: pg.Surface):
     hourglasses = [Hourglass(noAIActivePlayer[0], IMAGES["hourglass"], MARGIN, MARGIN_LEFT, SQ_SIZE, SCREEN_HEIGHT),
                    Hourglass(noAIActivePlayer[1], IMAGES["hourglass"], MARGIN, MARGIN_LEFT, SQ_SIZE, SCREEN_HEIGHT)]
     toMenu_btn = RadioButton((SCREEN_WIDTH - SQ_SIZE, SQ_SIZE), True, IMAGES["home_button_on"], IMAGES["home_button_off"])
+    restart_btn = RadioButton((SCREEN_WIDTH - SQ_SIZE, int(SQ_SIZE * 2.5)), True, IMAGES["restart_button_on"], IMAGES["restart_button_off"])
     while working:
         clock.tick(FPS)
         location = pg.mouse.get_pos()
         playerTurn = [(gameStates[0].whiteTurn and boardPlayers[0]) or (not gameStates[0].whiteTurn and boardPlayers[1]),
                       (gameStates[1].whiteTurn and boardPlayers[2]) or (not gameStates[1].whiteTurn and boardPlayers[3])]
-        toMenu_btn.changeColor(location)
-        drawGameState(screen, gameStates, validMoves, names, selectedSq, toMenu_btn, AIExists)
+        for btn in [toMenu_btn, restart_btn]:
+            btn.changeColor(location)
+        drawGameState(screen, gameStates, validMoves, names, selectedSq, toMenu_btn, restart_btn, AIExists)
         if not gameOver and AIExists:
             hourglass.update(screen)
         elif not gameOver and not AIExists:
             hourglasses[0].update(screen)
             hourglasses[1].update(screen)
         for e in pg.event.get():
-            if e.type == pg.QUIT:
+            if e.type == pg.KEYDOWN:
+                if e.key == pg.K_F4 and bool(e.mod & pg.KMOD_ALT):
+                    pg.quit()
+                    sys.exit()
+            elif e.type == pg.QUIT:
                 gameOver = True
                 if AIThinking:
                     AIProcess.terminate()
@@ -116,11 +128,40 @@ def main(screen: pg.Surface):
                         print(f"Average time per move: {AIThinkingTime[i] / moveCount}")
                         print(f"Average calculated positions per move: {AIPositionCounter[i] / moveCount}")
                         print(f"Average time per position: {AIThinkingTime[i] / AIPositionCounter[i]}")
+                boardPlayers = [True, True, True, True]
+                difficulties = [0, 0, 0, 0]
+                names = ["Player 1", "Player 2", "Player 3", "Player 4"]
                 working = False
             elif e.type == pg.MOUSEBUTTONDOWN:
                 if e.button == 1:
                     if toMenu_btn.checkForInput(location):
-                        createDialogWindow(screen, "Do you really want to exit?")
+                        if createDialogWindow(screen, "Do you really want to exit?"):
+                            pg.event.post(pg.event.Event(pg.QUIT))
+                    if restart_btn.checkForInput(location):
+                        if createDialogWindow(screen, "Do you really want to restart?"):
+                            if AIThinking:
+                                AIProcess.terminate()
+                                AIProcess.join()
+                                AIProcess.close()
+                                AIThinking = False
+                            gameStates = [GameState(), GameState()]
+                            validMoves = [gameStates[0].getValidMoves(), gameStates[1].getValidMoves()]
+                            AIThinkingTime = [0, 0]
+                            AIPositionCounter = [0, 0]
+                            returnQ = Queue()
+                            activeBoard = 0
+                            gameOver = False
+                            selectedSq = [(), ()]
+                            clicks = [[], []]
+                            moveMade = [False, False]
+                            hourglass = Hourglass(0, IMAGES["hourglass"], MARGIN, MARGIN_LEFT, SQ_SIZE, SCREEN_HEIGHT)
+                            noAIActivePlayer = [0, 2]
+                            hourglasses = [Hourglass(noAIActivePlayer[0], IMAGES["hourglass"], MARGIN, MARGIN_LEFT, SQ_SIZE, SCREEN_HEIGHT),
+                                           Hourglass(noAIActivePlayer[1], IMAGES["hourglass"], MARGIN, MARGIN_LEFT, SQ_SIZE, SCREEN_HEIGHT)]
+                            playerTurn = [(gameStates[0].whiteTurn and boardPlayers[0]) or (not gameStates[0].whiteTurn and boardPlayers[1]),
+                                          (gameStates[1].whiteTurn and boardPlayers[2]) or (not gameStates[1].whiteTurn and boardPlayers[3])]
+                            drawGameState(screen, gameStates, validMoves, names, selectedSq, toMenu_btn, restart_btn, AIExists)
+                            pg.display.flip()
                     if not gameOver:
                         boardNum = -1
                         reserveBoardNum = -1
@@ -169,7 +210,7 @@ def main(screen: pg.Surface):
                                         for validMove in part:
                                             if move == validMove or (move.moveID == validMove.moveID and move.isPawnPromotion and len(validMoves[boardNum][2]) > 0):
                                                 if move.isPawnPromotion:
-                                                    pos, piece = getPromotion(screen, gameStates, names, boardNum, toMenu_btn, AIExists)
+                                                    pos, piece = getPromotion(screen, gameStates, names, boardNum, toMenu_btn, restart_btn, AIExists)
                                                     validMove.promotedTo = None if piece is None else piece[1]
                                                     validMove.promotedPiecePosition = pos
                                                 if not (validMove.isPawnPromotion and validMove.promotedTo is None):
@@ -212,33 +253,8 @@ def main(screen: pg.Surface):
                         else:
                             selectedSq = [(), ()]
                             clicks = [[], []]
-                        drawGameState(screen, gameStates, validMoves, names, selectedSq, toMenu_btn, AIExists)
+                        drawGameState(screen, gameStates, validMoves, names, selectedSq, toMenu_btn, restart_btn, AIExists)
                         pg.display.flip()
-            elif e.type == pg.KEYDOWN:
-                if e.key == pg.K_r:
-                    if AIThinking:
-                        AIProcess.terminate()
-                        AIProcess.join()
-                        AIProcess.close()
-                        AIThinking = False
-                    gameStates = [GameState(), GameState()]
-                    validMoves = [gameStates[0].getValidMoves(), gameStates[1].getValidMoves()]
-                    AIThinkingTime = [0, 0]
-                    AIPositionCounter = [0, 0]
-                    returnQ = Queue()
-                    activeBoard = 0
-                    gameOver = False
-                    selectedSq = [(), ()]
-                    clicks = [[], []]
-                    moveMade = [False, False]
-                    hourglass = Hourglass(0, IMAGES["hourglass"], MARGIN, MARGIN_LEFT, SQ_SIZE, SCREEN_HEIGHT)
-                    noAIActivePlayer = [0, 2]
-                    hourglasses = [Hourglass(noAIActivePlayer[0], IMAGES["hourglass"], MARGIN, MARGIN_LEFT, SQ_SIZE, SCREEN_HEIGHT),
-                                   Hourglass(noAIActivePlayer[1], IMAGES["hourglass"], MARGIN, MARGIN_LEFT, SQ_SIZE, SCREEN_HEIGHT)]
-                    playerTurn = [(gameStates[0].whiteTurn and boardPlayers[0]) or (not gameStates[0].whiteTurn and boardPlayers[1]),
-                                  (gameStates[1].whiteTurn and boardPlayers[2]) or (not gameStates[1].whiteTurn and boardPlayers[3])]
-                    drawGameState(screen, gameStates, validMoves, names, selectedSq, toMenu_btn, AIExists)
-                    pg.display.flip()
         if not gameOver:
             gameOver = gameOverCheck(gameStates, AIExists)
         for i in range(2):
@@ -279,7 +295,7 @@ def main(screen: pg.Surface):
                         selectedSq[i] = ()
                         clicks[i] = []
             if moveMade[i]:
-                drawGameState(screen, gameStates, validMoves, names, selectedSq, toMenu_btn, AIExists)
+                drawGameState(screen, gameStates, validMoves, names, selectedSq, toMenu_btn, restart_btn, AIExists)
                 if not soundPlayed and SETTINGS["sounds"]:
                     SOUNDS["move"].play()
                 soundPlayed = False
@@ -433,13 +449,14 @@ def highlightPossiblePromotions(screen: pg.Surface, possiblePromotions: dict, pr
                 screen.blit(IMAGES["frame"], pg.Rect(column * SQ_SIZE + MARGIN, row * SQ_SIZE + MARGIN, SQ_SIZE, SQ_SIZE))
 
 
-def drawGameState(screen: pg.Surface, gameStates: list, validMoves: list, playerNames: list, selectedSq: list, toMenu_btn: RadioButton, AIExists: bool, promotion=-1, possiblePromotions=None):
+def drawGameState(screen: pg.Surface, gameStates: list, validMoves: list, playerNames: list, selectedSq: list, toMenu_btn: RadioButton, restart_btn: RadioButton, AIExists: bool, promotion=-1, possiblePromotions=None):
     screen.fill((181, 136, 99))
     # screen.blit(IMAGES["BG"], (0, 0, SCREEN_WIDTH, SCREEN_HEIGHT))
     drawEndGameText(screen, gameStates, AIExists)
     drawPlayersNames(screen, playerNames)
     drawBoard(screen)
-    toMenu_btn.update(screen)
+    for btn in [toMenu_btn, restart_btn]:
+        btn.update(screen)
     highlightPossiblePromotions(screen, possiblePromotions, promotion)
     if promotion == -1:
         highlightLastMove(screen, gameStates, selectedSq)
@@ -490,11 +507,11 @@ def getPlayerName(gameState: GameState, playerNames: list):
         return playerNames[1]
 
 
-def getPromotion(screen: pg.Surface, gameStates: list, playerNames: list, boardNum: int, toMenu_btn: RadioButton, AIExists: bool):
+def getPromotion(screen: pg.Surface, gameStates: list, playerNames: list, boardNum: int, toMenu_btn: RadioButton, restart_btn: RadioButton, AIExists: bool):
     possiblePromotions = calculatePossiblePromotions(gameStates, boardNum)
     if possiblePromotions == {}:
         return 0, None
-    drawGameState(screen, gameStates, [], playerNames, [], toMenu_btn, AIExists, promotion=boardNum, possiblePromotions=possiblePromotions)
+    drawGameState(screen, gameStates, [], playerNames, [], toMenu_btn, restart_btn, AIExists, promotion=boardNum, possiblePromotions=possiblePromotions)
     playerName = getPlayerName(gameStates[boardNum], playerNames[boardNum * 2:(boardNum + 1) * 2])
     drawTopText(screen, f"{playerName} chooses a piece to promote")
     pg.display.flip()
@@ -619,12 +636,14 @@ def createSettingsMenu(screen: pg.Surface):
     back_btn = Button(None, (SCREEN_WIDTH // 2, SCREEN_HEIGHT - SQ_SIZE * 2), "Back", font)
     sound_btn = RadioButton((SCREEN_WIDTH // 4 + SQ_SIZE // 2, SCREEN_HEIGHT // 4 + SQ_SIZE // 2), SETTINGS["sounds"], IMAGES["radio_button_on"], IMAGES["radio_button_off"])
     sound_lbl = RadioLabel("Sound: ON", "Sound: OFF", SETTINGS["sounds"], (SCREEN_WIDTH // 4 + SQ_SIZE, SCREEN_HEIGHT // 4), font)
+    lang_btn = RadioButton((SCREEN_WIDTH // 4 + SQ_SIZE // 2, SCREEN_HEIGHT // 4 + int(SQ_SIZE * 2.5)), SETTINGS["language"], IMAGES["en_flag"], IMAGES["ru_flag"])
+    lang_lbl = RadioLabel("Language: EN", "Language: RU", SETTINGS["language"], (SCREEN_WIDTH // 4 + SQ_SIZE, SCREEN_HEIGHT // 4 + SQ_SIZE * 2), font)
     while working:
         mousePos = pg.mouse.get_pos()
         clock.tick(FPS)
         drawMenu(screen, "Settings")
         back_btn.changeColor(mousePos)
-        for item in [back_btn, sound_btn, sound_lbl]:
+        for item in [back_btn, sound_btn, sound_lbl, lang_btn, lang_lbl]:
             item.update(screen)
         for e in pg.event.get():
             if e.type == pg.QUIT:
@@ -634,9 +653,13 @@ def createSettingsMenu(screen: pg.Surface):
                     if back_btn.checkForInput(mousePos):
                         working = False
                     if sound_btn.checkForInput(mousePos):
-                        sound_btn.switch(mousePos)
+                        sound_btn.switch()
                         sound_lbl.switch()
                         SETTINGS["sounds"] = sound_btn.state
+                    if lang_btn.checkForInput(mousePos):
+                        lang_btn.switch()
+                        lang_lbl.switch()
+                        SETTINGS["language"] = lang_btn.state
         pg.display.flip()
 
 
@@ -650,16 +673,16 @@ def createNewGameMenu(screen: pg.Surface):
     xBoard1 = SCREEN_WIDTH // 4
     xBoard2 = SCREEN_WIDTH // 4 + BOARD_SIZE // 2 + SQ_SIZE
     yBoard = SCREEN_HEIGHT // 3 + SQ_SIZE
-    board1_img = Image(IMAGES["board"], (xBoard1, yBoard), (BOARD_SIZE // 2, BOARD_SIZE // 2))
-    board2_img = Image(IMAGES["board"], (xBoard2, yBoard), (BOARD_SIZE // 2, BOARD_SIZE // 2))
+    board1_img = Image(IMAGES["board_with_pieces1"], (xBoard1, yBoard), (BOARD_SIZE // 2, BOARD_SIZE // 2))
+    board2_img = Image(IMAGES["board_with_pieces2"], (xBoard2, yBoard), (BOARD_SIZE // 2, BOARD_SIZE // 2))
     player1_ddm = DropDownMenu((xBoard1, yBoard + BOARD_SIZE // 4 + SQ_SIZE),
-                               ["Player 1", "Player 1", "AI (Easy)", "AI (Medium)", "AI (Hard)"], smallFont, BOARD_SIZE, SQ_SIZE)
+                               ["Player 1", "Player 1", "AI (Easy)", "AI (Normal)", "AI (Hard)"], smallFont, BOARD_SIZE, SQ_SIZE)
     player2_ddm = DropDownMenu((xBoard1, yBoard - BOARD_SIZE // 4 - SQ_SIZE),
-                               ["Player 2", "Player 2", "AI (Easy)", "AI (Medium)", "AI (Hard)"], smallFont, BOARD_SIZE, SQ_SIZE)
+                               ["Player 2", "Player 2", "AI (Easy)", "AI (Normal)", "AI (Hard)"], smallFont, BOARD_SIZE, SQ_SIZE)
     player3_ddm = DropDownMenu((xBoard2, yBoard - BOARD_SIZE // 4 - SQ_SIZE),
-                               ["Player 3", "Player 3", "AI (Easy)", "AI (Medium)", "AI (Hard)"], smallFont, BOARD_SIZE, SQ_SIZE)
+                               ["Player 3", "Player 3", "AI (Easy)", "AI (Normal)", "AI (Hard)"], smallFont, BOARD_SIZE, SQ_SIZE)
     player4_ddm = DropDownMenu((xBoard2, yBoard + BOARD_SIZE // 4 + SQ_SIZE),
-                               ["Player 4", "Player 4", "AI (Easy)", "AI (Medium)", "AI (Hard)"], smallFont, BOARD_SIZE, SQ_SIZE)
+                               ["Player 4", "Player 4", "AI (Easy)", "AI (Normal)", "AI (Hard)"], smallFont, BOARD_SIZE, SQ_SIZE)
     while working:
         mousePos = pg.mouse.get_pos()
         clock.tick(FPS)
@@ -708,11 +731,11 @@ def createDialogWindow(screen: pg.Surface, text: str):
             elif e.type == pg.MOUSEBUTTONDOWN:
                 if e.button == 1:
                     if dW.yes_btn.checkForInput(mousePos):
-                        working = False
-                        pg.event.post(pg.event.Event(pg.QUIT))
+                        return True
                     if dW.no_btn.checkForInput(mousePos):
-                        working = False
+                        return False
         pg.display.flip()
+    return False
 
 
 if __name__ == "__main__":

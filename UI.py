@@ -63,13 +63,12 @@ class RadioButton:
         self.yPos = center[1]
         self.rect = self.activeImage.get_rect(center=center)
 
-    def switch(self, position: tuple):
-        if self.checkForInput(position):
-            self.state = not self.state
-            if self.state:
-                self.activeImage = self.onImage
-            else:
-                self.activeImage = self.offImage
+    def switch(self):
+        self.state = not self.state
+        if self.state:
+            self.activeImage = self.onImage
+        else:
+            self.activeImage = self.offImage
 
     def update(self, screen: pg.Surface):
         screen.blit(self.activeImage, self.rect)
@@ -142,7 +141,7 @@ class DropDownMenu:
         self.head = pg.Surface((BOARD_SIZE // 4, SQ_SIZE // 2))
         self.head.fill((127, 97, 70))
         self.body = pg.Surface((BOARD_SIZE // 4, SQ_SIZE // 2))
-        self.body.fill((255, 0, 0))
+        self.body.fill((153, 117, 85))
         self.rects = [self.head.get_rect(center=center)]
         self.buttons = [Button(None, center, self.headText, font)]
         for i in range(1, len(text)):
