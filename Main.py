@@ -6,7 +6,7 @@ from math import ceil, floor
 from multiprocessing import Process, Queue
 from copy import deepcopy
 from random import randint
-from UI import Button, Hourglass, DialogWindow, RadioButton, RadioLabel, Image, DropDownMenu
+from UI import Button, Hourglass, DialogWindow, RadioButton, RadioLabel, Image, DropDownMenu, Label
 import json
 from os.path import isfile
 import sys
@@ -49,6 +49,7 @@ def loadResources():
     IMAGES["board"] = pg.transform.scale(pg.image.load("images/board.png"), (BOARD_SIZE, BOARD_SIZE))
     IMAGES["board_with_pieces1"] = pg.transform.scale(pg.image.load("images/board_with_pieces1.png"), (BOARD_SIZE // 2, BOARD_SIZE // 2))
     IMAGES["board_with_pieces2"] = pg.transform.scale(pg.image.load("images/board_with_pieces2.png"), (BOARD_SIZE // 2, BOARD_SIZE // 2))
+    IMAGES["button"] = pg.transform.scale(pg.image.load("images/button.png"), (SCREEN_WIDTH // 5, int(SQ_SIZE * 1.5)))
     IMAGES["frame"].set_alpha(200)
     SOUNDS["move"] = pg.mixer.Sound("sounds/move.wav")
     global SETTINGS
@@ -94,7 +95,7 @@ def main(screen: pg.Surface):
                       (gameStates[1].whiteTurn and boardPlayers[2]) or (not gameStates[1].whiteTurn and boardPlayers[3])]
         for btn in [toMenu_btn, restart_btn]:
             btn.changeColor(location)
-        drawGameState(screen, gameStates, validMoves, names, selectedSq, toMenu_btn, restart_btn, AIExists)
+        drawGameState(screen, gameStates, validMoves, selectedSq, toMenu_btn, restart_btn, AIExists)
         if not gameOver and AIExists:
             hourglass.update(screen)
         elif not gameOver and not AIExists:
@@ -160,7 +161,7 @@ def main(screen: pg.Surface):
                                            Hourglass(noAIActivePlayer[1], IMAGES["hourglass"], MARGIN, MARGIN_LEFT, SQ_SIZE, SCREEN_HEIGHT)]
                             playerTurn = [(gameStates[0].whiteTurn and boardPlayers[0]) or (not gameStates[0].whiteTurn and boardPlayers[1]),
                                           (gameStates[1].whiteTurn and boardPlayers[2]) or (not gameStates[1].whiteTurn and boardPlayers[3])]
-                            drawGameState(screen, gameStates, validMoves, names, selectedSq, toMenu_btn, restart_btn, AIExists)
+                            drawGameState(screen, gameStates, validMoves, selectedSq, toMenu_btn, restart_btn, AIExists)
                             pg.display.flip()
                     if not gameOver:
                         boardNum = -1
@@ -253,7 +254,7 @@ def main(screen: pg.Surface):
                         else:
                             selectedSq = [(), ()]
                             clicks = [[], []]
-                        drawGameState(screen, gameStates, validMoves, names, selectedSq, toMenu_btn, restart_btn, AIExists)
+                        drawGameState(screen, gameStates, validMoves, selectedSq, toMenu_btn, restart_btn, AIExists)
                         pg.display.flip()
         if not gameOver:
             gameOver = gameOverCheck(gameStates, AIExists)
@@ -295,7 +296,7 @@ def main(screen: pg.Surface):
                         selectedSq[i] = ()
                         clicks[i] = []
             if moveMade[i]:
-                drawGameState(screen, gameStates, validMoves, names, selectedSq, toMenu_btn, restart_btn, AIExists)
+                drawGameState(screen, gameStates, validMoves, selectedSq, toMenu_btn, restart_btn, AIExists)
                 if not soundPlayed and SETTINGS["sounds"]:
                     SOUNDS["move"].play()
                 soundPlayed = False
@@ -449,11 +450,11 @@ def highlightPossiblePromotions(screen: pg.Surface, possiblePromotions: dict, pr
                 screen.blit(IMAGES["frame"], pg.Rect(column * SQ_SIZE + MARGIN, row * SQ_SIZE + MARGIN, SQ_SIZE, SQ_SIZE))
 
 
-def drawGameState(screen: pg.Surface, gameStates: list, validMoves: list, playerNames: list, selectedSq: list, toMenu_btn: RadioButton, restart_btn: RadioButton, AIExists: bool, promotion=-1, possiblePromotions=None):
+def drawGameState(screen: pg.Surface, gameStates: list, validMoves: list, selectedSq: list, toMenu_btn: RadioButton, restart_btn: RadioButton, AIExists: bool, promotion=-1, possiblePromotions=None):
     screen.fill((181, 136, 99))
     # screen.blit(IMAGES["BG"], (0, 0, SCREEN_WIDTH, SCREEN_HEIGHT))
     drawEndGameText(screen, gameStates, AIExists)
-    drawPlayersNames(screen, playerNames)
+    drawPlayersNames(screen)
     drawBoard(screen)
     for btn in [toMenu_btn, restart_btn]:
         btn.update(screen)
@@ -511,7 +512,7 @@ def getPromotion(screen: pg.Surface, gameStates: list, playerNames: list, boardN
     possiblePromotions = calculatePossiblePromotions(gameStates, boardNum)
     if possiblePromotions == {}:
         return 0, None
-    drawGameState(screen, gameStates, [], playerNames, [], toMenu_btn, restart_btn, AIExists, promotion=boardNum, possiblePromotions=possiblePromotions)
+    drawGameState(screen, gameStates, [], [], toMenu_btn, restart_btn, AIExists, promotion=boardNum, possiblePromotions=possiblePromotions)
     playerName = getPlayerName(gameStates[boardNum], playerNames[boardNum * 2:(boardNum + 1) * 2])
     drawTopText(screen, f"{playerName} chooses a piece to promote")
     pg.display.flip()
@@ -542,45 +543,22 @@ def getPromotion(screen: pg.Surface, gameStates: list, playerNames: list, boardN
 
 def drawTopText(screen: pg.Surface, text: str):
     font = pg.font.SysFont("Helvetica", FONT_SIZE * 2, True, False)
-
-    textObj = font.render(text, False, pg.Color("gray"))
-    textLocation = pg.Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT).move(SCREEN_WIDTH // 2 - textObj.get_width() // 2,
-                                                                   textObj.get_height() // 2)
-    screen.blit(textObj, textLocation)
-    textObj = font.render(text, False, pg.Color("black"))
-    screen.blit(textObj, textLocation.move(2, 2))
+    topText_lbl = Label(text, (SCREEN_WIDTH // 2, SQ_SIZE), font)
+    topText_lbl.update(screen)
 
 
-def drawPlayersNames(screen: pg.Surface, playerNames: list):
+def drawPlayersNames(screen: pg.Surface):
     font = pg.font.SysFont("Helvetica", int(FONT_SIZE * 1.5), True, False)
-    textObj = font.render(playerNames[0], False, pg.Color("gray"))
-
-    textLocation = pg.Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT).move(MARGIN + (BOARD_SIZE - textObj.get_width()) // 2,
-                                                                   SCREEN_HEIGHT - (MARGIN + textObj.get_height()) // 2)
-    screen.blit(textObj, textLocation)
-    textObj = font.render(playerNames[0], False, pg.Color("black"))
-    screen.blit(textObj, textLocation.move(2, 2))
-
-    textObj = font.render(playerNames[1], False, pg.Color("gray"))
-    textLocation = pg.Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT).move(MARGIN + (BOARD_SIZE - textObj.get_width()) // 2,
-                                                                   (MARGIN - textObj.get_height()) // 2)
-    screen.blit(textObj, textLocation)
-    textObj = font.render(playerNames[1], False, pg.Color("black"))
-    screen.blit(textObj, textLocation.move(2, 2))
-
-    textObj = font.render(playerNames[2], False, pg.Color("gray"))
-    textLocation = pg.Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT).move(MARGIN_LEFT + (BOARD_SIZE - textObj.get_width()) // 2,
-                                                                   (MARGIN - textObj.get_height()) // 2)
-    screen.blit(textObj, textLocation)
-    textObj = font.render(playerNames[2], False, pg.Color("black"))
-    screen.blit(textObj, textLocation.move(2, 2))
-
-    textObj = font.render(playerNames[3], False, pg.Color("gray"))
-    textLocation = pg.Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT).move(MARGIN_LEFT + (BOARD_SIZE - textObj.get_width()) // 2,
-                                                                   SCREEN_HEIGHT - (MARGIN + textObj.get_height()) // 2)
-    screen.blit(textObj, textLocation)
-    textObj = font.render(playerNames[3], False, pg.Color("black"))
-    screen.blit(textObj, textLocation.move(2, 2))
+    xBoard1 = MARGIN + BOARD_SIZE // 2
+    xBoard2 = MARGIN_LEFT + BOARD_SIZE // 2
+    yTop = MARGIN // 2
+    yBot = SCREEN_HEIGHT - MARGIN // 2
+    player1_lbl = Label(names[0], (xBoard1, yBot), font)
+    player2_lbl = Label(names[1], (xBoard1, yTop), font)
+    player3_lbl = Label(names[2], (xBoard2, yTop), font)
+    player4_lbl = Label(names[3], (xBoard2, yBot), font)
+    for lbl in [player1_lbl, player2_lbl, player3_lbl, player4_lbl]:
+        lbl.update(screen)
 
 
 def drawMenu(screen: pg.Surface, name: str):
@@ -590,23 +568,20 @@ def drawMenu(screen: pg.Surface, name: str):
 
 def drawMenuName(screen: pg.Surface, name: str):
     font = pg.font.SysFont("Helvetica", FONT_SIZE * 5, True, False)
-    textObj = font.render(name, False, pg.Color("gray"))
-    pg.draw.polygon(screen, (127, 97, 70), ((0, 0), (SCREEN_WIDTH, 0), (SCREEN_WIDTH, textObj.get_height() // 2),
-                                            (textObj.get_width() + textObj.get_height() // 2 + 2, textObj.get_height() // 2),
-                                            (textObj.get_width() + 2, textObj.get_height() + 2), (0, textObj.get_height() + 2)))
-    textLocation = pg.Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT).move(2, 2)
-    screen.blit(textObj, textLocation)
-    textObj = font.render(name, False, pg.Color("black"))
-    screen.blit(textObj, textLocation.move(2, 2))
+    menuName_lbl = Label(name, (2, 2), font, topleft=True)
+    pg.draw.polygon(screen, (127, 97, 70), ((0, 0), (SCREEN_WIDTH, 0), (SCREEN_WIDTH, menuName_lbl.textRect1.height // 2),
+                                            (menuName_lbl.textRect1.width + menuName_lbl.textRect1.height // 2 + 2, menuName_lbl.textRect1.height // 2),
+                                            (menuName_lbl.textRect1.width + 2, menuName_lbl.textRect1.height + 2), (0, menuName_lbl.textRect1.height + 2)))
+    menuName_lbl.update(screen)
 
 
 def createMainMenu(screen: pg.Surface):
     working = True
     clock = pg.time.Clock()
     font = pg.font.SysFont("Helvetica", FONT_SIZE * 3, True, False)
-    settings_btn = Button(None, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2), "Settings", font)
-    newGame_btn = Button(None, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - settings_btn.rect.height * 2), "New game", font)
-    quit_btn = Button(None, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + settings_btn.rect.height * 2), "Quit", font)
+    settings_btn = Button(IMAGES["button"], (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2), "Settings", font)
+    newGame_btn = Button(IMAGES["button"], (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - settings_btn.rect.height * 2), "New game", font)
+    quit_btn = Button(IMAGES["button"], (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + settings_btn.rect.height * 2), "Quit", font)
     while working:
         mousePos = pg.mouse.get_pos()
         clock.tick(FPS)
@@ -633,7 +608,7 @@ def createSettingsMenu(screen: pg.Surface):
     working = True
     clock = pg.time.Clock()
     font = pg.font.SysFont("Helvetica", FONT_SIZE * 3, True, False)
-    back_btn = Button(None, (SCREEN_WIDTH // 2, SCREEN_HEIGHT - SQ_SIZE * 2), "Back", font)
+    back_btn = Button(IMAGES["button"], (SCREEN_WIDTH // 2, SCREEN_HEIGHT - SQ_SIZE * 2), "Back", font)
     sound_btn = RadioButton((SCREEN_WIDTH // 4 + SQ_SIZE // 2, SCREEN_HEIGHT // 4 + SQ_SIZE // 2), SETTINGS["sounds"], IMAGES["radio_button_on"], IMAGES["radio_button_off"])
     sound_lbl = RadioLabel("Sound: ON", "Sound: OFF", SETTINGS["sounds"], (SCREEN_WIDTH // 4 + SQ_SIZE, SCREEN_HEIGHT // 4), font)
     lang_btn = RadioButton((SCREEN_WIDTH // 4 + SQ_SIZE // 2, SCREEN_HEIGHT // 4 + int(SQ_SIZE * 2.5)), SETTINGS["language"], IMAGES["en_flag"], IMAGES["ru_flag"])
@@ -668,8 +643,8 @@ def createNewGameMenu(screen: pg.Surface):
     clock = pg.time.Clock()
     font = pg.font.SysFont("Helvetica", FONT_SIZE * 3, True, False)
     smallFont = pg.font.SysFont("Helvetica", FONT_SIZE, True, False)
-    back_btn = Button(None, (SCREEN_WIDTH // 2, SCREEN_HEIGHT - SQ_SIZE * 2), "Back", font)
-    play_btn = Button(None, (SCREEN_WIDTH - SQ_SIZE * 2, SCREEN_HEIGHT - SQ_SIZE * 2), "Play", font)
+    back_btn = Button(IMAGES["button"], (SCREEN_WIDTH // 2, SCREEN_HEIGHT - SQ_SIZE * 2), "Back", font)
+    play_btn = Button(IMAGES["button"], (SCREEN_WIDTH * 4 // 5, SCREEN_HEIGHT - SQ_SIZE * 2), "Play", font)
     xBoard1 = SCREEN_WIDTH // 4
     xBoard2 = SCREEN_WIDTH // 4 + BOARD_SIZE // 2 + SQ_SIZE
     yBoard = SCREEN_HEIGHT // 3 + SQ_SIZE

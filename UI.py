@@ -209,6 +209,11 @@ class Image:
     def update(self, screen: pg.Surface):
         screen.blit(self.image, self.rect)
 
+    def move(self, newPos: tuple):
+        self.xPos = newPos[0]
+        self.yPos = newPos[1]
+        self.rect = self.image.get_rect(center=(self.xPos, self.yPos))
+
 
 class Hourglass:
     def __init__(self, currentPlayer: int, image: pg.Surface, MARGIN: int, MARGIN_LEFT: int, SQ_SIZE: int, SCREEN_HEIGHT: int):
