@@ -47,7 +47,7 @@ def loadResources():
     IMAGES["ddm_head"] = pg.transform.scale(pg.image.load("images/button2.png"), (BOARD_SIZE * 5 // 12, SQ_SIZE * 2 // 3))
     IMAGES["ddm_body"] = pg.transform.scale(pg.image.load("images/button3.png"), (BOARD_SIZE * 5 // 12, SQ_SIZE * 2 // 3))
     IMAGES["dialogWindow"] = pg.transform.scale(pg.image.load("images/dialogWindow.png"), (SCREEN_WIDTH // 3, SCREEN_HEIGHT // 4))
-    IMAGES["frame"].set_alpha(200)
+    IMAGES["dialogWindow"].set_alpha(40)
     SOUNDS["move"] = pg.mixer.Sound("sounds/move.wav")
     global SETTINGS
     if isfile("SETTINGS.json"):
