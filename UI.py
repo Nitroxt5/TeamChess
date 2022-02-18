@@ -131,22 +131,20 @@ class RadioLabel:
 
 
 class DropDownMenu:
-    def __init__(self, center: tuple, text: list, font: pg.font.SysFont, BOARD_SIZE: int, SQ_SIZE: int):
+    def __init__(self, center: tuple, text: list, font: pg.font.SysFont, SQ_SIZE: int, head: pg.Surface, body: pg.Surface):
         self.xPos = center[0]
         self.yPos = center[1]
         self.headText = text[0]
         self.bodyText = text[1:]
         self.font = font
         self.state = False
-        self.head = pg.Surface((BOARD_SIZE // 4, SQ_SIZE // 2))
-        self.head.fill((127, 97, 70))
-        self.body = pg.Surface((BOARD_SIZE // 4, SQ_SIZE // 2))
-        self.body.fill((153, 117, 85))
+        self.head = head
+        self.body = body
         self.rects = [self.head.get_rect(center=center)]
         self.buttons = [Button(None, center, self.headText, font)]
         for i in range(1, len(text)):
-            self.rects.append(self.body.get_rect(center=(self.xPos, self.yPos + i * SQ_SIZE // 2)))
-            self.buttons.append(Button(None, (self.xPos, self.yPos + i * SQ_SIZE // 2), self.bodyText[i - 1], font))
+            self.rects.append(self.body.get_rect(center=(self.xPos, self.yPos + i * SQ_SIZE * 2 // 3)))
+            self.buttons.append(Button(None, (self.xPos, self.yPos + i * SQ_SIZE * 2 // 3), self.bodyText[i - 1], font))
 
     def switch(self):
         self.state = not self.state
@@ -161,7 +159,7 @@ class DropDownMenu:
                     self.changeHead(i)
                     self.switch()
                     return i
-        return 0
+        return None
 
     def update(self, screen: pg.Surface):
         screen.blit(self.head, self.rects[0])
@@ -178,19 +176,45 @@ class DropDownMenu:
 
 
 class DialogWindow:
-    def __init__(self, text: str, SCREEN_HEIGHT: int, SCREEN_WIDTH: int, FONT_SIZE: int):
+    def __init__(self, text: str, SCREEN_HEIGHT: int, SCREEN_WIDTH: int, FONT_SIZE: int, bg: pg.Surface, lang: bool):
         self.textInput = text
-        self.window = pg.Surface((SCREEN_WIDTH // 3, SCREEN_HEIGHT // 4))
-        self.window.fill((127, 97, 70))
+        self.window = bg
         self.windowRect = self.window.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2))
         self.font = pg.font.SysFont("Helvetica", FONT_SIZE * 2, True, False)
-        self.question = Label(text, (SCREEN_WIDTH // 2, (SCREEN_HEIGHT - self.windowRect.height // 2) // 2), self.font)
-        self.yes_btn = Button(None, ((SCREEN_WIDTH - self.windowRect.width // 2) // 2, (SCREEN_HEIGHT + self.windowRect.height // 2) // 2), "Yes", self.font)
-        self.no_btn = Button(None, ((SCREEN_WIDTH + self.windowRect.width // 2) // 2, (SCREEN_HEIGHT + self.windowRect.height // 2) // 2), "No", self.font)
+        self.firstLine, self.secondLine = self.textAdaptation(SCREEN_WIDTH, SCREEN_HEIGHT)
+        self.line1_lbl = Label(self.firstLine, (SCREEN_WIDTH // 2, (SCREEN_HEIGHT - self.windowRect.height // 2) // 2), self.font)
+        if self.secondLine is not None:
+            self.line2_lbl = Label(self.secondLine, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2), self.font)
+        else:
+            self.line2_lbl = None
+        self.yes_btn = Button(None, ((SCREEN_WIDTH - self.windowRect.width // 2) // 2, (SCREEN_HEIGHT + self.windowRect.height // 2) // 2), "Yes" if lang else "Да", self.font)
+        self.no_btn = Button(None, ((SCREEN_WIDTH + self.windowRect.width // 2) // 2, (SCREEN_HEIGHT + self.windowRect.height // 2) // 2), "No" if lang else "Нет", self.font)
+
+    def textAdaptation(self, SCREEN_WIDTH: int, SCREEN_HEIGHT: int):
+        text = self.font.render(self.textInput, True, BACK_COLOR)
+        rect = text.get_rect(center=(SCREEN_WIDTH // 2, (SCREEN_HEIGHT - self.windowRect.height // 2) // 2))
+        if rect.width + 30 < self.windowRect.width:
+            return self.textInput, None
+        else:
+            words = self.textInput.split(" ")
+            firstLine = ""
+            line = words[0]
+            index = 0
+            for word in words[1:]:
+                index += 1
+                firstLine = line
+                line += f" {word}"
+                text = self.font.render(line, True, BACK_COLOR)
+                rect = text.get_rect(center=(SCREEN_WIDTH // 2, (SCREEN_HEIGHT - self.windowRect.height // 2) // 2))
+                if rect.width + 30 >= self.windowRect.width:
+                    break
+            return firstLine, " ".join(words[index:])
 
     def update(self, screen: pg.Surface, position: tuple):
         screen.blit(self.window, self.windowRect)
-        self.question.update(screen)
+        self.line1_lbl.update(screen)
+        if self.line2_lbl is not None:
+            self.line2_lbl.update(screen)
         for btn in [self.yes_btn, self.no_btn]:
             btn.update(screen)
             btn.changeColor(position)
