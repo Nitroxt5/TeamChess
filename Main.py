@@ -30,6 +30,14 @@ IMAGES = {}
 SOUNDS = {}
 
 
+def settingsCheck(settings):
+    if isinstance(settings, dict):
+        if "sounds" in settings and "language" in settings:
+            if isinstance(settings["sounds"], bool) and isinstance(settings["language"], bool):
+                return True
+    return False
+
+
 def loadResources():
     SQ_SIZE_IMAGES = ("frame", "hourglass", "home_button_on", "home_button_off", "radio_button_on", "radio_button_off",
                       "restart_button_on", "restart_button_off", "ru_flag", "en_flag")
@@ -52,7 +60,12 @@ def loadResources():
     global SETTINGS
     if isfile("SETTINGS.json"):
         with open("SETTINGS.json", "r", encoding="utf-8") as f:
-            SETTINGS = json.load(f)
+            try:
+                SETTINGS = json.load(f)
+            except json.decoder.JSONDecodeError:
+                SETTINGS = {"sounds": True, "language": True}
+            if not settingsCheck(SETTINGS):
+                SETTINGS = {"sounds": True, "language": True}
     # IMAGES["BG"] = pg.transform.scale(pg.image.load("images/BG.png"), (SCREEN_WIDTH, SCREEN_HEIGHT))
 
 
