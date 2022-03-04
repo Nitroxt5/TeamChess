@@ -9,7 +9,7 @@ from random import randint
 from UI import Button, Hourglass, DialogWindow, RadioButton, RadioLabel, Image, DropDownMenu, Label
 import json
 from os.path import isfile
-import sys
+from sys import exit as sys_exit
 
 pg.init()
 SCREEN_WIDTH, SCREEN_HEIGHT = pg.display.Info().current_w, pg.display.Info().current_h
@@ -26,6 +26,7 @@ FONT_SIZE = 25 * SCREEN_HEIGHT // 1080
 EMPTY_PIECES = ["e" + piece for piece in PIECES if piece != "K"]
 SKIN_PACK = 2
 FPS = 60
+PALETTE = {"dark brown": (127, 97, 70), "brown": (181, 136, 99)}
 IMAGES = {}
 SOUNDS = {}
 
@@ -129,7 +130,7 @@ def main(screen: pg.Surface):
             if e.type == pg.KEYDOWN:
                 if e.key == pg.K_F4 and bool(e.mod & pg.KMOD_ALT):
                     pg.quit()
-                    sys.exit()
+                    sys_exit()
             elif e.type == pg.QUIT:
                 gameOver = True
                 if AIThinking:
@@ -473,7 +474,7 @@ def highlightPossiblePromotions(screen: pg.Surface, possiblePromotions: dict, pr
 
 
 def drawGameState(screen: pg.Surface, gameStates: list, validMoves: list, selectedSq: list, toMenu_btn: RadioButton, restart_btn: RadioButton, AIExists: bool, promotion=-1, possiblePromotions=None):
-    screen.fill((181, 136, 99))
+    screen.fill(PALETTE["brown"])
     # screen.blit(IMAGES["BG"], (0, 0, SCREEN_WIDTH, SCREEN_HEIGHT))
     drawEndGameText(screen, gameStates, AIExists)
     drawPlayersNames(screen)
@@ -583,17 +584,15 @@ def drawPlayersNames(screen: pg.Surface):
         lbl.update(screen)
 
 
-def drawMenu(screen: pg.Surface, name: str):
-    screen.fill((181, 136, 99))
-    drawMenuName(screen, name)
+def drawMenu(screen: pg.Surface, menuName_lbl: Label):
+    screen.fill(PALETTE["brown"])
+    drawMenuName(screen, menuName_lbl)
 
 
-def drawMenuName(screen: pg.Surface, name: str):
-    font = pg.font.SysFont("Helvetica", FONT_SIZE * 5, True, False)
-    menuName_lbl = Label(name, (2, 2), font, topleft=True)
-    pg.draw.polygon(screen, (127, 97, 70), ((0, 0), (SCREEN_WIDTH, 0), (SCREEN_WIDTH, menuName_lbl.textRect1.height // 2),
-                                            (menuName_lbl.textRect1.width + menuName_lbl.textRect1.height // 2 + 2, menuName_lbl.textRect1.height // 2),
-                                            (menuName_lbl.textRect1.width + 2, menuName_lbl.textRect1.height + 2), (0, menuName_lbl.textRect1.height + 2)))
+def drawMenuName(screen: pg.Surface, menuName_lbl: Label):
+    pg.draw.polygon(screen, PALETTE["dark brown"], ((0, 0), (SCREEN_WIDTH, 0), (SCREEN_WIDTH, menuName_lbl.textRect1.height // 2),
+                                                    (menuName_lbl.textRect1.width + menuName_lbl.textRect1.height // 2 + 2, menuName_lbl.textRect1.height // 2),
+                                                    (menuName_lbl.textRect1.width + 2, menuName_lbl.textRect1.height + 2), (0, menuName_lbl.textRect1.height + 2)))
     menuName_lbl.update(screen)
 
 
@@ -604,10 +603,11 @@ def createMainMenu(screen: pg.Surface):
     settings_btn = Button(IMAGES["button"], (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2), mainMenu["Settings_btn"], font)
     newGame_btn = Button(IMAGES["button"], (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - settings_btn.rect.height * 2), mainMenu["NewGame_btn"], font)
     quit_btn = Button(IMAGES["button"], (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + settings_btn.rect.height * 2), mainMenu["Quit_btn"], font)
+    menuName_lbl = Label("SwiChess", (2, 2), pg.font.SysFont("Helvetica", FONT_SIZE * 5, True, False), topleft=True)
     while working:
         mousePos = pg.mouse.get_pos()
         clock.tick(FPS)
-        drawMenu(screen, "SwiChess")
+        drawMenu(screen, menuName_lbl)
         for button in [newGame_btn, settings_btn, quit_btn]:
             button.changeColor(mousePos)
             button.update(screen)
@@ -636,10 +636,11 @@ def createSettingsMenu(screen: pg.Surface):
     sound_lbl = RadioLabel(settingsMenu["Sound_btn"][0], settingsMenu["Sound_btn"][1], SETTINGS["sounds"], (SCREEN_WIDTH // 4 + SQ_SIZE, SCREEN_HEIGHT // 4), font)
     lang_btn = RadioButton((SCREEN_WIDTH // 4 + SQ_SIZE // 2, SCREEN_HEIGHT // 4 + int(SQ_SIZE * 2.5)), SETTINGS["language"], IMAGES["en_flag"], IMAGES["ru_flag"])
     lang_lbl = RadioLabel(settingsMenu["Lang_btn"], settingsMenu["Lang_btn"], SETTINGS["language"], (SCREEN_WIDTH // 4 + SQ_SIZE, SCREEN_HEIGHT // 4 + SQ_SIZE * 2), font)
+    menuName_lbl = Label(settingsMenu["Name"], (2, 2), pg.font.SysFont("Helvetica", FONT_SIZE * 5, True, False), topleft=True)
     while working:
         mousePos = pg.mouse.get_pos()
         clock.tick(FPS)
-        drawMenu(screen, settingsMenu["Name"])
+        drawMenu(screen, menuName_lbl)
         back_btn.changeColor(mousePos)
         for item in [back_btn, sound_btn, sound_lbl, lang_btn, lang_lbl]:
             item.update(screen)
@@ -684,10 +685,11 @@ def createNewGameMenu(screen: pg.Surface):
                                newGameMenu["DDM3"], smallFont, SQ_SIZE, IMAGES["ddm_head"], IMAGES["ddm_body"])
     player4_ddm = DropDownMenu((xBoard2, yBoard + BOARD_SIZE // 4 + SQ_SIZE),
                                newGameMenu["DDM4"], smallFont, SQ_SIZE, IMAGES["ddm_head"], IMAGES["ddm_body"])
+    menuName_lbl = Label(newGameMenu["Name"], (2, 2), pg.font.SysFont("Helvetica", FONT_SIZE * 5, True, False), topleft=True)
     while working:
         mousePos = pg.mouse.get_pos()
         clock.tick(FPS)
-        drawMenu(screen, newGameMenu["Name"])
+        drawMenu(screen, menuName_lbl)
         for item in [board1_img, board2_img, player1_ddm, player2_ddm, player3_ddm, player4_ddm]:
             item.update(screen)
         for btn in player1_ddm.buttons + player2_ddm.buttons + player3_ddm.buttons + player4_ddm.buttons:
@@ -746,5 +748,4 @@ if __name__ == "__main__":
     pg.display.set_caption("SwiChess")
     pg.display.set_icon(IMAGES["icon"])
     createMainMenu(mainScreen)
-    # main(mainScreen)
     pg.quit()

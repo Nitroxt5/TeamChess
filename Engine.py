@@ -103,7 +103,6 @@ class GameState:
         self.boardHash = 0
         self.boardReserveHash = 0
         self.hashBoard()
-        self.updateReserveHash()
         self.currentValidMovesCount = 0
 
     def hashBoard(self):
@@ -123,6 +122,9 @@ class GameState:
             for position in splitPositions:
                 pos = getPower(position)
                 self.boardHash ^= self.zobristTable[pos][COLORED_PIECES_CODES[piece]]
+        for color, value in self.reserve.items():
+            for piece, count in value.items():
+                self.boardReserveHash ^= self.zobristReserveTable[count][COLORED_PIECES_CODES[color + piece]]
 
     def updateHash(self, move):
         self.boardHashLog.append(self.boardHash)
@@ -144,11 +146,9 @@ class GameState:
                 self.boardHash ^= self.zobristTable[move.endLoc + 1][COLORED_PIECES_CODES[f"{move.movedPiece[0]}R"]]
                 self.boardHash ^= self.zobristTable[move.endLoc - 2][COLORED_PIECES_CODES[f"{move.movedPiece[0]}R"]]
 
-    def updateReserveHash(self):
-        self.boardReserveHash = 0
-        for color, value in self.reserve.items():
-            for piece, count in value.items():
-                self.boardReserveHash ^= self.zobristReserveTable[count][COLORED_PIECES_CODES[color + piece]]
+    def updateReserveHash(self, coloredPiece: str, prevCount: int):
+        self.boardReserveHash ^= self.zobristReserveTable[prevCount][COLORED_PIECES_CODES[coloredPiece]]
+        self.boardReserveHash ^= self.zobristReserveTable[self.reserve[coloredPiece[0]][coloredPiece[1]]][COLORED_PIECES_CODES[coloredPiece]]
 
     def createThreatTable(self):
         self.bbOfThreats["w"] = 0
@@ -267,10 +267,10 @@ class GameState:
         if move.capturedPiece is not None:
             if isinstance(other, GameState):
                 other.reserve[move.capturedPiece[0]][move.capturedPiece[1]] += 1
-                other.updateReserveHash()
+                other.updateReserveHash(move.capturedPiece, other.reserve[move.capturedPiece[0]][move.capturedPiece[1]] - 1)
         if move.isReserve:
             self.reserve[move.movedPiece[0]][move.movedPiece[1]] -= 1
-            self.updateReserveHash()
+            self.updateReserveHash(move.movedPiece, self.reserve[move.movedPiece[0]][move.movedPiece[1]] + 1)
         if not move.isReserve:
             self.unsetSqState(move.capturedPiece, move.endSquare)
             self.unsetSqState(move.movedPiece, move.startSquare)
@@ -312,7 +312,7 @@ class GameState:
                 other.unsetSqState(f"{move.movedPiece[0] + move.promotedTo}", move.promotedPiecePosition)
                 other.boardHash ^= other.zobristTable[getPower(move.promotedPiecePosition)][COLORED_PIECES_CODES[move.movedPiece[0] + move.promotedTo]]
                 other.reserve[move.movedPiece[0]][move.movedPiece[1]] += 1
-                other.updateReserveHash()
+                other.updateReserveHash(move.movedPiece, other.reserve[move.movedPiece[0]][move.movedPiece[1]] - 1)
         self.updateCastleRights(move)
         self.updateHash(move)
         self.castleRightsLog.append(self.currentCastlingRight)
@@ -327,7 +327,7 @@ class GameState:
             self.boardHash = self.boardHashLog.pop()
             if move.isReserve:
                 self.reserve[move.movedPiece[0]][move.movedPiece[1]] += 1
-                self.updateReserveHash()
+                self.updateReserveHash(move.movedPiece, self.reserve[move.movedPiece[0]][move.movedPiece[1]] - 1)
             if move.isPawnPromotion:
                 self.unsetSqState(f"{move.movedPiece[0] + move.promotedTo}", move.endSquare)
             else:
@@ -661,11 +661,9 @@ class GameState:
     def getCastleMoves(self, square: int, moves: list):
         if self.isSquareAttacked(square):
             return
-        if (self.whiteTurn and self.getCastleRight(CASTLE_SIDES["wKs"])) or (
-                not self.whiteTurn and self.getCastleRight(CASTLE_SIDES["bKs"])):
+        if (self.whiteTurn and self.getCastleRight(CASTLE_SIDES["wKs"])) or (not self.whiteTurn and self.getCastleRight(CASTLE_SIDES["bKs"])):
             self.getKingSideCastle(square, moves)
-        if (self.whiteTurn and self.getCastleRight(CASTLE_SIDES["wQs"])) or (
-                not self.whiteTurn and self.getCastleRight(CASTLE_SIDES["bQs"])):
+        if (self.whiteTurn and self.getCastleRight(CASTLE_SIDES["wQs"])) or (not self.whiteTurn and self.getCastleRight(CASTLE_SIDES["bQs"])):
             self.getQueenSideCastle(square, moves)
 
     def getKingSideCastle(self, square: int, moves: list):
