@@ -129,6 +129,7 @@ def main(screen: pg.Surface):
         for e in pg.event.get():
             if e.type == pg.KEYDOWN:
                 if e.key == pg.K_F4 and bool(e.mod & pg.KMOD_ALT):
+                    saveResources()
                     pg.quit()
                     sys_exit()
             elif e.type == pg.QUIT:
