@@ -140,11 +140,9 @@ class DropDownMenu:
         self.state = False
         self.head = head
         self.body = body
-        self.rects = [self.head.get_rect(center=center)]
-        self.buttons = [Button(None, center, self.headText, font)]
+        self.buttons = [Button(self.head, center, self.headText, font)]
         for i in range(1, len(text)):
-            self.rects.append(self.body.get_rect(center=(self.xPos, self.yPos + i * SQ_SIZE * 2 // 3)))
-            self.buttons.append(Button(None, (self.xPos, self.yPos + i * SQ_SIZE * 2 // 3), self.bodyText[i - 1], font))
+            self.buttons.append(Button(self.body, (self.xPos, self.yPos + i * SQ_SIZE * 2 // 3), self.bodyText[i - 1], font))
 
     def switch(self):
         self.state = not self.state
@@ -162,17 +160,15 @@ class DropDownMenu:
         return None
 
     def update(self, screen: pg.Surface):
-        screen.blit(self.head, self.rects[0])
         self.buttons[0].update(screen)
         if self.state:
-            for i in range(1, len(self.rects)):
-                screen.blit(self.body, self.rects[i])
+            for i in range(1, len(self.buttons)):
                 self.buttons[i].update(screen)
 
     def changeHead(self, index: int):
         if index != 0:
             self.headText = self.bodyText[index - 1]
-            self.buttons[0] = Button(None, (self.xPos, self.yPos), self.headText, self.font)
+            self.buttons[0] = Button(self.head, (self.xPos, self.yPos), self.headText, self.font)
 
 
 class DialogWindow:
@@ -254,7 +250,7 @@ class Hourglass:
         self.angle = 0
 
     def update(self, screen: pg.Surface):
-        self.angle += 2
+        self.angle += 4
         if self.angle == 360:
             self.angle = 0
         self.rotate()

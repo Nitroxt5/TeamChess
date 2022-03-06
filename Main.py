@@ -25,7 +25,7 @@ RESERVE_MARGIN = (BOARD_SIZE - 5 * SQ_SIZE) // 2
 FONT_SIZE = 25 * SCREEN_HEIGHT // 1080
 EMPTY_PIECES = ["e" + piece for piece in PIECES if piece != "K"]
 SKIN_PACK = 2
-FPS = 60
+FPS = 30
 PALETTE = {"dark brown": (127, 97, 70), "brown": (181, 136, 99)}
 IMAGES = {}
 SOUNDS = {}
@@ -678,13 +678,13 @@ def createNewGameMenu(screen: pg.Surface):
     board2_img = Image(IMAGES["board_with_pieces2"], (xBoard2, yBoard), (BOARD_SIZE // 2, BOARD_SIZE // 2))
     for i, ddm_lst in enumerate([newGameMenu["DDM1"], newGameMenu["DDM2"], newGameMenu["DDM3"], newGameMenu["DDM4"]]):
         ddm_lst[0] = ddm_lst[difficulties[i]]
-    player1_ddm = DropDownMenu((xBoard1, yBoard + BOARD_SIZE // 4 + SQ_SIZE),
+    player1_ddm = DropDownMenu((xBoard1, yBoard + BOARD_SIZE // 4 + SQ_SIZE // 2),
                                newGameMenu["DDM1"], smallFont, SQ_SIZE, IMAGES["ddm_head"], IMAGES["ddm_body"])
-    player2_ddm = DropDownMenu((xBoard1, yBoard - BOARD_SIZE // 4 - SQ_SIZE),
+    player2_ddm = DropDownMenu((xBoard1, yBoard - BOARD_SIZE // 4 - SQ_SIZE // 2),
                                newGameMenu["DDM2"], smallFont, SQ_SIZE, IMAGES["ddm_head"], IMAGES["ddm_body"])
-    player3_ddm = DropDownMenu((xBoard2, yBoard - BOARD_SIZE // 4 - SQ_SIZE),
+    player3_ddm = DropDownMenu((xBoard2, yBoard - BOARD_SIZE // 4 - SQ_SIZE // 2),
                                newGameMenu["DDM3"], smallFont, SQ_SIZE, IMAGES["ddm_head"], IMAGES["ddm_body"])
-    player4_ddm = DropDownMenu((xBoard2, yBoard + BOARD_SIZE // 4 + SQ_SIZE),
+    player4_ddm = DropDownMenu((xBoard2, yBoard + BOARD_SIZE // 4 + SQ_SIZE // 2),
                                newGameMenu["DDM4"], smallFont, SQ_SIZE, IMAGES["ddm_head"], IMAGES["ddm_body"])
     menuName_lbl = Label(newGameMenu["Name"], (2, 2), pg.font.SysFont("Helvetica", FONT_SIZE * 5, True, False), topleft=True)
     while working:
