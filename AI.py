@@ -1,3 +1,4 @@
+from math import sqrt
 from ScoreBoard import scoreBoard
 from random import randint
 from time import perf_counter
@@ -62,7 +63,7 @@ def negaScoutAI(gameState: GameState, otherGameState: GameState, validMoves: lis
     oneDepthSearch(gameState, moves, turn, depth)
     moves.sort(key=lambda mov: mov.estimatedScore, reverse=True)
     moves.sort(key=lambda mov: mov.isKiller, reverse=True)
-    silentMoveCounter = 19 + len(validMoves[1]) * 3 // 5
+    silentMoveCounter = 19 + int(2 * sqrt(max(len(validMoves[1]), 100)))
     for move in moves:
         if not silentMoveCounter:
             break
