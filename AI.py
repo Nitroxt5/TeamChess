@@ -62,7 +62,7 @@ def negaScoutAI(gameState: GameState, otherGameState: GameState, validMoves: lis
     oneDepthSearch(gameState, moves, turn, depth)
     moves.sort(key=lambda mov: mov.estimatedScore, reverse=True)
     moves.sort(key=lambda mov: mov.isKiller, reverse=True)
-    silentMoveCounter = 19 + len(validMoves[1]) * 2 // 3
+    silentMoveCounter = 19 + len(validMoves[1]) * 3 // 5
     for move in moves:
         if not silentMoveCounter:
             break
