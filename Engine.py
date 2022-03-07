@@ -99,9 +99,10 @@ class GameState:
         # self.reserve = {"w": {"Q": 16, "R": 16, "B": 16, "N": 16, "p": 16}, "b": {"Q": 16, "R": 16, "B": 16, "N": 16, "p": 16}}
         self.zobristTable = []
         self.zobristReserveTable = []
+        self.zobristWhiteTurn = 0
+        self.zobristBlackTurn = 0
         self.boardHashLog = []
         self.boardHash = 0
-        self.boardReserveHash = 0
         self.hashBoard()
         self.currentValidMovesCount = 0
 
@@ -117,6 +118,8 @@ class GameState:
             for j in range(12):
                 newList.append(randint(0, MAX_INT))
             self.zobristReserveTable.append(newList)
+        self.zobristWhiteTurn = randint(0, MAX_INT)
+        self.zobristBlackTurn = randint(0, MAX_INT)
         for piece in COLORED_PIECES:
             splitPositions = numSplit(self.bbOfPieces[piece])
             for position in splitPositions:
@@ -124,7 +127,8 @@ class GameState:
                 self.boardHash ^= self.zobristTable[pos][COLORED_PIECES_CODES[piece]]
         for color, value in self.reserve.items():
             for piece, count in value.items():
-                self.boardReserveHash ^= self.zobristReserveTable[count][COLORED_PIECES_CODES[color + piece]]
+                self.boardHash ^= self.zobristReserveTable[count][COLORED_PIECES_CODES[color + piece]]
+        self.boardHash ^= self.zobristWhiteTurn
 
     def updateHash(self, move):
         self.boardHashLog.append(self.boardHash)
@@ -145,10 +149,12 @@ class GameState:
             elif move.endSquare & move.bbOfCastle["wQs"] or move.endSquare & move.bbOfCastle["bQs"]:
                 self.boardHash ^= self.zobristTable[move.endLoc + 1][COLORED_PIECES_CODES[f"{move.movedPiece[0]}R"]]
                 self.boardHash ^= self.zobristTable[move.endLoc - 2][COLORED_PIECES_CODES[f"{move.movedPiece[0]}R"]]
+        self.boardHash ^= self.zobristWhiteTurn
+        self.boardHash ^= self.zobristBlackTurn
 
     def updateReserveHash(self, coloredPiece: str, prevCount: int):
-        self.boardReserveHash ^= self.zobristReserveTable[prevCount][COLORED_PIECES_CODES[coloredPiece]]
-        self.boardReserveHash ^= self.zobristReserveTable[self.reserve[coloredPiece[0]][coloredPiece[1]]][COLORED_PIECES_CODES[coloredPiece]]
+        self.boardHash ^= self.zobristReserveTable[prevCount][COLORED_PIECES_CODES[coloredPiece]]
+        self.boardHash ^= self.zobristReserveTable[self.reserve[coloredPiece[0]][coloredPiece[1]]][COLORED_PIECES_CODES[coloredPiece]]
 
     def createThreatTable(self):
         self.bbOfThreats["w"] = 0

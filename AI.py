@@ -69,18 +69,18 @@ def negaScoutAI(gameState: GameState, otherGameState: GameState, validMoves: lis
         gameState.makeMove(move)
         inTable = False
         score = 0
-        if (gameState.boardHash, gameState.boardReserveHash, gameState.whiteTurn) in hashTableForBestMoves:
-            if hashTableForBestMoves[(gameState.boardHash, gameState.boardReserveHash, gameState.whiteTurn)][0] >= depth:
-                score = hashTableForBestMoves[(gameState.boardHash, gameState.boardReserveHash, gameState.whiteTurn)][1]
+        if gameState.boardHash in hashTableForBestMoves:
+            if hashTableForBestMoves[gameState.boardHash][0] >= depth:
+                score = hashTableForBestMoves[gameState.boardHash][1]
                 inTable = True
         if not inTable:
-            if (gameState.boardHash, gameState.boardReserveHash, gameState.whiteTurn) in hashTableForValidMoves:
-                nextMoves, gameState.checkmate, gameState.stalemate = hashTableForValidMoves[(gameState.boardHash, gameState.boardReserveHash, gameState.whiteTurn)]
+            if gameState.boardHash in hashTableForValidMoves:
+                nextMoves, gameState.checkmate, gameState.stalemate = hashTableForValidMoves[gameState.boardHash]
                 gameState.updatePawnPromotionMoves(nextMoves, otherGameState)
             else:
                 nextMoves = gameState.getValidMoves()
                 gameState.updatePawnPromotionMoves(nextMoves, otherGameState)
-                hashTableForValidMoves[(gameState.boardHash, gameState.boardReserveHash, gameState.whiteTurn)] = (nextMoves, gameState.checkmate, gameState.stalemate)
+                hashTableForValidMoves[gameState.boardHash] = (nextMoves, gameState.checkmate, gameState.stalemate)
             if depth == DEPTH or move.isCapture or gameState.isWhiteInCheck or gameState.isBlackInCheck:
                 score = -negaScoutAI(gameState, otherGameState, nextMoves, -beta, -alpha, -turn, depth - 1, globalDepth, globalLength)
             else:
@@ -92,13 +92,13 @@ def negaScoutAI(gameState: GameState, otherGameState: GameState, validMoves: lis
         prevAlpha = alpha
         if score > alpha:
             alpha = score
-            if (gameState.boardHash, gameState.boardReserveHash, gameState.whiteTurn) in hashTableForBestMoves:
-                if depth > hashTableForBestMoves[(gameState.boardHash, gameState.boardReserveHash, gameState.whiteTurn)][0]:
-                    hashTableForBestMoves[(gameState.boardHash, gameState.boardReserveHash, gameState.whiteTurn)] = (depth, score)
-                if depth == hashTableForBestMoves[(gameState.boardHash, gameState.boardReserveHash, gameState.whiteTurn)][0] and score > hashTableForBestMoves[(gameState.boardHash, gameState.boardReserveHash, gameState.whiteTurn)][1]:
-                    hashTableForBestMoves[(gameState.boardHash, gameState.boardReserveHash, gameState.whiteTurn)] = (depth, score)
+            if gameState.boardHash in hashTableForBestMoves:
+                if depth > hashTableForBestMoves[gameState.boardHash][0]:
+                    hashTableForBestMoves[gameState.boardHash] = (depth, score)
+                if depth == hashTableForBestMoves[gameState.boardHash][0] and score > hashTableForBestMoves[gameState.boardHash][1]:
+                    hashTableForBestMoves[gameState.boardHash] = (depth, score)
             else:
-                hashTableForBestMoves[(gameState.boardHash, gameState.boardReserveHash, gameState.whiteTurn)] = (depth, score)
+                hashTableForBestMoves[gameState.boardHash] = (depth, score)
             if depth == globalDepth:
                 move.exactScore = score
                 move.estimatedScore = score
