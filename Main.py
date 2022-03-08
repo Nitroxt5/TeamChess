@@ -12,8 +12,8 @@ from os.path import isfile
 from sys import exit as sys_exit
 
 pg.init()
-SCREEN_WIDTH, SCREEN_HEIGHT = pg.display.Info().current_w, pg.display.Info().current_h
-# SCREEN_WIDTH, SCREEN_HEIGHT = 960, 540
+# SCREEN_WIDTH, SCREEN_HEIGHT = pg.display.Info().current_w, pg.display.Info().current_h
+SCREEN_WIDTH, SCREEN_HEIGHT = 960, 540
 if __name__ != "__main__":
     pg.quit()
 BOARD_SIZE = 600 * SCREEN_HEIGHT // 1080
@@ -103,6 +103,7 @@ def main(screen: pg.Surface):
     AIThinking = False
     AIThinkingTime = [0, 0]
     AIPositionCounter = [0, 0]
+    AIMoveCounter = [len(validMoves[0][0]), 0]
     AIProcess = Process()
     returnQ = Queue()
     selectedSq = [(), ()]
@@ -155,6 +156,8 @@ def main(screen: pg.Surface):
                         print(f"Average time per move: {AIThinkingTime[i] / moveCount}")
                         print(f"Average calculated positions per move: {AIPositionCounter[i] / moveCount}")
                         print(f"Average time per position: {AIThinkingTime[i] / AIPositionCounter[i]}")
+                    if AIExists:
+                        print(f"Average possible moves per move: {AIMoveCounter[i] / moveCount}")
                 names = plyrNames
                 working = False
             elif e.type == pg.MOUSEBUTTONDOWN:
@@ -173,6 +176,7 @@ def main(screen: pg.Surface):
                             validMoves = [gameStates[0].getValidMoves(), gameStates[1].getValidMoves()]
                             AIThinkingTime = [0, 0]
                             AIPositionCounter = [0, 0]
+                            AIMoveCounter = [len(validMoves[0][0]), 0]
                             returnQ = Queue()
                             activeBoard = 0
                             gameOver = False
@@ -288,6 +292,7 @@ def main(screen: pg.Surface):
                     playerNum = i * 2 + (0 if gameStates[i].whiteTurn else 1)
                     playerName = getPlayerName(gameStates[i], names[i * 2:(i + 1) * 2])
                     if not AIThinking:
+                        AIMoveCounter[1 - i] += len(validMoves[1 - i][0]) + len(validMoves[1 - i][1]) + len(validMoves[1 - i][2])
                         print(f"{playerName} is thinking...")
                         AIThinking = True
                         AIProcess = Process(target=negaScoutMoveAI, args=(gameStates[i], gameStates[1 - i], validMoves[i], difficulties[playerNum], returnQ))
@@ -349,7 +354,7 @@ def gameOverCheck(gameStates: list, AIExists: bool):
         return True
     elif (gameStates[0].checkmate and gameStates[0].whiteTurn) or (gameStates[1].checkmate and not gameStates[1].whiteTurn):
         return True
-    # if len(gameStates[1].gameLog) == 20:
+    # if len(gameStates[1].gameLog) == 30:
     #     return True
     # if len(gameStates[0].gameLog) == 1:
     #     return True
