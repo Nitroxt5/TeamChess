@@ -25,8 +25,8 @@ RESERVE_MARGIN = (BOARD_SIZE - 5 * SQ_SIZE) // 2
 FONT_SIZE = 25 * SCREEN_HEIGHT // 1080
 EMPTY_PIECES = ["e" + piece for piece in PIECES if piece != "K"]
 SKIN_PACK = 2
-FPS = 30
-PALETTE = {"dark brown": (127, 97, 70), "brown": (181, 136, 99)}
+FPS = 60
+# PALETTE = {"dark brown": (127, 97, 70), "brown": (181, 136, 99)}
 IMAGES = {}
 SOUNDS = {}
 
@@ -49,14 +49,15 @@ def loadResources():
     for img in SQ_SIZE_IMAGES:
         IMAGES[img] = pg.transform.scale(pg.image.load(f"images/{img}.png"), (SQ_SIZE, SQ_SIZE))
     IMAGES["icon"] = pg.image.load("images/icon.png")
+    IMAGES["settingsBG"] = pg.transform.scale(pg.image.load("images/settingsBG.png"), (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 9))
     IMAGES["board"] = pg.transform.scale(pg.image.load("images/board.png"), (BOARD_SIZE, BOARD_SIZE))
     IMAGES["board_with_pieces1"] = pg.transform.scale(pg.image.load("images/board_with_pieces1.png"), (BOARD_SIZE // 2, BOARD_SIZE // 2))
     IMAGES["board_with_pieces2"] = pg.transform.scale(pg.image.load("images/board_with_pieces2.png"), (BOARD_SIZE // 2, BOARD_SIZE // 2))
     IMAGES["button"] = pg.transform.scale(pg.image.load("images/button.png"), (SCREEN_WIDTH // 5, int(SQ_SIZE * 1.5)))
+    IMAGES["header"] = pg.transform.scale(pg.image.load("images/button.png"), (SCREEN_WIDTH // 4 * 3, SCREEN_HEIGHT // 5))
     IMAGES["ddm_head"] = pg.transform.scale(pg.image.load("images/button2.png"), (BOARD_SIZE * 5 // 12, SQ_SIZE * 2 // 3))
     IMAGES["ddm_body"] = pg.transform.scale(pg.image.load("images/button3.png"), (BOARD_SIZE * 5 // 12, SQ_SIZE * 2 // 3))
     IMAGES["dialogWindow"] = pg.transform.scale(pg.image.load("images/dialogWindow.png"), (SCREEN_WIDTH // 3, SCREEN_HEIGHT // 4))
-    IMAGES["dialogWindow"].set_alpha(40)
     SOUNDS["move"] = pg.mixer.Sound("sounds/move.wav")
     global SETTINGS
     if isfile("SETTINGS.json"):
@@ -67,7 +68,7 @@ def loadResources():
                 SETTINGS = {"sounds": True, "language": True}
             if not settingsCheck(SETTINGS):
                 SETTINGS = {"sounds": True, "language": True}
-    # IMAGES["BG"] = pg.transform.scale(pg.image.load("images/BG.png"), (SCREEN_WIDTH, SCREEN_HEIGHT))
+    IMAGES["BG"] = pg.transform.scale(pg.image.load("images/BG.png"), (SCREEN_WIDTH, SCREEN_HEIGHT))
 
 
 def saveResources():
@@ -480,8 +481,8 @@ def highlightPossiblePromotions(screen: pg.Surface, possiblePromotions: dict, pr
 
 
 def drawGameState(screen: pg.Surface, gameStates: list, validMoves: list, selectedSq: list, toMenu_btn: RadioButton, restart_btn: RadioButton, AIExists: bool, promotion=-1, possiblePromotions=None):
-    screen.fill(PALETTE["brown"])
-    # screen.blit(IMAGES["BG"], (0, 0, SCREEN_WIDTH, SCREEN_HEIGHT))
+    # screen.fill(PALETTE["brown"])
+    screen.blit(IMAGES["BG"], (0, 0, SCREEN_WIDTH, SCREEN_HEIGHT))
     drawEndGameText(screen, gameStates, AIExists)
     drawPlayersNames(screen)
     drawBoard(screen)
@@ -495,12 +496,12 @@ def drawGameState(screen: pg.Surface, gameStates: list, validMoves: list, select
 
 
 def drawBoard(screen: pg.Surface):
-    s2 = pg.Surface((BOARD_SIZE, BOARD_SIZE))
-    s2.set_alpha(80)
+    s2 = pg.Surface((BOARD_SIZE + 4, BOARD_SIZE + 4))
+    s2.set_alpha(100)
     s2.fill(pg.Color("black"))
-    screen.blit(s2, pg.Rect(MARGIN + 3, MARGIN + 3, BOARD_SIZE, BOARD_SIZE))
+    screen.blit(s2, pg.Rect(MARGIN - 2, MARGIN - 2, BOARD_SIZE + 4, BOARD_SIZE + 4))
     screen.blit(IMAGES["board"], pg.Rect(MARGIN, MARGIN, BOARD_SIZE, BOARD_SIZE))
-    screen.blit(s2, pg.Rect(MARGIN_LEFT + 3, MARGIN + 3, BOARD_SIZE, BOARD_SIZE))
+    screen.blit(s2, pg.Rect(MARGIN_LEFT - 2, MARGIN - 2, BOARD_SIZE + 4, BOARD_SIZE + 4))
     screen.blit(IMAGES["board"], pg.Rect(MARGIN_LEFT, MARGIN, BOARD_SIZE, BOARD_SIZE))
 
 
@@ -522,9 +523,8 @@ def drawPieces(screen: pg.Surface, gameStates: list):
                 marg = marginLeft + k[piece[0]] * SQ_SIZE + RESERVE_MARGIN
                 if gameStates[i].reserve[piece[0]][piece[1]] > 0:
                     screen.blit(IMAGES[piece], pg.Rect(marg, marginTop, SQ_SIZE, SQ_SIZE))
-                    textObj = font.render(f"{gameStates[i].reserve[piece[0]][piece[1]]}", False, pg.Color("black"))
-                    text_rect = textObj.get_rect(center=(marg + SQ_SIZE // 2, marginTop + marginTextTop))
-                    screen.blit(textObj, text_rect)
+                    tmp_lbl = Label(f"{gameStates[i].reserve[piece[0]][piece[1]]}", (marg + SQ_SIZE // 2, marginTop + marginTextTop), font, shift=1)
+                    tmp_lbl.update(screen)
                 elif gameStates[i].reserve[piece[0]][piece[1]] == 0:
                     screen.blit(IMAGES[f"e{piece[1]}"], pg.Rect(marg, marginTop, SQ_SIZE, SQ_SIZE))
                 k[piece[0]] += 1
@@ -577,28 +577,23 @@ def drawTopText(screen: pg.Surface, text: str):
 
 
 def drawPlayersNames(screen: pg.Surface):
-    font = pg.font.SysFont("Helvetica", int(FONT_SIZE * 1.5), True, False)
+    font = pg.font.SysFont("Helvetica", FONT_SIZE * 2, True, False)
     xBoard1 = MARGIN + BOARD_SIZE // 2
     xBoard2 = MARGIN_LEFT + BOARD_SIZE // 2
     yTop = MARGIN // 2
     yBot = SCREEN_HEIGHT - MARGIN // 2
-    player1_lbl = Label(names[0], (xBoard1, yBot), font)
-    player2_lbl = Label(names[1], (xBoard1, yTop), font)
-    player3_lbl = Label(names[2], (xBoard2, yTop), font)
-    player4_lbl = Label(names[3], (xBoard2, yBot), font)
+    player1_lbl = Label(names[0], (xBoard1, yBot), font, shift=2)
+    player2_lbl = Label(names[1], (xBoard1, yTop), font, shift=2)
+    player3_lbl = Label(names[2], (xBoard2, yTop), font, shift=2)
+    player4_lbl = Label(names[3], (xBoard2, yBot), font, shift=2)
     for lbl in [player1_lbl, player2_lbl, player3_lbl, player4_lbl]:
         lbl.update(screen)
 
 
 def drawMenu(screen: pg.Surface, menuName_lbl: Label):
-    screen.fill(PALETTE["brown"])
-    drawMenuName(screen, menuName_lbl)
-
-
-def drawMenuName(screen: pg.Surface, menuName_lbl: Label):
-    pg.draw.polygon(screen, PALETTE["dark brown"], ((0, 0), (SCREEN_WIDTH, 0), (SCREEN_WIDTH, menuName_lbl.textRect1.height // 2),
-                                                    (menuName_lbl.textRect1.width + menuName_lbl.textRect1.height // 2 + 2, menuName_lbl.textRect1.height // 2),
-                                                    (menuName_lbl.textRect1.width + 2, menuName_lbl.textRect1.height + 2), (0, menuName_lbl.textRect1.height + 2)))
+    # screen.fill(PALETTE["brown"])
+    screen.blit(IMAGES["BG"], (0, 0, SCREEN_WIDTH, SCREEN_HEIGHT))
+    screen.blit(IMAGES["header"], (SCREEN_WIDTH // 8, 0, SCREEN_WIDTH // 4 * 3, SCREEN_HEIGHT // 5))
     menuName_lbl.update(screen)
 
 
@@ -609,7 +604,7 @@ def createMainMenu(screen: pg.Surface):
     settings_btn = Button(IMAGES["button"], (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2), mainMenu["Settings_btn"], font)
     newGame_btn = Button(IMAGES["button"], (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - settings_btn.rect.height * 2), mainMenu["NewGame_btn"], font)
     quit_btn = Button(IMAGES["button"], (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + settings_btn.rect.height * 2), mainMenu["Quit_btn"], font)
-    menuName_lbl = Label("SwiChess", (2, 2), pg.font.SysFont("Helvetica", FONT_SIZE * 5, True, False), topleft=True)
+    menuName_lbl = Label("SwiChess", (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 10), pg.font.SysFont("Helvetica", FONT_SIZE * 7, True, False), shift=5)
     while working:
         mousePos = pg.mouse.get_pos()
         clock.tick(FPS)
@@ -638,17 +633,19 @@ def createSettingsMenu(screen: pg.Surface):
     clock = pg.time.Clock()
     font = pg.font.SysFont("Helvetica", FONT_SIZE * 3, True, False)
     back_btn = Button(IMAGES["button"], (SCREEN_WIDTH // 2, SCREEN_HEIGHT - SQ_SIZE * 2), settingsMenu["Back_btn"], font)
-    sound_btn = RadioButton((SCREEN_WIDTH // 4 + SQ_SIZE // 2, SCREEN_HEIGHT // 4 + SQ_SIZE // 2), SETTINGS["sounds"], IMAGES["radio_button_on"], IMAGES["radio_button_off"])
-    sound_lbl = RadioLabel(settingsMenu["Sound_btn"][0], settingsMenu["Sound_btn"][1], SETTINGS["sounds"], (SCREEN_WIDTH // 4 + SQ_SIZE, SCREEN_HEIGHT // 4), font)
-    lang_btn = RadioButton((SCREEN_WIDTH // 4 + SQ_SIZE // 2, SCREEN_HEIGHT // 4 + int(SQ_SIZE * 2.5)), SETTINGS["language"], IMAGES["en_flag"], IMAGES["ru_flag"])
-    lang_lbl = RadioLabel(settingsMenu["Lang_btn"], settingsMenu["Lang_btn"], SETTINGS["language"], (SCREEN_WIDTH // 4 + SQ_SIZE, SCREEN_HEIGHT // 4 + SQ_SIZE * 2), font)
-    menuName_lbl = Label(settingsMenu["Name"], (2, 2), pg.font.SysFont("Helvetica", FONT_SIZE * 5, True, False), topleft=True)
+    sound_btn = RadioButton((SCREEN_WIDTH // 4 + SQ_SIZE, SCREEN_HEIGHT // 4 + SQ_SIZE // 2), SETTINGS["sounds"], IMAGES["radio_button_on"], IMAGES["radio_button_off"])
+    sound_lbl = RadioLabel(settingsMenu["Sound_btn"][0], settingsMenu["Sound_btn"][1], SETTINGS["sounds"], (SCREEN_WIDTH // 4 + int(SQ_SIZE * 1.5), SCREEN_HEIGHT // 4), font)
+    lang_btn = RadioButton((SCREEN_WIDTH // 4 + SQ_SIZE, SCREEN_HEIGHT // 4 + int(SQ_SIZE * 2.5)), SETTINGS["language"], IMAGES["en_flag"], IMAGES["ru_flag"])
+    lang_lbl = RadioLabel(settingsMenu["Lang_btn"], settingsMenu["Lang_btn"], SETTINGS["language"], (SCREEN_WIDTH // 4 + int(SQ_SIZE * 1.5), SCREEN_HEIGHT // 4 + SQ_SIZE * 2), font)
+    menuName_lbl = Label(settingsMenu["Name"], (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 10), pg.font.SysFont("Helvetica", FONT_SIZE * 7, True, False), shift=5)
+    lang_img = Image(IMAGES["settingsBG"], (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 4 + int(SQ_SIZE * 2.5)), None)
+    sound_img = Image(IMAGES["settingsBG"], (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 4 + SQ_SIZE // 2), None)
     while working:
         mousePos = pg.mouse.get_pos()
         clock.tick(FPS)
         drawMenu(screen, menuName_lbl)
         back_btn.changeColor(mousePos)
-        for item in [back_btn, sound_btn, sound_lbl, lang_btn, lang_lbl]:
+        for item in [lang_img, sound_img, back_btn, sound_btn, sound_lbl, lang_btn, lang_lbl]:
             item.update(screen)
         for e in pg.event.get():
             if e.type == pg.QUIT:
@@ -691,7 +688,7 @@ def createNewGameMenu(screen: pg.Surface):
                                newGameMenu["DDM3"], smallFont, SQ_SIZE, IMAGES["ddm_head"], IMAGES["ddm_body"])
     player4_ddm = DropDownMenu((xBoard2, yBoard + BOARD_SIZE // 4 + SQ_SIZE // 2),
                                newGameMenu["DDM4"], smallFont, SQ_SIZE, IMAGES["ddm_head"], IMAGES["ddm_body"])
-    menuName_lbl = Label(newGameMenu["Name"], (2, 2), pg.font.SysFont("Helvetica", FONT_SIZE * 5, True, False), topleft=True)
+    menuName_lbl = Label(newGameMenu["Name"], (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 10), pg.font.SysFont("Helvetica", FONT_SIZE * 7, True, False), shift=5)
     while working:
         mousePos = pg.mouse.get_pos()
         clock.tick(FPS)

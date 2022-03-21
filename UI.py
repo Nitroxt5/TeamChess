@@ -1,7 +1,9 @@
 import pygame as pg
 
 BACK_COLOR = "gray"
-TOP_COLOR = "black"
+# TOP_COLOR = "black"
+# BACK_COLOR = (201, 112, 68)
+TOP_COLOR = (33, 11, 0)
 
 
 class Button:
@@ -23,10 +25,10 @@ class Button:
         if self.font is not None:
             if topleft:
                 self.textRect1 = self.text1.get_rect(topleft=pos)
-                self.textRect2 = self.text2.get_rect(topleft=(self.xPos + 2, self.yPos + 2))
+                self.textRect2 = self.text2.get_rect(topleft=(self.xPos + 3, self.yPos + 3))
             else:
                 self.textRect1 = self.text1.get_rect(center=pos)
-                self.textRect2 = self.text2.get_rect(center=(self.xPos + 2, self.yPos + 2))
+                self.textRect2 = self.text2.get_rect(center=(self.xPos + 3, self.yPos + 3))
 
     def update(self, screen: pg.Surface):
         if self.image is not None:
@@ -86,7 +88,7 @@ class RadioButton:
 
 
 class Label:
-    def __init__(self, text: str, pos: tuple, font: pg.font.SysFont, topleft=False):
+    def __init__(self, text: str, pos: tuple, font: pg.font.SysFont, shift=3, topleft=False):
         self.textInput = text
         self.xPos = pos[0]
         self.yPos = pos[1]
@@ -95,10 +97,10 @@ class Label:
         self.text2 = self.font.render(self.textInput, True, TOP_COLOR)
         if topleft:
             self.textRect1 = self.text1.get_rect(topleft=pos)
-            self.textRect2 = self.text2.get_rect(topleft=(self.xPos + 2, self.yPos + 2))
+            self.textRect2 = self.text2.get_rect(topleft=(self.xPos + shift, self.yPos + shift))
         else:
             self.textRect1 = self.text1.get_rect(center=pos)
-            self.textRect2 = self.text2.get_rect(center=(self.xPos + 2, self.yPos + 2))
+            self.textRect2 = self.text2.get_rect(center=(self.xPos + shift, self.yPos + shift))
 
     def update(self, screen: pg.Surface):
         screen.blit(self.text1, self.textRect1)
@@ -178,9 +180,9 @@ class DialogWindow:
         self.windowRect = self.window.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2))
         self.font = pg.font.SysFont("Helvetica", FONT_SIZE * 2, True, False)
         self.firstLine, self.secondLine = self.textAdaptation(SCREEN_WIDTH, SCREEN_HEIGHT)
-        self.line1_lbl = Label(self.firstLine, (SCREEN_WIDTH // 2, (SCREEN_HEIGHT - self.windowRect.height // 2) // 2), self.font)
+        self.line1_lbl = Label(self.firstLine, (SCREEN_WIDTH // 2, (SCREEN_HEIGHT - self.windowRect.height // 2) // 2), self.font, shift=2)
         if self.secondLine is not None:
-            self.line2_lbl = Label(self.secondLine, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2), self.font)
+            self.line2_lbl = Label(self.secondLine, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2), self.font, shift=2)
         else:
             self.line2_lbl = None
         self.yes_btn = Button(None, ((SCREEN_WIDTH - self.windowRect.width // 2) // 2, (SCREEN_HEIGHT + self.windowRect.height // 2) // 2), "Yes" if lang else "Да", self.font)
@@ -224,6 +226,8 @@ class Image:
             self.width = imageSize[0]
             self.height = imageSize[1]
             self.image = pg.transform.scale(image, (self.width, self.height))
+        else:
+            self.image = image
         self.rect = self.image.get_rect(center=(self.xPos, self.yPos))
 
     def update(self, screen: pg.Surface):
