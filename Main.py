@@ -157,7 +157,7 @@ def main(screen: pg.Surface):
                         print(f"Average time per move: {AIThinkingTime[i] / moveCount}")
                         print(f"Average calculated positions per move: {AIPositionCounter[i] / moveCount}")
                         print(f"Average time per position: {AIThinkingTime[i] / AIPositionCounter[i]}")
-                    if AIExists:
+                    if moveCount != 0 and AIExists:
                         print(f"Average possible moves per move: {AIMoveCounter[i] / moveCount}")
                 names = plyrNames
                 working = False
@@ -523,7 +523,7 @@ def drawPieces(screen: pg.Surface, gameStates: list):
                 marg = marginLeft + k[piece[0]] * SQ_SIZE + RESERVE_MARGIN
                 if gameStates[i].reserve[piece[0]][piece[1]] > 0:
                     screen.blit(IMAGES[piece], pg.Rect(marg, marginTop, SQ_SIZE, SQ_SIZE))
-                    tmp_lbl = Label(f"{gameStates[i].reserve[piece[0]][piece[1]]}", (marg + SQ_SIZE // 2, marginTop + marginTextTop), font, shift=1)
+                    tmp_lbl = Label(f"{gameStates[i].reserve[piece[0]][piece[1]]}", (marg + SQ_SIZE // 2 - 1, marginTop + marginTextTop), font, shift=1)
                     tmp_lbl.update(screen)
                 elif gameStates[i].reserve[piece[0]][piece[1]] == 0:
                     screen.blit(IMAGES[f"e{piece[1]}"], pg.Rect(marg, marginTop, SQ_SIZE, SQ_SIZE))
@@ -577,7 +577,7 @@ def drawTopText(screen: pg.Surface, text: str):
 
 
 def drawPlayersNames(screen: pg.Surface):
-    font = pg.font.SysFont("Helvetica", FONT_SIZE * 2, True, False)
+    font = pg.font.SysFont("Helvetica", FONT_SIZE * 7 // 4, True, False)
     xBoard1 = MARGIN + BOARD_SIZE // 2
     xBoard2 = MARGIN_LEFT + BOARD_SIZE // 2
     yTop = MARGIN // 2
@@ -680,6 +680,10 @@ def createNewGameMenu(screen: pg.Surface):
     board2_img = Image(IMAGES["board_with_pieces2"], (xBoard2, yBoard), (BOARD_SIZE // 2, BOARD_SIZE // 2))
     for i, ddm_lst in enumerate([newGameMenu["DDM1"], newGameMenu["DDM2"], newGameMenu["DDM3"], newGameMenu["DDM4"]]):
         ddm_lst[0] = ddm_lst[difficulties[i]]
+        if difficulties[i] == 1:
+            names[i] = constNames[i]
+        elif difficulties[i] in [2, 3, 4]:
+            names[i] = f"{constNames[i]} {AItxt} ({difficultiesNames[difficulties[i]]})"
     player1_ddm = DropDownMenu((xBoard1, yBoard + BOARD_SIZE // 4 + SQ_SIZE // 2),
                                newGameMenu["DDM1"], smallFont, SQ_SIZE, IMAGES["ddm_head"], IMAGES["ddm_body"])
     player2_ddm = DropDownMenu((xBoard1, yBoard - BOARD_SIZE // 4 - SQ_SIZE // 2),

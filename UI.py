@@ -7,7 +7,7 @@ TOP_COLOR = (33, 11, 0)
 
 
 class Button:
-    def __init__(self, image: pg.image, pos: tuple, text: str, font: [pg.font.SysFont, None], topleft=False):
+    def __init__(self, image: pg.image, pos: tuple, text: str, font: [pg.font.SysFont, None], shift=3, topleft=False):
         self.image = image
         self.xPos = pos[0]
         self.yPos = pos[1]
@@ -25,10 +25,10 @@ class Button:
         if self.font is not None:
             if topleft:
                 self.textRect1 = self.text1.get_rect(topleft=pos)
-                self.textRect2 = self.text2.get_rect(topleft=(self.xPos + 3, self.yPos + 3))
+                self.textRect2 = self.text2.get_rect(topleft=(self.xPos + shift, self.yPos + shift))
             else:
                 self.textRect1 = self.text1.get_rect(center=pos)
-                self.textRect2 = self.text2.get_rect(center=(self.xPos + 3, self.yPos + 3))
+                self.textRect2 = self.text2.get_rect(center=(self.xPos + shift, self.yPos + shift))
 
     def update(self, screen: pg.Surface):
         if self.image is not None:
@@ -142,9 +142,9 @@ class DropDownMenu:
         self.state = False
         self.head = head
         self.body = body
-        self.buttons = [Button(self.head, center, self.headText, font)]
+        self.buttons = [Button(self.head, center, self.headText, font, shift=2)]
         for i in range(1, len(text)):
-            self.buttons.append(Button(self.body, (self.xPos, self.yPos + i * SQ_SIZE * 2 // 3), self.bodyText[i - 1], font))
+            self.buttons.append(Button(self.body, (self.xPos, self.yPos + i * SQ_SIZE * 2 // 3), self.bodyText[i - 1], font, shift=2))
 
     def switch(self):
         self.state = not self.state
@@ -170,7 +170,7 @@ class DropDownMenu:
     def changeHead(self, index: int):
         if index != 0:
             self.headText = self.bodyText[index - 1]
-            self.buttons[0] = Button(self.head, (self.xPos, self.yPos), self.headText, self.font)
+            self.buttons[0] = Button(self.head, (self.xPos, self.yPos), self.headText, self.font, shift=2)
 
 
 class DialogWindow:
