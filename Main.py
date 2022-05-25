@@ -1,5 +1,5 @@
 from TestDLL import getPower, numSplit
-from Engine import DIMENSION, GameState, Move, PIECES, bbOfSquares, COLORED_PIECES, POSSIBLE_PIECES_TO_PROMOTE
+from Engine import GameState, Move, PIECES, bbOfSquares, COLORED_PIECES, POSSIBLE_PIECES_TO_PROMOTE
 import pygame as pg
 from AI import randomMoveAI, negaScoutMoveAI
 from math import ceil, floor
@@ -16,6 +16,7 @@ SCREEN_WIDTH, SCREEN_HEIGHT = pg.display.Info().current_w, pg.display.Info().cur
 # SCREEN_WIDTH, SCREEN_HEIGHT = 960, 540
 if __name__ != "__main__":
     pg.quit()
+DIMENSION = 8
 BOARD_SIZE = 600 * SCREEN_HEIGHT // 1080
 MARGIN = (SCREEN_HEIGHT - BOARD_SIZE) // 2
 SQ_SIZE = BOARD_SIZE // DIMENSION

@@ -12,7 +12,6 @@ pieceScores = {"K": 0, "Q": 1200, "R": 600, "B": 400, "N": 400, "p": 100}
 COLORED_PIECES = [color + piece for color in COLORS for piece in PIECES]
 COLORED_PIECES_CODES = {COLORED_PIECES[i]: i for i in range(len(COLORED_PIECES))}
 CASTLE_SIDES = {"wKs": 8, "wQs": 4, "bKs": 2, "bQs": 1}
-DIMENSION = 8
 bbOfPawnStarts = {"w": 0b0000000000000000000000000000000000000000000000001111111100000000,
                   "b": 0b0000000011111111000000000000000000000000000000000000000000000000}
 bbOfColumns = {"a": 0b1000000010000000100000001000000010000000100000001000000010000000,
@@ -694,8 +693,7 @@ class GameState:
         reserveMoves = []
         allyColor = "w" if self.whiteTurn else "b"
         mul = 1 if self.whiteTurn else -1
-        occupiedSquares = numSplit(self.bbOfOccupiedSquares["a"])
-        freeSquares = [sq for row in bbOfSquares for sq in row if sq not in occupiedSquares]
+        freeSquares = numSplit(~ctypes.c_uint64(self.bbOfOccupiedSquares["a"]).value)
         for sq in freeSquares:
             for piece, count in self.reserve[allyColor].items():
                 if count > 0:
