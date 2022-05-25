@@ -32,11 +32,13 @@ SOUNDS = {}
 
 
 def settingsCheck(settings):
-    if isinstance(settings, dict):
-        if "sounds" in settings and "language" in settings:
-            if isinstance(settings["sounds"], bool) and isinstance(settings["language"], bool):
-                return True
-    return False
+    if not isinstance(settings, dict):
+        return False
+    if not ("sounds" in settings and "language" in settings):
+        return False
+    if not (isinstance(settings["sounds"], bool) and isinstance(settings["language"], bool)):
+        return False
+    return True
 
 
 def loadResources():
