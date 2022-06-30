@@ -227,15 +227,13 @@ def main(screen: pg.Surface):
                                     movedPiece = None
                                     color = "w" if clicks[boardNum][0][1] == 8 else "b"
                                     if clicks[boardNum][0][1] == -1 or clicks[boardNum][0][1] == 8:
-                                        startSq = -clicks[boardNum][0][0] if clicks[boardNum][0][1] == -1 else clicks[boardNum][0][0]
+                                        startSq = 0
                                         isReserve = True
                                         movedPiece = color + PIECES[clicks[boardNum][0][0]]
                                     else:
                                         startSq = bbOfSquares[clicks[boardNum][0][1]][clicks[boardNum][0][0]]
                                     if 0 <= clicks[boardNum][1][1] <= 7:
                                         endSq = bbOfSquares[clicks[boardNum][1][1]][clicks[boardNum][1][0]]
-                                    elif clicks[boardNum][1][1] == -1 or clicks[boardNum][1][1] == 8:
-                                        endSq = -1
                                     else:
                                         endSq = 0
                                     move = Move(startSq, endSq, gameStates[boardNum], movedPiece=movedPiece, isReserve=isReserve)
@@ -381,7 +379,7 @@ def highlightSq(screen: pg.Surface, gameStates: list, validMoves: list, selected
         if selectedSq[i] != ():
             color = "w" if selectedSq[i][1] == 8 else "b"
             isReserve = True if selectedSq[i][1] == -1 or selectedSq[i][1] == 8 else False
-            square = bbOfSquares[selectedSq[i][1]][selectedSq[i][0]] if not isReserve else -abs(selectedSq[i][0])
+            square = bbOfSquares[selectedSq[i][1]][selectedSq[i][0]] if not isReserve else 0
             piece = gameStates[i].getPieceBySquare(square) if not isReserve else color + PIECES[selectedSq[i][0]]
             if piece is not None:
                 s = pg.Surface((SQ_SIZE, SQ_SIZE))
@@ -406,12 +404,13 @@ def highlightSq(screen: pg.Surface, gameStates: list, validMoves: list, selected
                         for part in validMoves[i]:
                             for move in part:
                                 if move.startSquare == square and move.endSquare not in endSquares:
+                                    endLoc = getPower(move.endSquare)
                                     endSquares.append(move.endSquare)
                                     if i == 0:
-                                        screen.blit(s, (move.endLoc % 8 * SQ_SIZE + MARGIN, move.endLoc // 8 * SQ_SIZE + MARGIN))
+                                        screen.blit(s, (endLoc % 8 * SQ_SIZE + MARGIN, endLoc // 8 * SQ_SIZE + MARGIN))
                                     else:
-                                        r = DIMENSION - 1 - move.endLoc // 8
-                                        c = DIMENSION - 1 - move.endLoc % 8
+                                        r = DIMENSION - 1 - endLoc // 8
+                                        c = DIMENSION - 1 - endLoc % 8
                                         screen.blit(s, (c * SQ_SIZE + MARGIN_LEFT, r * SQ_SIZE + MARGIN))
 
 
@@ -431,25 +430,27 @@ def highlightLastMove(screen: pg.Surface, gameStates: list, selectedSq: list):
                 s = pg.Surface((SQ_SIZE, SQ_SIZE))
                 s.set_alpha(100)
                 s.fill(pg.Color(0, 0, 255))
+                startLoc = getPower(lastMove.startSquare)
+                endLoc = getPower(lastMove.endSquare)
                 if not lastMove.isReserve:
                     if i == 0:
-                        screen.blit(s, (lastMove.startLoc % 8 * SQ_SIZE + MARGIN, lastMove.startLoc // 8 * SQ_SIZE + MARGIN))
-                        screen.blit(s, (lastMove.endLoc % 8 * SQ_SIZE + MARGIN, lastMove.endLoc // 8 * SQ_SIZE + MARGIN))
+                        screen.blit(s, (startLoc % 8 * SQ_SIZE + MARGIN, startLoc // 8 * SQ_SIZE + MARGIN))
+                        screen.blit(s, (endLoc % 8 * SQ_SIZE + MARGIN, endLoc // 8 * SQ_SIZE + MARGIN))
                     else:
-                        screen.blit(s, ((DIMENSION - 1 - lastMove.startLoc % 8) * SQ_SIZE + MARGIN_LEFT,
-                                        (DIMENSION - 1 - lastMove.startLoc // 8) * SQ_SIZE + MARGIN))
-                        screen.blit(s, ((DIMENSION - 1 - lastMove.endLoc % 8) * SQ_SIZE + MARGIN_LEFT,
-                                        (DIMENSION - 1 - lastMove.endLoc // 8) * SQ_SIZE + MARGIN))
+                        screen.blit(s, ((DIMENSION - 1 - startLoc % 8) * SQ_SIZE + MARGIN_LEFT,
+                                        (DIMENSION - 1 - startLoc // 8) * SQ_SIZE + MARGIN))
+                        screen.blit(s, ((DIMENSION - 1 - endLoc % 8) * SQ_SIZE + MARGIN_LEFT,
+                                        (DIMENSION - 1 - endLoc // 8) * SQ_SIZE + MARGIN))
                 else:
                     if i == 0:
-                        marginTop = MARGIN - SQ_SIZE if lastMove.startLoc < 0 else MARGIN + BOARD_SIZE
-                        screen.blit(s, ((abs(lastMove.startLoc) - 1) * SQ_SIZE + MARGIN + RESERVE_MARGIN, marginTop))
-                        screen.blit(s, (lastMove.endLoc % 8 * SQ_SIZE + MARGIN, lastMove.endLoc // 8 * SQ_SIZE + MARGIN))
+                        marginTop = MARGIN - SQ_SIZE if lastMove.movedPiece[0] == "b" else MARGIN + BOARD_SIZE
+                        screen.blit(s, ((startLoc - 1) * SQ_SIZE + MARGIN + RESERVE_MARGIN, marginTop))
+                        screen.blit(s, (endLoc % 8 * SQ_SIZE + MARGIN, endLoc // 8 * SQ_SIZE + MARGIN))
                     else:
-                        marginTop = MARGIN - SQ_SIZE if lastMove.startLoc > 0 else MARGIN + BOARD_SIZE
-                        screen.blit(s, ((abs(lastMove.startLoc) - 1) * SQ_SIZE + MARGIN_LEFT + RESERVE_MARGIN, marginTop))
-                        screen.blit(s, ((DIMENSION - 1 - lastMove.endLoc % 8) * SQ_SIZE + MARGIN_LEFT,
-                                        (DIMENSION - 1 - lastMove.endLoc // 8) * SQ_SIZE + MARGIN))
+                        marginTop = MARGIN - SQ_SIZE if lastMove.movedPiece[0] == "w" else MARGIN + BOARD_SIZE
+                        screen.blit(s, ((startLoc - 1) * SQ_SIZE + MARGIN_LEFT + RESERVE_MARGIN, marginTop))
+                        screen.blit(s, ((DIMENSION - 1 - endLoc % 8) * SQ_SIZE + MARGIN_LEFT,
+                                        (DIMENSION - 1 - endLoc // 8) * SQ_SIZE + MARGIN))
 
 
 def calculatePossiblePromotions(gameStates: list, promotion: int):
