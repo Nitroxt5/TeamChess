@@ -86,10 +86,10 @@ class GameState:
         self.checkmate = False
         self.stalemate = False
         self.enpassantSq = 0
-        self.enpassantSqLog = [self.enpassantSq]
+        self.enpassantSqLog = []
         # self.currentCastlingRight = 0b0
         self.currentCastlingRight = 0b1111
-        self.castleRightsLog = [self.currentCastlingRight]
+        self.castleRightsLog = []
         self.isWhiteCastled = False
         self.isBlackCastled = False
         self.isWhiteInCheck = False
@@ -135,8 +135,11 @@ class GameState:
         self.boardHashLog.append(self.boardHash)
         if move.capturedPiece is not None and not move.isEnpassant:
             self.boardHash ^= self.zobristTable[endLoc][COLORED_PIECES_CODES[move.capturedPiece]]
-        if move.capturedPiece is not None and move.isEnpassant:
-            self.boardHash ^= self.zobristTable[self.enpassantSqLog[-1]][COLORED_PIECES_CODES[move.capturedPiece]]
+        if move.isEnpassant:
+            if move.movedPiece == "wp":
+                self.boardHash ^= self.zobristTable[endLoc - 8][COLORED_PIECES_CODES[move.capturedPiece]]
+            elif move.movedPiece == "bp":
+                self.boardHash ^= self.zobristTable[endLoc + 8][COLORED_PIECES_CODES[move.capturedPiece]]
         if not move.isPawnPromotion:
             self.boardHash ^= self.zobristTable[endLoc][COLORED_PIECES_CODES[move.movedPiece]]
         else:
@@ -287,13 +290,13 @@ class GameState:
                 self.unsetSqState(move.capturedPiece, move.endSquare >> 8)
             else:
                 self.unsetSqState(move.capturedPiece, move.endSquare << 8)
-        if move.movedPiece[0] == "w" and move.isFirst:
+        self.enpassantSqLog.append(self.enpassantSq)
+        if move.movedPiece == "wp" and move.isFirst:
             self.enpassantSq = move.endSquare >> 8
-        elif move.movedPiece[0] == "b" and move.isFirst:
+        elif move.movedPiece == "bp" and move.isFirst:
             self.enpassantSq = move.startSquare >> 8
         else:
             self.enpassantSq = 0
-        self.enpassantSqLog.append(self.enpassantSq)
         if move.isCastle:
             if self.whiteTurn:
                 if move.endSquare & move.bbOfCastle["wKs"]:
@@ -320,9 +323,9 @@ class GameState:
                 other.boardHash ^= other.zobristTable[getPower(move.promotedPiecePosition)][COLORED_PIECES_CODES[move.movedPiece[0] + move.promotedTo]]
                 other.reserve[move.movedPiece[0]][move.movedPiece[1]] += 1
                 other.updateReserveHash(move.movedPiece, other.reserve[move.movedPiece[0]][move.movedPiece[1]] - 1)
-        self.updateCastleRights(move)
         self.updateHash(move)
         self.castleRightsLog.append(self.currentCastlingRight)
+        self.updateCastleRights(move)
         self.whiteTurn = not self.whiteTurn
         self.bbOfThreatsLog.append(deepcopy(self.bbOfThreats))
         self.createThreatTable()
@@ -346,10 +349,8 @@ class GameState:
                     self.setSqState(move.capturedPiece, move.endSquare << 8)
                 else:
                     self.setSqState(move.capturedPiece, move.endSquare >> 8)
-            self.enpassantSqLog.pop()
-            self.enpassantSq = self.enpassantSqLog[-1]
-            self.castleRightsLog.pop()
-            self.currentCastlingRight = self.castleRightsLog[-1]
+            self.enpassantSq = self.enpassantSqLog.pop()
+            self.currentCastlingRight = self.castleRightsLog.pop()
             if move.isCastle:
                 if not self.whiteTurn:
                     if move.endSquare & move.bbOfCastle["wKs"]:
@@ -842,7 +843,7 @@ class Move:
                   "bQs": 0b0010000000000000000000000000000000000000000000000000000000000000}
 
     def __init__(self, startSq, endSq, gameState: GameState = None, movedPiece: str = None, isEnpassant=False,
-                 isCastle=False, isFirst=False, isReserve=False, promotedTo="Q", promotedPiecePosition=0):
+                 isCastle=False, isFirst=False, isReserve=False, promotedTo="", promotedPiecePosition=0):
         if gameState is not None:
             self.isReserve = isReserve
             self.startSquare = startSq
@@ -856,8 +857,7 @@ class Move:
                 self.isCastle = False
                 self.isFirst = False
                 self.moveID = self.endSquare
-                self.promotionMoveID = 0
-                self.promotedTo = None
+                self.promotedTo = ""
                 self.promotedPiecePosition = 0
             else:
                 if self.movedPiece is None:
@@ -871,9 +871,6 @@ class Move:
                 self.isPawnPromotion = (self.movedPiece == "wp" and not self.endSquare & bbOfCorrections["8"]) or (
                         self.movedPiece == "bp" and not self.endSquare & bbOfCorrections["1"])
                 self.promotedTo = promotedTo
-                self.promotionMoveID = 0
-                if self.isPawnPromotion and self.promotedTo is not None:
-                    self.promotionMoveID = RESERVE_PIECES[self.promotedTo] * 10
                 self.promotedPiecePosition = promotedPiecePosition
                 self.isCapture = False
                 if self.capturedPiece is not None and self.movedPiece is not None:
@@ -888,7 +885,7 @@ class Move:
 
     def __eq__(self, other):
         if isinstance(other, Move):
-            return self.moveID == other.moveID and self.promotionMoveID == other.promotionMoveID and self.movedPiece == other.movedPiece
+            return self.moveID == other.moveID and self.promotedTo == other.promotedTo and self.movedPiece == other.movedPiece
         return False
 
     def __repr__(self):
