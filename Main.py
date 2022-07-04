@@ -69,8 +69,8 @@ def loadResources():
     IMAGES["BG"] = pg.transform.scale(pg.image.load(join(workingDirectory, "images/BG.png")), (SCREEN_WIDTH, SCREEN_HEIGHT))
     SOUNDS["move"] = pg.mixer.Sound(join(workingDirectory, "sounds/move.wav"))
     global SETTINGS
-    if isfile(join(workingDirectory, "SETTINGS.json")):
-        with open(join(workingDirectory, "SETTINGS.json"), "r", encoding="utf-8") as f:
+    if isfile("SETTINGS.json"):
+        with open("SETTINGS.json", "r", encoding="utf-8") as f:
             try:
                 SETTINGS = json.load(f)
             except json.decoder.JSONDecodeError:

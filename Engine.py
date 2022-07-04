@@ -845,9 +845,6 @@ class Move:
         else:
             if self.movedPiece is None:
                 self.movedPiece = gameState.getPieceBySquare(self.startSquare)
-
-            assert self.movedPiece is not None
-
             if not self.isEnpassant:
                 self.capturedPiece = gameState.getPieceBySquare(self.endSquare)
             else:
