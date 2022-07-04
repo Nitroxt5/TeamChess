@@ -332,82 +332,84 @@ class GameState:
         self.inCheck()
 
     def undoMove(self):
-        if len(self.gameLog) != 0:
-            move = self.gameLog.pop()
-            self.boardHash = self.boardHashLog.pop()
-            if move.isReserve:
-                self.reserve[move.movedPiece[0]][move.movedPiece[1]] += 1
-                self.updateReserveHash(move.movedPiece, self.reserve[move.movedPiece[0]][move.movedPiece[1]] - 1)
-            if move.isPawnPromotion:
-                self.unsetSqState(f"{move.movedPiece[0] + move.promotedTo}", move.endSquare)
+        if len(self.gameLog) == 0:
+            return
+        move = self.gameLog.pop()
+        self.boardHash = self.boardHashLog.pop()
+        if move.isReserve:
+            self.reserve[move.movedPiece[0]][move.movedPiece[1]] += 1
+            self.updateReserveHash(move.movedPiece, self.reserve[move.movedPiece[0]][move.movedPiece[1]] - 1)
+        if move.isPawnPromotion:
+            self.unsetSqState(f"{move.movedPiece[0] + move.promotedTo}", move.endSquare)
+        else:
+            self.unsetSqState(move.movedPiece, move.endSquare)
+        if not move.isEnpassant:
+            self.setSqState(move.capturedPiece, move.endSquare)
+        else:
+            if self.whiteTurn:
+                self.setSqState(move.capturedPiece, move.endSquare << 8)
             else:
-                self.unsetSqState(move.movedPiece, move.endSquare)
-            if not move.isEnpassant:
-                self.setSqState(move.capturedPiece, move.endSquare)
+                self.setSqState(move.capturedPiece, move.endSquare >> 8)
+        self.enpassantSq = self.enpassantSqLog.pop()
+        self.currentCastlingRight = self.castleRightsLog.pop()
+        if move.isCastle:
+            if not self.whiteTurn:
+                if move.endSquare & move.bbOfCastle["wKs"]:
+                    self.unsetSqState(f"{move.movedPiece[0]}R", move.endSquare << 1)
+                    self.setSqState(f"{move.movedPiece[0]}R", move.endSquare >> 1)
+                elif move.endSquare & move.bbOfCastle["wQs"]:
+                    self.unsetSqState(f"{move.movedPiece[0]}R", move.endSquare >> 1)
+                    self.setSqState(f"{move.movedPiece[0]}R", move.endSquare << 2)
+                self.isWhiteCastled = False
             else:
-                if self.whiteTurn:
-                    self.setSqState(move.capturedPiece, move.endSquare << 8)
-                else:
-                    self.setSqState(move.capturedPiece, move.endSquare >> 8)
-            self.enpassantSq = self.enpassantSqLog.pop()
-            self.currentCastlingRight = self.castleRightsLog.pop()
-            if move.isCastle:
-                if not self.whiteTurn:
-                    if move.endSquare & move.bbOfCastle["wKs"]:
-                        self.unsetSqState(f"{move.movedPiece[0]}R", move.endSquare << 1)
-                        self.setSqState(f"{move.movedPiece[0]}R", move.endSquare >> 1)
-                    elif move.endSquare & move.bbOfCastle["wQs"]:
-                        self.unsetSqState(f"{move.movedPiece[0]}R", move.endSquare >> 1)
-                        self.setSqState(f"{move.movedPiece[0]}R", move.endSquare << 2)
-                    self.isWhiteCastled = False
-                else:
-                    if move.endSquare & move.bbOfCastle["bKs"]:
-                        self.unsetSqState(f"{move.movedPiece[0]}R", move.endSquare << 1)
-                        self.setSqState(f"{move.movedPiece[0]}R", move.endSquare >> 1)
-                    elif move.endSquare & move.bbOfCastle["bQs"]:
-                        self.unsetSqState(f"{move.movedPiece[0]}R", move.endSquare >> 1)
-                        self.setSqState(f"{move.movedPiece[0]}R", move.endSquare << 2)
-                    self.isBlackCastled = False
-            if not move.isReserve:
-                self.setSqState(move.movedPiece, move.startSquare)
-            self.checkmate = False
-            self.stalemate = False
-            self.whiteTurn = not self.whiteTurn
-            self.bbOfThreats = self.bbOfThreatsLog.pop()
-            self.inCheck()
+                if move.endSquare & move.bbOfCastle["bKs"]:
+                    self.unsetSqState(f"{move.movedPiece[0]}R", move.endSquare << 1)
+                    self.setSqState(f"{move.movedPiece[0]}R", move.endSquare >> 1)
+                elif move.endSquare & move.bbOfCastle["bQs"]:
+                    self.unsetSqState(f"{move.movedPiece[0]}R", move.endSquare >> 1)
+                    self.setSqState(f"{move.movedPiece[0]}R", move.endSquare << 2)
+                self.isBlackCastled = False
+        if not move.isReserve:
+            self.setSqState(move.movedPiece, move.startSquare)
+        self.checkmate = False
+        self.stalemate = False
+        self.whiteTurn = not self.whiteTurn
+        self.bbOfThreats = self.bbOfThreatsLog.pop()
+        self.inCheck()
 
     def updateCastleRights(self, move):
-        if not move.isReserve:
-            if move.movedPiece == "wK":
-                self.unsetCastleRight(CASTLE_SIDES["wKs"])
-                self.unsetCastleRight(CASTLE_SIDES["wQs"])
-            elif move.movedPiece == "bK":
-                self.unsetCastleRight(CASTLE_SIDES["bKs"])
-                self.unsetCastleRight(CASTLE_SIDES["bQs"])
-            elif move.movedPiece == "wR":
-                if not (move.startSquare & bbOfCorrections["1"]):
-                    if not (move.startSquare & bbOfCorrections["a"]):
-                        self.unsetCastleRight(CASTLE_SIDES["wQs"])
-                    elif not (move.startSquare & bbOfCorrections["h"]):
-                        self.unsetCastleRight(CASTLE_SIDES["wKs"])
-            elif move.movedPiece == "bR":
-                if not (move.startSquare & bbOfCorrections["8"]):
-                    if not (move.startSquare & bbOfCorrections["a"]):
-                        self.unsetCastleRight(CASTLE_SIDES["bQs"])
-                    elif not (move.startSquare & bbOfCorrections["h"]):
-                        self.unsetCastleRight(CASTLE_SIDES["bKs"])
-            if move.capturedPiece == "wR":
-                if not (move.endSquare & bbOfCorrections["1"]):
-                    if not (move.endSquare & bbOfCorrections["a"]):
-                        self.unsetCastleRight(CASTLE_SIDES["wQs"])
-                    elif not (move.endSquare & bbOfCorrections["h"]):
-                        self.unsetCastleRight(CASTLE_SIDES["wKs"])
-            elif move.capturedPiece == "bR":
-                if not (move.endSquare & bbOfCorrections["8"]):
-                    if not (move.endSquare & bbOfCorrections["a"]):
-                        self.unsetCastleRight(CASTLE_SIDES["bQs"])
-                    elif not (move.endSquare & bbOfCorrections["h"]):
-                        self.unsetCastleRight(CASTLE_SIDES["bKs"])
+        if move.isReserve:
+            return
+        if move.movedPiece == "wK":
+            self.unsetCastleRight(CASTLE_SIDES["wKs"])
+            self.unsetCastleRight(CASTLE_SIDES["wQs"])
+        elif move.movedPiece == "bK":
+            self.unsetCastleRight(CASTLE_SIDES["bKs"])
+            self.unsetCastleRight(CASTLE_SIDES["bQs"])
+        elif move.movedPiece == "wR":
+            if not (move.startSquare & bbOfCorrections["1"]):
+                if not (move.startSquare & bbOfCorrections["a"]):
+                    self.unsetCastleRight(CASTLE_SIDES["wQs"])
+                elif not (move.startSquare & bbOfCorrections["h"]):
+                    self.unsetCastleRight(CASTLE_SIDES["wKs"])
+        elif move.movedPiece == "bR":
+            if not (move.startSquare & bbOfCorrections["8"]):
+                if not (move.startSquare & bbOfCorrections["a"]):
+                    self.unsetCastleRight(CASTLE_SIDES["bQs"])
+                elif not (move.startSquare & bbOfCorrections["h"]):
+                    self.unsetCastleRight(CASTLE_SIDES["bKs"])
+        if move.capturedPiece == "wR":
+            if not (move.endSquare & bbOfCorrections["1"]):
+                if not (move.endSquare & bbOfCorrections["a"]):
+                    self.unsetCastleRight(CASTLE_SIDES["wQs"])
+                elif not (move.endSquare & bbOfCorrections["h"]):
+                    self.unsetCastleRight(CASTLE_SIDES["wKs"])
+        elif move.capturedPiece == "bR":
+            if not (move.endSquare & bbOfCorrections["8"]):
+                if not (move.endSquare & bbOfCorrections["a"]):
+                    self.unsetCastleRight(CASTLE_SIDES["bQs"])
+                elif not (move.endSquare & bbOfCorrections["h"]):
+                    self.unsetCastleRight(CASTLE_SIDES["bKs"])
 
     def getPossibleMoves(self):
         moves = [[], [], []]
@@ -423,10 +425,8 @@ class GameState:
             if not self.getSqState(square << 8):
                 move = Move(square, square << 8, self, movedPiece="wp")
                 if move.isPawnPromotion:
-                    moves[2].append(Move(square, square << 8, self, movedPiece="wp", promotedTo="Q"))
-                    moves[2].append(Move(square, square << 8, self, movedPiece="wp", promotedTo="B"))
-                    moves[2].append(Move(square, square << 8, self, movedPiece="wp", promotedTo="N"))
-                    moves[2].append(Move(square, square << 8, self, movedPiece="wp", promotedTo="R"))
+                    for piece in POSSIBLE_PIECES_TO_PROMOTE:
+                        moves[2].append(Move(square, square << 8, self, movedPiece="wp", promotedTo=piece))
                 else:
                     moves[0].append(move)
                 if (square & bbOfPawnStarts["w"]) and not self.getSqState(square << 16):
@@ -435,10 +435,8 @@ class GameState:
                 if self.getSqStateByColor("b", square << 9):
                     move = Move(square, square << 9, self, movedPiece="wp")
                     if move.isPawnPromotion:
-                        moves[2].append(Move(square, square << 9, self, movedPiece="wp", promotedTo="Q"))
-                        moves[2].append(Move(square, square << 9, self, movedPiece="wp", promotedTo="B"))
-                        moves[2].append(Move(square, square << 9, self, movedPiece="wp", promotedTo="N"))
-                        moves[2].append(Move(square, square << 9, self, movedPiece="wp", promotedTo="R"))
+                        for piece in POSSIBLE_PIECES_TO_PROMOTE:
+                            moves[2].append(Move(square, square << 9, self, movedPiece="wp", promotedTo=piece))
                     else:
                         moves[0].append(move)
                 elif square << 9 == self.enpassantSq:
@@ -447,10 +445,8 @@ class GameState:
                 if self.getSqStateByColor("b", square << 7):
                     move = Move(square, square << 7, self, movedPiece="wp")
                     if move.isPawnPromotion:
-                        moves[2].append(Move(square, square << 7, self, movedPiece="wp", promotedTo="Q"))
-                        moves[2].append(Move(square, square << 7, self, movedPiece="wp", promotedTo="B"))
-                        moves[2].append(Move(square, square << 7, self, movedPiece="wp", promotedTo="N"))
-                        moves[2].append(Move(square, square << 7, self, movedPiece="wp", promotedTo="R"))
+                        for piece in POSSIBLE_PIECES_TO_PROMOTE:
+                            moves[2].append(Move(square, square << 7, self, movedPiece="wp", promotedTo=piece))
                     else:
                         moves[0].append(move)
                 elif square << 7 == self.enpassantSq:
@@ -459,10 +455,8 @@ class GameState:
             if not self.getSqState(square >> 8):
                 move = Move(square, square >> 8, self, movedPiece="bp")
                 if move.isPawnPromotion:
-                    moves[2].append(Move(square, square >> 8, self, movedPiece="bp", promotedTo="Q"))
-                    moves[2].append(Move(square, square >> 8, self, movedPiece="bp", promotedTo="B"))
-                    moves[2].append(Move(square, square >> 8, self, movedPiece="bp", promotedTo="N"))
-                    moves[2].append(Move(square, square >> 8, self, movedPiece="bp", promotedTo="R"))
+                    for piece in POSSIBLE_PIECES_TO_PROMOTE:
+                        moves[2].append(Move(square, square >> 8, self, movedPiece="bp", promotedTo=piece))
                 else:
                     moves[0].append(move)
                 if (square & bbOfPawnStarts["b"]) and not self.getSqState(square >> 16):
@@ -471,10 +465,8 @@ class GameState:
                 if self.getSqStateByColor("w", square >> 7):
                     move = Move(square, square >> 7, self, movedPiece="bp")
                     if move.isPawnPromotion:
-                        moves[2].append(Move(square, square >> 7, self, movedPiece="bp", promotedTo="Q"))
-                        moves[2].append(Move(square, square >> 7, self, movedPiece="bp", promotedTo="B"))
-                        moves[2].append(Move(square, square >> 7, self, movedPiece="bp", promotedTo="N"))
-                        moves[2].append(Move(square, square >> 7, self, movedPiece="bp", promotedTo="R"))
+                        for piece in POSSIBLE_PIECES_TO_PROMOTE:
+                            moves[2].append(Move(square, square >> 7, self, movedPiece="bp", promotedTo=piece))
                     else:
                         moves[0].append(move)
                 elif square >> 7 == self.enpassantSq:
@@ -483,10 +475,8 @@ class GameState:
                 if self.getSqStateByColor("w", square >> 9):
                     move = Move(square, square >> 9, self, movedPiece="bp")
                     if move.isPawnPromotion:
-                        moves[2].append(Move(square, square >> 9, self, movedPiece="bp", promotedTo="Q"))
-                        moves[2].append(Move(square, square >> 9, self, movedPiece="bp", promotedTo="B"))
-                        moves[2].append(Move(square, square >> 9, self, movedPiece="bp", promotedTo="N"))
-                        moves[2].append(Move(square, square >> 9, self, movedPiece="bp", promotedTo="R"))
+                        for piece in POSSIBLE_PIECES_TO_PROMOTE:
+                            moves[2].append(Move(square, square >> 9, self, movedPiece="bp", promotedTo=piece))
                     else:
                         moves[0].append(move)
                 elif square >> 9 == self.enpassantSq:
@@ -675,19 +665,13 @@ class GameState:
             self.getQueenSideCastle(square, moves)
 
     def getKingSideCastle(self, square: int, moves: list):
-        if self.whiteTurn:
-            piece = "wK"
-        else:
-            piece = "bK"
+        piece = "wK" if self.whiteTurn else "bK"
         if not self.getSqState(square >> 1) and not self.getSqState(square >> 2):
             if not self.isSquareAttacked(square >> 1) and not self.isSquareAttacked(square >> 2):
                 moves[0].append(Move(square, square >> 2, self, movedPiece=piece, isCastle=True))
 
     def getQueenSideCastle(self, square: int, moves: list):
-        if self.whiteTurn:
-            piece = "wK"
-        else:
-            piece = "bK"
+        piece = "wK" if self.whiteTurn else "bK"
         if not self.getSqState(square << 1) and not self.getSqState(square << 2) and not self.getSqState(square << 3):
             if not self.isSquareAttacked(square << 1) and not self.isSquareAttacked(square << 2):
                 moves[0].append(Move(square, square << 2, self, movedPiece=piece, isCastle=True))
@@ -842,46 +826,45 @@ class Move:
                   "bKs": 0b0000001000000000000000000000000000000000000000000000000000000000,
                   "bQs": 0b0010000000000000000000000000000000000000000000000000000000000000}
 
-    def __init__(self, startSq, endSq, gameState: GameState = None, movedPiece: str = None, isEnpassant=False,
+    def __init__(self, startSq, endSq, gameState: GameState, movedPiece: str = None, isEnpassant=False,
                  isCastle=False, isFirst=False, isReserve=False, promotedTo="", promotedPiecePosition=0):
-        if gameState is not None:
-            self.isReserve = isReserve
-            self.startSquare = startSq
-            self.endSquare = endSq
-            self.movedPiece = movedPiece
-            if self.isReserve:
-                self.capturedPiece = None
-                self.isEnpassant = False
-                self.isPawnPromotion = False
-                self.isCapture = False
-                self.isCastle = False
-                self.isFirst = False
-                self.moveID = self.endSquare
-                self.promotedTo = ""
-                self.promotedPiecePosition = 0
+        self.isReserve = isReserve
+        self.startSquare = startSq
+        self.endSquare = endSq
+        self.movedPiece = movedPiece
+        self.isEnpassant = isEnpassant
+        self.isCastle = isCastle
+        self.isFirst = isFirst
+        if self.isReserve:
+            self.capturedPiece = None
+            self.isPawnPromotion = False
+            self.isCapture = False
+            self.moveID = self.endSquare
+            self.promotedTo = ""
+            self.promotedPiecePosition = 0
+        else:
+            if self.movedPiece is None:
+                self.movedPiece = gameState.getPieceBySquare(self.startSquare)
+
+            assert self.movedPiece is not None
+
+            if not self.isEnpassant:
+                self.capturedPiece = gameState.getPieceBySquare(self.endSquare)
             else:
-                if self.movedPiece is None:
-                    self.movedPiece = gameState.getPieceBySquare(self.startSquare)
-                self.isEnpassant = isEnpassant
-                if not self.isEnpassant:
-                    self.capturedPiece = gameState.getPieceBySquare(self.endSquare)
-                else:
-                    self.capturedPiece = "bp" if self.movedPiece == "wp" else "wp"
-                self.moveID = self.startSquare ^ self.endSquare
-                self.isPawnPromotion = (self.movedPiece == "wp" and not self.endSquare & bbOfCorrections["8"]) or (
-                        self.movedPiece == "bp" and not self.endSquare & bbOfCorrections["1"])
-                self.promotedTo = promotedTo
-                self.promotedPiecePosition = promotedPiecePosition
-                self.isCapture = False
-                if self.capturedPiece is not None and self.movedPiece is not None:
-                    if self.capturedPiece[0] != self.movedPiece[0]:
-                        self.isCapture = True
-                self.isCastle = isCastle
-                self.isFirst = isFirst
-            self.estimatedScore = 0
-            self.exactScore = 0
-            self.goodScore = False
-            self.isKiller = False
+                self.capturedPiece = "bp" if self.movedPiece == "wp" else "wp"
+            self.moveID = self.startSquare ^ self.endSquare
+            self.isPawnPromotion = (self.movedPiece == "wp" and not self.endSquare & bbOfCorrections["8"]) or (
+                    self.movedPiece == "bp" and not self.endSquare & bbOfCorrections["1"])
+            self.promotedTo = promotedTo
+            self.promotedPiecePosition = promotedPiecePosition
+            self.isCapture = False
+            if self.capturedPiece is not None and self.movedPiece is not None:
+                if self.capturedPiece[0] != self.movedPiece[0]:
+                    self.isCapture = True
+        self.estimatedScore = 0
+        self.exactScore = 0
+        self.goodScore = False
+        self.isKiller = False
 
     def __eq__(self, other):
         if isinstance(other, Move):
@@ -907,7 +890,7 @@ class Move:
         if self.isCastle:
             if (self.endSquare & self.bbOfCastle["wKs"]) or (self.endSquare & self.bbOfCastle["bKs"]):
                 return "0-0"
-            elif (self.endSquare & self.bbOfCastle["wQs"]) or (self.endSquare & self.bbOfCastle["bQs"]):
+            if (self.endSquare & self.bbOfCastle["wQs"]) or (self.endSquare & self.bbOfCastle["bQs"]):
                 return "0-0-0"
         if self.isPawnPromotion and self.isCapture:
             return f"{self.getSquareNotation(self.startSquare)}x{self.getSquareNotation(self.endSquare) + self.promotedTo}"
@@ -917,9 +900,6 @@ class Move:
         if self.movedPiece[1] != "p":
             moveNotation = self.movedPiece[1]
         moveNotation += self.getSquareNotation(self.startSquare)
-        if self.isCapture:
-            moveNotation += "x"
-        else:
-            moveNotation += "-"
+        moveNotation += "x" if self.isCapture else "-"
         moveNotation += self.getSquareNotation(self.endSquare)
         return moveNotation

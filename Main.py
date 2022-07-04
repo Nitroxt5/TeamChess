@@ -12,8 +12,8 @@ from os.path import isfile
 from sys import exit as sys_exit
 
 pg.init()
-# SCREEN_WIDTH, SCREEN_HEIGHT = pg.display.Info().current_w, pg.display.Info().current_h
-SCREEN_WIDTH, SCREEN_HEIGHT = 960, 540
+SCREEN_WIDTH, SCREEN_HEIGHT = pg.display.Info().current_w, pg.display.Info().current_h
+# SCREEN_WIDTH, SCREEN_HEIGHT = 960, 540
 if __name__ != "__main__":
     pg.quit()
 DIMENSION = 8
