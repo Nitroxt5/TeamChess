@@ -3,13 +3,19 @@ from Engine import GameState, Move, PIECES, bbOfSquares, COLORED_PIECES, POSSIBL
 import pygame as pg
 from AI import randomMoveAI, negaScoutMoveAI
 from math import ceil, floor
-from multiprocessing import Process, Queue
+from multiprocessing import Process, Queue, freeze_support
 from copy import deepcopy
 from random import randint
 from UI import Button, Hourglass, DialogWindow, RadioButton, RadioLabel, Image, DropDownMenu, Label
 import json
-from os.path import isfile
+from os.path import isfile, join
 from sys import exit as sys_exit
+import sys
+from os import getcwd
+try:
+    workingDirectory = sys._MEIPASS
+except AttributeError:
+    workingDirectory = getcwd()
 
 pg.init()
 SCREEN_WIDTH, SCREEN_HEIGHT = pg.display.Info().current_w, pg.display.Info().current_h
@@ -25,7 +31,6 @@ MARGIN_LEFT = SCREEN_WIDTH - BOARD_SIZE - MARGIN
 RESERVE_MARGIN = (BOARD_SIZE - 5 * SQ_SIZE) // 2
 FONT_SIZE = 25 * SCREEN_HEIGHT // 1080
 EMPTY_PIECES = ["e" + piece for piece in PIECES if piece != "K"]
-SKIN_PACK = 2
 FPS = 60
 # PALETTE = {"dark brown": (127, 97, 70), "brown": (181, 136, 99)}
 IMAGES = {}
@@ -46,32 +51,32 @@ def loadResources():
     SQ_SIZE_IMAGES = ("frame", "hourglass", "home_button_on", "home_button_off", "radio_button_on", "radio_button_off",
                       "restart_button_on", "restart_button_off", "ru_flag", "en_flag")
     for piece in COLORED_PIECES:
-        IMAGES[piece] = pg.transform.scale(pg.image.load(f"images/{SKIN_PACK}/{piece}.png"), (SQ_SIZE, SQ_SIZE))
+        IMAGES[piece] = pg.transform.scale(pg.image.load(join(workingDirectory, f"images/{piece}.png")), (SQ_SIZE, SQ_SIZE))
     for piece in EMPTY_PIECES:
-        IMAGES[piece] = pg.transform.scale(pg.image.load(f"images/{SKIN_PACK}/{piece}.png"), (SQ_SIZE, SQ_SIZE))
+        IMAGES[piece] = pg.transform.scale(pg.image.load(join(workingDirectory, f"images/{piece}.png")), (SQ_SIZE, SQ_SIZE))
     for img in SQ_SIZE_IMAGES:
-        IMAGES[img] = pg.transform.scale(pg.image.load(f"images/{img}.png"), (SQ_SIZE, SQ_SIZE))
-    IMAGES["icon"] = pg.image.load("images/icon.png")
-    IMAGES["settingsBG"] = pg.transform.scale(pg.image.load("images/settingsBG.png"), (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 9))
-    IMAGES["board"] = pg.transform.scale(pg.image.load("images/board.png"), (BOARD_SIZE, BOARD_SIZE))
-    IMAGES["board_with_pieces1"] = pg.transform.scale(pg.image.load("images/board_with_pieces1.png"), (BOARD_SIZE // 2, BOARD_SIZE // 2))
-    IMAGES["board_with_pieces2"] = pg.transform.scale(pg.image.load("images/board_with_pieces2.png"), (BOARD_SIZE // 2, BOARD_SIZE // 2))
-    IMAGES["button"] = pg.transform.scale(pg.image.load("images/button.png"), (SCREEN_WIDTH // 5, int(SQ_SIZE * 1.5)))
-    IMAGES["header"] = pg.transform.scale(pg.image.load("images/button.png"), (SCREEN_WIDTH // 4 * 3, SCREEN_HEIGHT // 5))
-    IMAGES["ddm_head"] = pg.transform.scale(pg.image.load("images/button2.png"), (BOARD_SIZE * 5 // 12, SQ_SIZE * 2 // 3))
-    IMAGES["ddm_body"] = pg.transform.scale(pg.image.load("images/button3.png"), (BOARD_SIZE * 5 // 12, SQ_SIZE * 2 // 3))
-    IMAGES["dialogWindow"] = pg.transform.scale(pg.image.load("images/dialogWindow.png"), (SCREEN_WIDTH // 3, SCREEN_HEIGHT // 4))
-    SOUNDS["move"] = pg.mixer.Sound("sounds/move.wav")
+        IMAGES[img] = pg.transform.scale(pg.image.load(join(workingDirectory, f"images/{img}.png")), (SQ_SIZE, SQ_SIZE))
+    IMAGES["icon"] = pg.image.load(join(workingDirectory, "images/icon.png"))
+    IMAGES["settingsBG"] = pg.transform.scale(pg.image.load(join(workingDirectory, "images/settingsBG.png")), (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 9))
+    IMAGES["board"] = pg.transform.scale(pg.image.load(join(workingDirectory, "images/board.png")), (BOARD_SIZE, BOARD_SIZE))
+    IMAGES["board_with_pieces1"] = pg.transform.scale(pg.image.load(join(workingDirectory, "images/board_with_pieces1.png")), (BOARD_SIZE // 2, BOARD_SIZE // 2))
+    IMAGES["board_with_pieces2"] = pg.transform.scale(pg.image.load(join(workingDirectory, "images/board_with_pieces2.png")), (BOARD_SIZE // 2, BOARD_SIZE // 2))
+    IMAGES["button"] = pg.transform.scale(pg.image.load(join(workingDirectory, "images/button.png")), (SCREEN_WIDTH // 5, int(SQ_SIZE * 1.5)))
+    IMAGES["header"] = pg.transform.scale(pg.image.load(join(workingDirectory, "images/button.png")), (SCREEN_WIDTH // 4 * 3, SCREEN_HEIGHT // 5))
+    IMAGES["ddm_head"] = pg.transform.scale(pg.image.load(join(workingDirectory, "images/button2.png")), (BOARD_SIZE * 5 // 12, SQ_SIZE * 2 // 3))
+    IMAGES["ddm_body"] = pg.transform.scale(pg.image.load(join(workingDirectory, "images/button3.png")), (BOARD_SIZE * 5 // 12, SQ_SIZE * 2 // 3))
+    IMAGES["dialogWindow"] = pg.transform.scale(pg.image.load(join(workingDirectory, "images/dialogWindow.png")), (SCREEN_WIDTH // 3, SCREEN_HEIGHT // 4))
+    IMAGES["BG"] = pg.transform.scale(pg.image.load(join(workingDirectory, "images/BG.png")), (SCREEN_WIDTH, SCREEN_HEIGHT))
+    SOUNDS["move"] = pg.mixer.Sound(join(workingDirectory, "sounds/move.wav"))
     global SETTINGS
-    if isfile("SETTINGS.json"):
-        with open("SETTINGS.json", "r", encoding="utf-8") as f:
+    if isfile(join(workingDirectory, "SETTINGS.json")):
+        with open(join(workingDirectory, "SETTINGS.json"), "r", encoding="utf-8") as f:
             try:
                 SETTINGS = json.load(f)
             except json.decoder.JSONDecodeError:
                 SETTINGS = {"sounds": True, "language": True}
             if not settingsCheck(SETTINGS):
                 SETTINGS = {"sounds": True, "language": True}
-    IMAGES["BG"] = pg.transform.scale(pg.image.load("images/BG.png"), (SCREEN_WIDTH, SCREEN_HEIGHT))
 
 
 def saveResources():
@@ -755,6 +760,7 @@ def createDialogWindow(screen: pg.Surface, text: str):
 
 
 if __name__ == "__main__":
+    freeze_support()
     mainScreen = pg.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
     pg.display.set_caption("SwiChess")
     pg.display.set_icon(IMAGES["icon"])
