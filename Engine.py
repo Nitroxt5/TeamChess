@@ -8,7 +8,6 @@ COLORS = ("w", "b")
 PIECES = ("K", "Q", "R", "B", "N", "p")
 POSSIBLE_PIECES_TO_PROMOTE = ("Q", "R", "B", "N")
 RESERVE_PIECES = {"Q": 1, "R": 2, "B": 3, "N": 4, "p": 5}
-pieceScores = {"K": 0, "Q": 1200, "R": 600, "B": 400, "N": 400, "p": 100}
 COLORED_PIECES = [color + piece for color in COLORS for piece in PIECES]
 COLORED_PIECES_CODES = {COLORED_PIECES[i]: i for i in range(len(COLORED_PIECES))}
 CASTLE_SIDES = {"wKs": 8, "wQs": 4, "bKs": 2, "bQs": 1}
@@ -106,6 +105,7 @@ class GameState:
         self.currentValidMovesCount = 0
 
     def hashBoard(self):
+        """Creates zobrist hashes and hashes the board"""
         seed(1)
         for i in range(64):
             newList = []
@@ -130,6 +130,7 @@ class GameState:
         self.boardHash ^= self.zobristWhiteTurn
 
     def updateHash(self, move):
+        """Updates board hash"""
         startLoc = getPower(move.startSquare)
         endLoc = getPower(move.endSquare)
         self.boardHashLog.append(self.boardHash)
@@ -157,24 +158,20 @@ class GameState:
         self.boardHash ^= self.zobristBlackTurn
 
     def updateReserveHash(self, coloredPiece: str, prevCount: int):
+        """Updates reserve hash"""
         self.boardHash ^= self.zobristReserveTable[prevCount][COLORED_PIECES_CODES[coloredPiece]]
         self.boardHash ^= self.zobristReserveTable[self.reserve[coloredPiece[0]][coloredPiece[1]]][COLORED_PIECES_CODES[coloredPiece]]
 
     def createThreatTable(self):
+        """Creates threat table for both white and black"""
         self.bbOfThreats["w"] = 0
         self.bbOfThreats["b"] = 0
-        self.createWhiteThreatTable()
-        self.createBlackThreatTable()
-
-    def createWhiteThreatTable(self):
         for piece in PIECES:
             self.threatTableFunc[piece]("w")
-
-    def createBlackThreatTable(self):
-        for piece in PIECES:
             self.threatTableFunc[piece]("b")
 
     def createPawnThreatTable(self, color: str):
+        """Creates pawn threat table"""
         piece = color + "p"
         if color == "w":
             self.bbOfThreats[color] |= ((self.bbOfPieces[piece] & bbOfCorrections["h"]) << 7)
@@ -184,6 +181,7 @@ class GameState:
             self.bbOfThreats[color] |= ((self.bbOfPieces[piece] & bbOfCorrections["a"]) >> 7)
 
     def createKnightThreatTable(self, color: str):
+        """Creates knight threat table"""
         piece = color + "N"
         self.bbOfThreats[color] |= ((self.bbOfPieces[piece] & bbOfCorrections["h"] & bbOfCorrections["78"]) << 15)
         self.bbOfThreats[color] |= ((self.bbOfPieces[piece] & bbOfCorrections["gh"] & bbOfCorrections["8"]) << 6)
@@ -195,6 +193,7 @@ class GameState:
         self.bbOfThreats[color] |= ((self.bbOfPieces[piece] & bbOfCorrections["a"] & bbOfCorrections["78"]) << 17)
 
     def createKingThreatTable(self, color: str):
+        """Creates king threat table"""
         piece = color + "K"
         self.bbOfThreats[color] |= ((self.bbOfPieces[piece] & bbOfCorrections["8"]) << 8)
         self.bbOfThreats[color] |= ((self.bbOfPieces[piece] & bbOfCorrections["h"] & bbOfCorrections["8"]) << 7)
@@ -206,6 +205,7 @@ class GameState:
         self.bbOfThreats[color] |= ((self.bbOfPieces[piece] & bbOfCorrections["a"] & bbOfCorrections["8"]) << 9)
 
     def createBishopThreatTable(self, color: str, isQueen=False):
+        """Creates bishop threat table"""
         if isQueen:
             piece = color + "Q"
         else:
@@ -238,6 +238,7 @@ class GameState:
                     break
 
     def createRookThreatTable(self, color: str, isQueen=False):
+        """Creates rook threat table"""
         if isQueen:
             piece = color + "Q"
         else:
@@ -270,10 +271,12 @@ class GameState:
                     break
 
     def createQueenThreatTable(self, color: str):
+        """Creates queen threat table"""
         self.createBishopThreatTable(color, True)
         self.createRookThreatTable(color, True)
 
     def makeMove(self, move, other=None):
+        """Makes provided move. Switches turn. Updates hash. Rebuilds threat tables"""
         if move.capturedPiece is not None:
             if isinstance(other, GameState):
                 other.reserve[move.capturedPiece[0]][move.capturedPiece[1]] += 1
@@ -332,6 +335,7 @@ class GameState:
         self.inCheck()
 
     def undoMove(self):
+        """Undoes last move. Switches turn. Undoes hash. Undoes threat tables"""
         if len(self.gameLog) == 0:
             return
         move = self.gameLog.pop()
@@ -378,6 +382,7 @@ class GameState:
         self.inCheck()
 
     def updateCastleRights(self, move):
+        """Checks whether any king or rook were moved. Checks whether any rook was captured. Updates castle rights according to this"""
         if move.isReserve:
             return
         if move.movedPiece == "wK":
@@ -412,6 +417,7 @@ class GameState:
                     self.unsetCastleRight(CASTLE_SIDES["bKs"])
 
     def getPossibleMoves(self):
+        """Generates all possible moves (ignores their validity in terms of king safety)"""
         moves = [[], [], []]
         for piece in COLORED_PIECES:
             if (piece[0] == "w" and self.whiteTurn) or (piece[0] == "b" and not self.whiteTurn):
@@ -421,6 +427,7 @@ class GameState:
         return moves
 
     def getPawnMoves(self, square: int, moves: list):
+        """Generates all possible moves for pawns"""
         if self.whiteTurn:
             if not self.getSqState(square << 8):
                 move = Move(square, square << 8, self, movedPiece="wp")
@@ -483,6 +490,7 @@ class GameState:
                     moves[0].append(Move(square, square >> 9, self, movedPiece="bp", isEnpassant=True))
 
     def getRookMoves(self, square: int, moves: list, isQueen=False):
+        """Generates all possible moves for rooks"""
         allyColor = "w" if self.whiteTurn else "b"
         enemyColor = "b" if self.whiteTurn else "w"
         if isQueen:
@@ -531,6 +539,7 @@ class GameState:
                 break
 
     def getKnightMoves(self, square: int, moves: list):
+        """Generates all possible moves for knights"""
         enemyColor = "b" if self.whiteTurn else "w"
         allyColor = "w" if self.whiteTurn else "b"
         piece = f"{allyColor}N"
@@ -568,6 +577,7 @@ class GameState:
                 moves[0].append(Move(square, tempSquare, self, movedPiece=piece))
 
     def getBishopMoves(self, square: int, moves: list, isQueen=False):
+        """Generates all possible moves for bishops"""
         enemyColor = "b" if self.whiteTurn else "w"
         allyColor = "w" if self.whiteTurn else "b"
         if isQueen:
@@ -616,10 +626,12 @@ class GameState:
                 break
 
     def getQueenMoves(self, square: int, moves: list):
+        """Generates all possible moves for queens"""
         self.getRookMoves(square, moves, True)
         self.getBishopMoves(square, moves, True)
 
     def getKingMoves(self, square: int, moves: list):
+        """Generates all possible moves for king"""
         enemyColor = "b" if self.whiteTurn else "w"
         allyColor = "w" if self.whiteTurn else "b"
         piece = f"{allyColor}K"
@@ -657,6 +669,7 @@ class GameState:
                 moves[0].append(Move(square, tempSquare, self, movedPiece=piece))
 
     def getCastleMoves(self, square: int, moves: list):
+        """Generates all possible castle moves"""
         if self.isSquareAttacked(square):
             return
         if (self.whiteTurn and self.getCastleRight(CASTLE_SIDES["wKs"])) or (not self.whiteTurn and self.getCastleRight(CASTLE_SIDES["bKs"])):
@@ -665,18 +678,21 @@ class GameState:
             self.getQueenSideCastle(square, moves)
 
     def getKingSideCastle(self, square: int, moves: list):
+        """Generates king side castle moves"""
         piece = "wK" if self.whiteTurn else "bK"
         if not self.getSqState(square >> 1) and not self.getSqState(square >> 2):
             if not self.isSquareAttacked(square >> 1) and not self.isSquareAttacked(square >> 2):
                 moves[0].append(Move(square, square >> 2, self, movedPiece=piece, isCastle=True))
 
     def getQueenSideCastle(self, square: int, moves: list):
+        """Generates queen side castle moves"""
         piece = "wK" if self.whiteTurn else "bK"
         if not self.getSqState(square << 1) and not self.getSqState(square << 2) and not self.getSqState(square << 3):
             if not self.isSquareAttacked(square << 1) and not self.isSquareAttacked(square << 2):
                 moves[0].append(Move(square, square << 2, self, movedPiece=piece, isCastle=True))
 
     def getReserveMoves(self, moves):
+        """Generates reserve moves"""
         reserveMoves = []
         allyColor = "w" if self.whiteTurn else "b"
         freeSquares = numSplit(~ctypes.c_uint64(self.bbOfOccupiedSquares["a"]).value)
@@ -688,6 +704,7 @@ class GameState:
         moves[1] = reserveMoves
 
     def updatePawnPromotionMoves(self, moves: list, other):
+        """Updates pawn promotion moves. Checks if a piece to promote can be removed from the other board"""
         if isinstance(other, GameState):
             color = "w" if self.whiteTurn else "b"
             badPieces = []
@@ -705,6 +722,7 @@ class GameState:
                     moves[2].remove(moves[2][i])
 
     def getValidMoves(self):
+        """Generates all valid moves (checks for threats to kings)"""
         moves = self.getPossibleMoves()
         if self.whiteTurn:
             self.getCastleMoves(self.bbOfPieces["wK"], moves)
@@ -728,7 +746,7 @@ class GameState:
         else:
             self.checkmate = False
             self.stalemate = False
-        if len(self.gameLog) >= 12:
+        if len(self.gameLog) >= 12:  # draw on repeat
             pos1 = self.gameLog[-4:]
             pos2 = self.gameLog[-8:-4]
             if pos1 == pos2:
@@ -738,6 +756,7 @@ class GameState:
         return moves
 
     def inCheck(self):
+        """Checks whether current player is in check"""
         if self.whiteTurn:
             self.isWhiteInCheck = self.isSquareAttacked(self.bbOfPieces["wK"])
             self.whiteTurn = not self.whiteTurn
@@ -752,6 +771,7 @@ class GameState:
             return self.isBlackInCheck
 
     def isSquareAttacked(self, square: int):
+        """Checks whether specified square is under attack by an opponent"""
         if self.whiteTurn and (self.bbOfThreats["b"] & square):
             return True
         if not self.whiteTurn and (self.bbOfThreats["w"] & square):
@@ -759,50 +779,58 @@ class GameState:
         return False
 
     def canBeRemoved(self, square: int, otherTurn: str):
+        """Checks whether a piece on a specified square can be removed for a promotion on the other board"""
         piece = self.getPieceBySquare(square)
+        if piece is None or piece[0] != otherTurn or piece[1] == "p" or piece[1] == "K":
+            return False
         whiteInCheck = self.isWhiteInCheck
         blackInCheck = self.isBlackInCheck
         currentThreatTable = deepcopy(self.bbOfThreats)
-        if piece is not None:
-            if piece[0] == otherTurn:
-                if piece[1] != "p" and piece[1] != "K":
-                    self.unsetSqState(piece, square)
-                    self.createThreatTable()
-                    self.inCheck()
-                    self.setSqState(piece, square)
-                    self.bbOfThreats = deepcopy(currentThreatTable)
-                    if whiteInCheck == self.isWhiteInCheck and blackInCheck == self.isBlackInCheck:
-                        return True
-                    self.isWhiteInCheck = whiteInCheck
-                    self.isBlackInCheck = blackInCheck
+        self.unsetSqState(piece, square)
+        self.createThreatTable()
+        self.inCheck()
+        self.setSqState(piece, square)
+        self.bbOfThreats = deepcopy(currentThreatTable)
+        if whiteInCheck == self.isWhiteInCheck and blackInCheck == self.isBlackInCheck:
+            return True
+        self.isWhiteInCheck = whiteInCheck
+        self.isBlackInCheck = blackInCheck
         return False
 
     def setSqState(self, piece: str, piecePosition: int):
-        if piece is not None:
-            self.bbOfPieces[piece] |= piecePosition
-            self.bbOfOccupiedSquares[piece[0]] |= piecePosition
-            self.bbOfOccupiedSquares["a"] |= piecePosition
+        """Sets specified piece into specified position. Does nothing if piece is None or square is already occupied with that exact piece"""
+        if piece is None:
+            return
+        self.bbOfPieces[piece] |= piecePosition
+        self.bbOfOccupiedSquares[piece[0]] |= piecePosition
+        self.bbOfOccupiedSquares["a"] |= piecePosition
 
     def unsetSqState(self, piece: str, piecePosition: int):
-        if piece is not None:
-            newBit = ctypes.c_uint64(piecePosition)
-            newBit.value = ~newBit.value
-            self.bbOfPieces[piece] &= newBit.value
-            self.bbOfOccupiedSquares[piece[0]] &= newBit.value
-            self.bbOfOccupiedSquares["a"] &= newBit.value
+        """Unsets specified piece from specified position. Does nothing if piece is None or square is already empty"""
+        if piece is None:
+            return
+        newBit = ctypes.c_uint64(piecePosition)
+        newBit.value = ~newBit.value
+        self.bbOfPieces[piece] &= newBit.value
+        self.bbOfOccupiedSquares[piece[0]] &= newBit.value
+        self.bbOfOccupiedSquares["a"] &= newBit.value
 
     def getSqStateByPiece(self, piece: str, piecePosition: int):
-        if piece is not None:
-            return (self.bbOfPieces[piece] & piecePosition) != 0
-        return False
+        """Returns True or False whether specified piece occupies specified square or not. Does nothing if piece is None"""
+        if piece is None:
+            return False
+        return (self.bbOfPieces[piece] & piecePosition) != 0
 
     def getSqStateByColor(self, color: str, piecePosition: int):
+        """Returns True or False whether piece of specified color occupies specified square or not"""
         return (self.bbOfOccupiedSquares[color] & piecePosition) != 0
 
     def getSqState(self, piecePosition: int):
+        """Returns True or False whether any piece occupies specified square or not"""
         return (self.bbOfOccupiedSquares["a"] & piecePosition) != 0
 
     def getPieceBySquare(self, piecePosition: int):
+        """If specified square is occupied by any piece returns it. If square is empty returns None"""
         if self.getSqState(piecePosition):
             for piece in COLORED_PIECES:
                 if self.getSqStateByPiece(piece, piecePosition):
@@ -810,11 +838,13 @@ class GameState:
         return None
 
     def unsetCastleRight(self, right: int):
+        """Unsets specified castle right"""
         newBit = ctypes.c_uint(right)
         newBit.value = ~newBit.value
         self.currentCastlingRight &= newBit.value
 
     def getCastleRight(self, right: int):
+        """Returns True or False whether castling to the specified side is available or not"""
         return (self.currentCastlingRight & right) != 0
 
 
@@ -875,10 +905,12 @@ class Move:
         return self.getMoveNotation()
 
     def getSquareNotation(self, square: int):
+        """Turns bitboard of a square into a chess notation"""
         location = getPower(square)
         return self.columnToLetter[location % 8] + self.rowToNumber[location // 8]
 
     def getMoveNotation(self):
+        """Makes chess notation of a move"""
         if self.isReserve:
             if self.movedPiece[1] != "p":
                 return f"&{self.movedPiece[1]}{self.getSquareNotation(self.endSquare)}"

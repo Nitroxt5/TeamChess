@@ -18,10 +18,12 @@ posMargin = {1: 350, 2: 800}
 
 
 def randomMoveAI(validMoves: list) -> Move:
+    """Returns a random move from a given list"""
     return validMoves[randint(0, len(validMoves) - 1)]
 
 
 def negaScoutMoveAI(gameState: GameState, otherGameState: GameState, validMoves: list, requiredDepth: int, returnQ: Queue):
+    """This method is a starting point of the new process which calculates AI next move"""
     global nextMove, counter, DEPTH
     DEPTH = requiredDepth
     nextMove = None
@@ -41,11 +43,12 @@ def negaScoutMoveAI(gameState: GameState, otherGameState: GameState, validMoves:
     returnQ.put((nextMove, thinkingTime, counter))
 
 
-def oneDepthSearch(gameState: GameState, validMoves: list, turn: int, depth: int):
+def oneDepthSearch(gameState: GameState, validMoves: list, turn: int, currentDepth: int):
+    """Lightweight algorithm for searching the best move. Goes only for a depth of 1. Does not use any heuristics."""
     gameState.currentValidMovesCount = len(validMoves)
     for move in validMoves:
-        if depth in killerMoves:
-            if move.moveID == killerMoves[depth]:
+        if currentDepth in killerMoves:
+            if move.moveID == killerMoves[currentDepth]:
                 move.isKiller = True
         if not move.goodScore:
             gameState.makeMove(move)
@@ -54,6 +57,7 @@ def oneDepthSearch(gameState: GameState, validMoves: list, turn: int, depth: int
 
 
 def negaScoutAI(gameState: GameState, otherGameState: GameState, validMoves: list, alpha: int, beta: int, turn: int, depth: int, globalDepth: int, globalLength: int):
+    """Algorithm for searching the best move"""
     global nextMove, counter
     counter += 1
     moves = validMoves[0] + validMoves[1] + validMoves[2]
