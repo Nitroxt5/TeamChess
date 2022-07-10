@@ -1,7 +1,8 @@
 from TestDLL import getPower, numSplit
 from Engine import GameState, Move, PIECES, bbOfSquares, COLORED_PIECES, POSSIBLE_PIECES_TO_PROMOTE, RESERVE_PIECES
+from AIpy import randomMoveAI, negaScoutMoveAI
+from Utils import *
 import pygame as pg
-from AI import randomMoveAI, negaScoutMoveAI
 from math import ceil, floor
 from multiprocessing import Process, Queue, freeze_support
 from copy import deepcopy
@@ -18,44 +19,32 @@ try:
 except AttributeError:
     workingDirectory = getcwd()
 
-pg.init()
-SCREEN_WIDTH, SCREEN_HEIGHT = pg.display.Info().current_w, pg.display.Info().current_h  # getting screen sizes
-# SCREEN_WIDTH, SCREEN_HEIGHT = 960, 540
-if __name__ != "__main__":
-    pg.quit()
-DIMENSION = 8  # chessboard is 8x8
-BOARD_SIZE = 600 * SCREEN_HEIGHT // 1080  # approximate size of the board in pixels
-SQ_SIZE = BOARD_SIZE // DIMENSION  # size of one square of a board in pixels
-BOARD_SIZE = SQ_SIZE * DIMENSION  # exact size of the board in pixels
-MARGIN = (SCREEN_HEIGHT - BOARD_SIZE) // 2  # top and left margin for the left board in pixels
-MARGIN_LEFT = SCREEN_WIDTH - BOARD_SIZE - MARGIN  # left margin for the right board in pixels, top margin is the same as for the left board
-RESERVE_MARGIN = (BOARD_SIZE - 5 * SQ_SIZE) // 2  # distance between the edge of the board and the edge of the reserve pieces in pixels
-FONT_SIZE = 25 * SCREEN_HEIGHT // 1080  # standard font size; every label size in the game is a scale of this constant
-FPS = 30
-IMAGES = {}  # loaded images are stored here; key = filename without extension
-SOUNDS = {}  # loaded sounds are stored here; key = filename without extension
+if __name__ == "__main__":
+    pg.init()
+    SCREEN_WIDTH, SCREEN_HEIGHT = pg.display.Info().current_w, pg.display.Info().current_h  # getting screen sizes
+    # SCREEN_WIDTH, SCREEN_HEIGHT = 960, 540
+    DIMENSION = 8  # chessboard is 8x8
+    BOARD_SIZE = 600 * SCREEN_HEIGHT // 1080  # approximate size of the board in pixels
+    SQ_SIZE = BOARD_SIZE // DIMENSION  # size of one square of a board in pixels
+    BOARD_SIZE = SQ_SIZE * DIMENSION  # exact size of the board in pixels
+    MARGIN = (SCREEN_HEIGHT - BOARD_SIZE) // 2  # top and left margin for the left board in pixels
+    MARGIN_LEFT = SCREEN_WIDTH - BOARD_SIZE - MARGIN  # left margin for the right board in pixels, top margin is the same as for the left board
+    RESERVE_MARGIN = (BOARD_SIZE - 5 * SQ_SIZE) // 2  # distance between the edge of the board and the edge of the reserve pieces in pixels
+    FONT_SIZE = 25 * SCREEN_HEIGHT // 1080  # standard font size; every label size in the game is a scale of this constant
+    FPS = 30
 
-DARK_GREEN = pg.Surface((SQ_SIZE, SQ_SIZE))
-DARK_GREEN.fill((110, 90, 0))
-BLUE = pg.Surface((SQ_SIZE, SQ_SIZE))
-BLUE.set_alpha(100)
-BLUE.fill((0, 0, 255))
-YELLOW = pg.Surface((SQ_SIZE, SQ_SIZE))
-YELLOW.set_alpha(100)
-YELLOW.fill("yellow")
+    # surfaces used in highlighting
+    DARK_GREEN = pg.Surface((SQ_SIZE, SQ_SIZE))
+    DARK_GREEN.fill((110, 90, 0))
+    BLUE = pg.Surface((SQ_SIZE, SQ_SIZE))
+    BLUE.set_alpha(100)
+    BLUE.fill((0, 0, 255))
+    YELLOW = pg.Surface((SQ_SIZE, SQ_SIZE))
+    YELLOW.set_alpha(100)
+    YELLOW.fill("yellow")
 
-
-def settingsCheck(settings):
-    """Checks SETTINGS dict for correctness"""
-    if not isinstance(settings, dict):
-        return False
-    if len(SETTINGS) != 2:
-        return False
-    if not ("sounds" in settings and "language" in settings):
-        return False
-    if not (isinstance(settings["sounds"], bool) and isinstance(settings["language"], bool)):
-        return False
-    return True
+IMAGES = {}  # loaded images are stored here
+SOUNDS = {}  # loaded sounds are stored here
 
 
 def loadResources():
@@ -101,40 +90,55 @@ if SETTINGS["language"]:
     from lang_en import *
 else:
     from lang_ru import *
+
 boardPlayers = [True, True, True, True]  # there are 4 players in the game; True = player, False = AI
 difficulties = [1, 1, 1, 1]  # 1 = player, 2 = EasyAI, 3 = NormalAI, 4 = HardAI
 names = deepcopy(plyrNames)  # current names of every player (they are changing for AI)
 
 
-def main(screen: pg.Surface):
+def setGameStateToDefault():
+    """Sets some game state variables to default state
+
+    Order is: AIExists, gameStates, validMoves, AIProcess, returnQ, activeBoard, gameOver, selectedSq,
+    clicks, moveMade, AIThinkingTime, AIPositionCounter, AIMoveCounter, hourglass
+    """
+    AIExists = not (boardPlayers[0] and boardPlayers[1] and boardPlayers[2] and boardPlayers[3])  # figures out if there is an AI in the game
+    gameStates = [GameState(), GameState()]
+    validMoves = [gameStates[0].getValidMoves(), gameStates[1].getValidMoves()]
+    AIProcess = Process()
+    returnQ = Queue()
+    activeBoard = 0  # number of the board (0 or 1) which player is to move
+    gameOver = False
+    selectedSq = [(), ()]
+    clicks = [[], []]
+    moveMade = [False, False]
+    AIThinkingTime = [0, 0]
+    AIPositionCounter = [0, 0]
+    AIMoveCounter = [len(validMoves[0][0]), 0]
+    hourglass = Hourglass(0, IMAGES["hourglass"], MARGIN, MARGIN_LEFT, SQ_SIZE, SCREEN_HEIGHT)
+    return AIExists, gameStates, validMoves, AIProcess, returnQ, activeBoard, gameOver, selectedSq, clicks, moveMade, \
+           AIThinkingTime, AIPositionCounter, AIMoveCounter, hourglass
+
+
+def terminateAI(AIThinking: bool, AIProcess: Process):
+    if AIThinking:
+        AIProcess.terminate()
+        AIProcess.join()
+        AIProcess.close()
+        AIThinking = False
+    return AIThinking
+
+
+def gamePlay(screen: pg.Surface):
     """Contains main loop that handles game process"""
     global difficulties, boardPlayers, names
     clock = pg.time.Clock()
-    AIExists = not (boardPlayers[0] and boardPlayers[1] and boardPlayers[2] and boardPlayers[3])  # figures out if there is an AI in the game
-    activeBoard = 0  # number of the board (0 or 1) which player is to move; does not affect anything if AI is not participating in the game
-    gameStates = [GameState(), GameState()]
-    validMoves = [gameStates[0].getValidMoves(), gameStates[1].getValidMoves()]
+    AIExists, gameStates, validMoves, AIProcess, returnQ, activeBoard, gameOver, selectedSq, clicks, moveMade, AIThinkingTime, AIPositionCounter, AIMoveCounter, hourglass = setGameStateToDefault()
     working = True  # for game loop
-    moveMade = [False, False]
     soundPlayed = False
-    gameOver = False
     AIThinking = False
-    AIProcess = Process()
-    returnQ = Queue()
-    selectedSq = [(), ()]  # latest click on every board
-    clicks = [[], []]  # 2 latest clicks on every board
-    noAIActivePlayer = []
-    if AIExists:
-        hourglass = [Hourglass(0, IMAGES["hourglass"], MARGIN, MARGIN_LEFT, SQ_SIZE, SCREEN_HEIGHT)]  # one hourglass sprite in case AI exists in the game
-    else:
-        noAIActivePlayer = [0, 2]  # if AI does not exist, game goes asynchronous, so we must remember which player is to move
-        hourglass = [Hourglass(noAIActivePlayer[0], IMAGES["hourglass"], MARGIN, MARGIN_LEFT, SQ_SIZE, SCREEN_HEIGHT),
-                     Hourglass(noAIActivePlayer[1], IMAGES["hourglass"], MARGIN, MARGIN_LEFT, SQ_SIZE, SCREEN_HEIGHT)]  # two hourglass sprites in case AI does not exist
     toMenu_btn = RadioButton((SCREEN_WIDTH - SQ_SIZE, SQ_SIZE), True, IMAGES["home_button_on"], IMAGES["home_button_off"])
     restart_btn = RadioButton((SCREEN_WIDTH - SQ_SIZE, int(SQ_SIZE * 2.5)), True, IMAGES["restart_button_on"], IMAGES["restart_button_off"])
-    AIThinkingTime = [0, 0]  # log info
-    AIPositionCounter = [0, 0]
-    AIMoveCounter = [len(validMoves[0][0]), 0]
     while working:
         clock.tick(FPS)
         location = pg.mouse.get_pos()  # getting position of the cursor
@@ -143,7 +147,7 @@ def main(screen: pg.Surface):
         changeColorOfUIObjects(location, [toMenu_btn, restart_btn])  # updating UI
         drawGameState(screen, gameStates, validMoves, selectedSq, toMenu_btn, restart_btn, AIExists)
         if not gameOver:
-            updateUIObjects(screen, hourglass)
+            updateUIObjects(screen, [hourglass])
         for e in pg.event.get():
             if e.type == pg.KEYDOWN:
                 if e.key == pg.K_F4 and bool(e.mod & pg.KMOD_ALT):  # in case alt+f4 save settings and exit
@@ -152,11 +156,7 @@ def main(screen: pg.Surface):
                     sys_exit()
             elif e.type == pg.QUIT:  # before exit: terminating an AI process and print log info
                 gameOver = True
-                if AIThinking:
-                    AIProcess.terminate()
-                    AIProcess.join()
-                    AIProcess.close()
-                    AIThinking = False
+                AIThinking = terminateAI(AIThinking, AIProcess)
                 for i in range(2):
                     print(f"Board {i + 1}:")
                     print(gameStates[i].gameLog)
@@ -184,28 +184,8 @@ def main(screen: pg.Surface):
                             pg.event.post(pg.event.Event(pg.QUIT))
                     if restart_btn.checkForInput(location):  # if restart button clicked, dialog window pops up
                         if createDialogWindow(screen, gameMenu["DW2"]):  # if player wants to restart - set game state to starting position
-                            if AIThinking:
-                                AIProcess.terminate()
-                                AIProcess.join()
-                                AIProcess.close()
-                                AIThinking = False
-                            gameStates = [GameState(), GameState()]
-                            validMoves = [gameStates[0].getValidMoves(), gameStates[1].getValidMoves()]
-                            AIThinkingTime = [0, 0]
-                            AIPositionCounter = [0, 0]
-                            AIMoveCounter = [len(validMoves[0][0]), 0]
-                            returnQ = Queue()
-                            activeBoard = 0
-                            gameOver = False
-                            selectedSq = [(), ()]
-                            clicks = [[], []]
-                            moveMade = [False, False]
-                            if AIExists:
-                                hourglass = [Hourglass(0, IMAGES["hourglass"], MARGIN, MARGIN_LEFT, SQ_SIZE, SCREEN_HEIGHT)]
-                            else:
-                                noAIActivePlayer = [0, 2]
-                                hourglass = [Hourglass(noAIActivePlayer[0], IMAGES["hourglass"], MARGIN, MARGIN_LEFT, SQ_SIZE, SCREEN_HEIGHT),
-                                             Hourglass(noAIActivePlayer[1], IMAGES["hourglass"], MARGIN, MARGIN_LEFT, SQ_SIZE, SCREEN_HEIGHT)]
+                            AIThinking = terminateAI(AIThinking, AIProcess)
+                            AIExists, gameStates, validMoves, AIProcess, returnQ, activeBoard, gameOver, selectedSq, clicks, moveMade, AIThinkingTime, AIPositionCounter, AIMoveCounter, hourglass = setGameStateToDefault()
                             playerTurn = [(gameStates[0].whiteTurn and boardPlayers[0]) or (not gameStates[0].whiteTurn and boardPlayers[1]),
                                           (gameStates[1].whiteTurn and boardPlayers[2]) or (not gameStates[1].whiteTurn and boardPlayers[3])]
                             drawGameState(screen, gameStates, validMoves, selectedSq, toMenu_btn, restart_btn, AIExists)
@@ -222,7 +202,7 @@ def main(screen: pg.Surface):
                         elif MARGIN_LEFT + RESERVE_MARGIN < location[0] < MARGIN_LEFT + BOARD_SIZE - RESERVE_MARGIN and (MARGIN - SQ_SIZE < location[1] < MARGIN or MARGIN + BOARD_SIZE < location[1] < MARGIN + BOARD_SIZE + SQ_SIZE):
                             reserveBoardNum = 1
                         if boardNum != -1:  # if clicked on any board or reserve field of any board
-                            if not AIExists or (AIExists and activeBoard == boardNum):  # if AI exists we can move pieces only on the active board
+                            if activeBoard == boardNum:  # we can move pieces only on an active board
                                 if boardNum == 0:
                                     column = (location[0] - MARGIN) // SQ_SIZE  # calculating exact square which was clicked
                                     row = (location[1] - MARGIN) // SQ_SIZE
@@ -268,11 +248,8 @@ def main(screen: pg.Surface):
                                                     selectedSq[boardNum] = ()  # reset clicks
                                                     clicks[boardNum] = []
                                                     activeBoard = 1 - activeBoard  # swap active board
-                                                    if AIExists:  # update hourglass sprite position
-                                                        hourglass[0] = Hourglass(getCurrentPlayer(gameStates, activeBoard), IMAGES["hourglass"], MARGIN, MARGIN_LEFT, SQ_SIZE, SCREEN_HEIGHT)
-                                                    else:
-                                                        noAIActivePlayer[boardNum] = 5 - (1 - boardNum) * 4 - noAIActivePlayer[boardNum]
-                                                        hourglass[boardNum] = Hourglass(noAIActivePlayer[boardNum], IMAGES["hourglass"], MARGIN, MARGIN_LEFT, SQ_SIZE, SCREEN_HEIGHT)
+                                                    # update hourglass sprite position
+                                                    hourglass = Hourglass(getCurrentPlayer(gameStates, activeBoard), IMAGES["hourglass"], MARGIN, MARGIN_LEFT, SQ_SIZE, SCREEN_HEIGHT)
                                                     if not soundPlayed and SETTINGS["sounds"]:  # play a move sound
                                                         SOUNDS["move"].play()
                                                         soundPlayed = True
@@ -280,7 +257,7 @@ def main(screen: pg.Surface):
                                     if not moveMade[boardNum]:  # if move was not made (was not a valid move) reset the first click
                                         clicks[boardNum] = [deepcopy(selectedSq[boardNum])]
                         elif reserveBoardNum != -1:  # if player clicked directly on a reserve field, just save this click
-                            if not AIExists or (AIExists and activeBoard == reserveBoardNum):
+                            if activeBoard == reserveBoardNum:
                                 if reserveBoardNum == 0:
                                     column = (location[0] - MARGIN - RESERVE_MARGIN) // SQ_SIZE + 1
                                     row = (location[1] - MARGIN) // SQ_SIZE
@@ -304,43 +281,42 @@ def main(screen: pg.Surface):
         if not gameOver:  # check for game end
             gameOver = gameOverCheck(gameStates, AIExists)
         for i in range(2):  # AI turn
-            if not gameOver and not playerTurn[i]:
-                if AIExists and activeBoard == i:
-                    playerNum = i * 2 + (0 if gameStates[i].whiteTurn else 1)  # get the difficulty to correctly start an algorithm
-                    playerName = getPlayerName(gameStates[i], names[i * 2:(i + 1) * 2])  # get the name for log info
-                    if not AIThinking:
-                        AIMoveCounter[1 - i] += len(validMoves[1 - i][0]) + len(validMoves[1 - i][1]) + len(validMoves[1 - i][2])
-                        print(f"{playerName} is thinking...")
-                        AIThinking = True
-                        AIProcess = Process(target=negaScoutMoveAI, args=(gameStates[i], gameStates[1 - i], validMoves[i], difficulties[playerNum], returnQ))
-                        AIProcess.start()  # starting an algorithm
-                    if not AIProcess.is_alive():  # when AI found a move
-                        AIMove, thinkingTime, positionCounter = returnQ.get()  # get the move from the process
-                        AIThinkingTime[i] += thinkingTime
-                        AIPositionCounter[i] += positionCounter
-                        print(f"{playerName} came up with a move")
-                        print(f"{playerName} thinking time: {thinkingTime} s")
-                        print(f"{playerName} positions calculated: {positionCounter}")
-                        if AIMove is None:  # if move was not found, make a random move (this case must never happen)
-                            AIMove = randomMoveAI(validMoves)
-                            print(f"{playerName} made a random move")
-                        if AIMove.isPawnPromotion:  # if move is a pawn promotion, AI chooses a random piece to remove
-                            possiblePromotions = calculatePossiblePromotions(gameStates, i)  # calculating positions of pieces, that can be removed
-                            possibleRequiredPromotions = [bbOfSquares[key[1]][key[0]] for key, value in possiblePromotions.items() if value[1] == AIMove.promotedTo]  # leave those pieces, that AI wants to promote to
-                            promotion = possibleRequiredPromotions[randint(0, len(possibleRequiredPromotions) - 1)]  # randomly choose a position of a piece
-                            AIMove = Move(AIMove.startSquare, AIMove.endSquare, gameStates[i], movedPiece=AIMove.movedPiece, promotedTo=AIMove.promotedTo, promotedPiecePosition=promotion)
-                        gameStates[i].makeMove(AIMove, gameStates[1 - i])  # make a move
-                        for j in range(2):  # update valid moves
-                            validMoves[j] = gameStates[j].getValidMoves()
-                            gameStates[j].updatePawnPromotionMoves(validMoves[j], gameStates[1 - j])
-                        if not gameOver:  # we should check for game end right here, not to start a new process when the game actually ended
-                            gameOver = gameOverCheck(gameStates, AIExists)
-                        moveMade[i] = True
-                        activeBoard = 1 - activeBoard
-                        hourglass[0] = Hourglass(getCurrentPlayer(gameStates, activeBoard), IMAGES["hourglass"], MARGIN, MARGIN_LEFT, SQ_SIZE, SCREEN_HEIGHT)
-                        AIThinking = False
-                        selectedSq[i] = ()
-                        clicks[i] = []
+            if not gameOver and not playerTurn[i] and activeBoard == i:
+                playerNum = i * 2 + (0 if gameStates[i].whiteTurn else 1)  # get the difficulty to correctly start an algorithm
+                playerName = getPlayerName(gameStates[i], names[i * 2:(i + 1) * 2])  # get the name for log info
+                if not AIThinking:
+                    AIMoveCounter[1 - i] += len(validMoves[1 - i][0]) + len(validMoves[1 - i][1]) + len(validMoves[1 - i][2])
+                    print(f"{playerName} is thinking...")
+                    AIThinking = True
+                    AIProcess = Process(target=negaScoutMoveAI, args=(gameStates[i], gameStates[1 - i], validMoves[i], difficulties[playerNum], returnQ))
+                    AIProcess.start()  # starting an algorithm
+                if not AIProcess.is_alive():  # when AI found a move
+                    AIMove, thinkingTime, positionCounter = returnQ.get()  # get the move from the process
+                    AIThinkingTime[i] += thinkingTime
+                    AIPositionCounter[i] += positionCounter
+                    print(f"{playerName} came up with a move")
+                    print(f"{playerName} thinking time: {thinkingTime} s")
+                    print(f"{playerName} positions calculated: {positionCounter}")
+                    if AIMove is None:  # if move was not found, make a random move (this case must never happen)
+                        AIMove = randomMoveAI(validMoves)
+                        print(f"{playerName} made a random move")
+                    if AIMove.isPawnPromotion:  # if move is a pawn promotion, AI chooses a random piece to remove
+                        possiblePromotions = calculatePossiblePromotions(gameStates, i)  # calculating positions of pieces, that can be removed
+                        possibleRequiredPromotions = [bbOfSquares[key[1]][key[0]] for key, value in possiblePromotions.items() if value[1] == AIMove.promotedTo]  # leave those pieces, that AI wants to promote to
+                        promotion = possibleRequiredPromotions[randint(0, len(possibleRequiredPromotions) - 1)]  # randomly choose a position of a piece
+                        AIMove = Move(AIMove.startSquare, AIMove.endSquare, gameStates[i], movedPiece=AIMove.movedPiece, promotedTo=AIMove.promotedTo, promotedPiecePosition=promotion)
+                    gameStates[i].makeMove(AIMove, gameStates[1 - i])  # make a move
+                    for j in range(2):  # update valid moves
+                        validMoves[j] = gameStates[j].getValidMoves()
+                        gameStates[j].updatePawnPromotionMoves(validMoves[j], gameStates[1 - j])
+                    if not gameOver:  # we should check for game end right here, not to start a new process when the game actually ended
+                        gameOver = gameOverCheck(gameStates, AIExists)
+                    moveMade[i] = True
+                    activeBoard = 1 - activeBoard
+                    hourglass = Hourglass(getCurrentPlayer(gameStates, activeBoard), IMAGES["hourglass"], MARGIN, MARGIN_LEFT, SQ_SIZE, SCREEN_HEIGHT)
+                    AIThinking = False
+                    selectedSq[i] = ()
+                    clicks[i] = []
             if moveMade[i]:  # updating UI once more to remove lags
                 drawGameState(screen, gameStates, validMoves, selectedSq, toMenu_btn, restart_btn, AIExists)
                 if not soundPlayed and SETTINGS["sounds"]:
@@ -377,13 +353,11 @@ def drawEndGameText(screen: pg.Surface, gameStates: list, AIExists: bool):
 
 def gameOverCheck(gameStates: list, AIExists: bool):
     """Checks whether the game has ended"""
-    if (gameStates[0].checkmate and not gameStates[0].whiteTurn) or (gameStates[1].checkmate and gameStates[1].whiteTurn):
+    if gameStates[0].checkmate or gameStates[1].checkmate:
         return True
     elif gameStates[0].stalemate and gameStates[1].stalemate:
         return True
     elif AIExists and (gameStates[0].stalemate or gameStates[1].stalemate):
-        return True
-    elif (gameStates[0].checkmate and gameStates[0].whiteTurn) or (gameStates[1].checkmate and not gameStates[1].whiteTurn):
         return True
     # if len(gameStates[1].gameLog) == 30:
     #     return True
@@ -472,11 +446,11 @@ def highlightLastMove(screen: pg.Surface, gameStates: list, selectedSq: list):
             else:
                 if i == 0:
                     marginTop = MARGIN - SQ_SIZE if lastMove.movedPiece[0] == "b" else MARGIN + BOARD_SIZE
-                    screen.blit(BLUE, ((startLoc - 1) * SQ_SIZE + MARGIN + RESERVE_MARGIN, marginTop))
+                    screen.blit(BLUE, ((RESERVE_PIECES[lastMove.movedPiece[1]] - 1) * SQ_SIZE + MARGIN + RESERVE_MARGIN, marginTop))
                     screen.blit(BLUE, (endLoc % 8 * SQ_SIZE + MARGIN, endLoc // 8 * SQ_SIZE + MARGIN))
                 else:
                     marginTop = MARGIN - SQ_SIZE if lastMove.movedPiece[0] == "w" else MARGIN + BOARD_SIZE
-                    screen.blit(BLUE, ((startLoc - 1) * SQ_SIZE + MARGIN_LEFT + RESERVE_MARGIN, marginTop))
+                    screen.blit(BLUE, ((RESERVE_PIECES[lastMove.movedPiece[1]] - 1) * SQ_SIZE + MARGIN_LEFT + RESERVE_MARGIN, marginTop))
                     screen.blit(BLUE, ((DIMENSION - 1 - endLoc % 8) * SQ_SIZE + MARGIN_LEFT,
                                        (DIMENSION - 1 - endLoc // 8) * SQ_SIZE + MARGIN))
 
@@ -737,7 +711,7 @@ def createNewGameMenu(screen: pg.Surface):
                     if back_btn.checkForInput(mousePos):
                         working = False
                     if play_btn.checkForInput(mousePos):
-                        main(screen)
+                        gamePlay(screen)
                         working = False
                     for i, ddm in enumerate([player1_ddm, player2_ddm, player3_ddm, player4_ddm]):
                         if ddm.checkForInput(mousePos):

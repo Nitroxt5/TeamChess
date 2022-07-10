@@ -6,7 +6,6 @@ from Engine import GameState, Move
 from multiprocessing import Queue
 
 CHECKMATE = 100000
-STALEMATE = 0
 DEPTH = 4
 R = 1 if DEPTH <= 3 else 2
 nextMove = None
@@ -23,17 +22,17 @@ def randomMoveAI(validMoves: list) -> Move:
 
 
 def negaScoutMoveAI(gameState: GameState, otherGameState: GameState, validMoves: list, requiredDepth: int, returnQ: Queue):
-    """This method is a starting point of the new process which calculates AI next move"""
-    global nextMove, counter, DEPTH
+    """This method is an entry point of the new process which calculates AI next move"""
+    global nextMove, counter, DEPTH, R
     DEPTH = requiredDepth
+    R = 1 if DEPTH <= 3 else 2
     nextMove = None
     counter = 0
     start = perf_counter()
     if validMoves is not None:
         globalLength = len(validMoves[0]) + len(validMoves[1]) + len(validMoves[2])
         if globalLength > 8:
-            for d in range(DEPTH):
-                currentDepth = d + 1
+            for currentDepth in range(1, DEPTH + 1):
                 score = negaScoutAI(gameState, otherGameState, validMoves, -CHECKMATE - 1, CHECKMATE + 1, 1 if gameState.whiteTurn else -1, currentDepth, currentDepth, globalLength)
                 if score == CHECKMATE:
                     break
