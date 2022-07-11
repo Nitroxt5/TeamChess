@@ -1,0 +1,6 @@
+module.cpp
+setup.py
+ScoreBoard.egg-info/PKG-INFO
+ScoreBoard.egg-info/SOURCES.txt
+ScoreBoard.egg-info/dependency_links.txt
+ScoreBoard.egg-info/top_level.txt

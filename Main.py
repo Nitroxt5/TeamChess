@@ -3,8 +3,7 @@ from Engine import GameState, Move, PIECES, bbOfSquares, COLORED_PIECES, POSSIBL
 from AIpy import randomMoveAI, negaScoutMoveAI
 from Utils import *
 import pygame as pg
-from math import ceil, floor
-from multiprocessing import Process, Queue, freeze_support
+from multiprocessing import Queue, freeze_support
 from copy import deepcopy
 from random import randint
 from UI import Button, Hourglass, DialogWindow, RadioButton, RadioLabel, Image, DropDownMenu, Label
@@ -21,8 +20,8 @@ except AttributeError:
 
 if __name__ == "__main__":
     pg.init()
-    SCREEN_WIDTH, SCREEN_HEIGHT = pg.display.Info().current_w, pg.display.Info().current_h  # getting screen sizes
-    # SCREEN_WIDTH, SCREEN_HEIGHT = 960, 540
+    # SCREEN_WIDTH, SCREEN_HEIGHT = pg.display.Info().current_w, pg.display.Info().current_h  # getting screen sizes
+    SCREEN_WIDTH, SCREEN_HEIGHT = 960, 540
     DIMENSION = 8  # chessboard is 8x8
     BOARD_SIZE = 600 * SCREEN_HEIGHT // 1080  # approximate size of the board in pixels
     SQ_SIZE = BOARD_SIZE // DIMENSION  # size of one square of a board in pixels
@@ -116,17 +115,8 @@ def setGameStateToDefault():
     AIPositionCounter = [0, 0]
     AIMoveCounter = [len(validMoves[0][0]), 0]
     hourglass = Hourglass(0, IMAGES["hourglass"], MARGIN, MARGIN_LEFT, SQ_SIZE, SCREEN_HEIGHT)
-    return AIExists, gameStates, validMoves, AIProcess, returnQ, activeBoard, gameOver, selectedSq, clicks, moveMade, \
-           AIThinkingTime, AIPositionCounter, AIMoveCounter, hourglass
-
-
-def terminateAI(AIThinking: bool, AIProcess: Process):
-    if AIThinking:
-        AIProcess.terminate()
-        AIProcess.join()
-        AIProcess.close()
-        AIThinking = False
-    return AIThinking
+    return AIExists, gameStates, validMoves, AIProcess, returnQ, activeBoard, gameOver, selectedSq, \
+           clicks, moveMade, AIThinkingTime, AIPositionCounter, AIMoveCounter, hourglass
 
 
 def gamePlay(screen: pg.Surface):
@@ -157,24 +147,7 @@ def gamePlay(screen: pg.Surface):
             elif e.type == pg.QUIT:  # before exit: terminating an AI process and print log info
                 gameOver = True
                 AIThinking = terminateAI(AIThinking, AIProcess)
-                for i in range(2):
-                    print(f"Board {i + 1}:")
-                    print(gameStates[i].gameLog)
-                    if not boardPlayers[i * 2] and not boardPlayers[i * 2 + 1]:
-                        moveCount = len(gameStates[i].gameLog)
-                    else:
-                        moveCountCeil = ceil(len(gameStates[i].gameLog) / 2)
-                        moveCountFloor = floor(len(gameStates[i].gameLog) / 2)
-                        moveCount = moveCountCeil if not boardPlayers[i * 2] else moveCountFloor
-                    print(f"Moves: {moveCount}")
-                    print(f"Overall thinking time: {AIThinkingTime[i]}")
-                    print(f"Overall positions calculated: {AIPositionCounter[i]}")
-                    if moveCount != 0 and AIPositionCounter[i] != 0:
-                        print(f"Average time per move: {AIThinkingTime[i] / moveCount}")
-                        print(f"Average calculated positions per move: {AIPositionCounter[i] / moveCount}")
-                        print(f"Average time per position: {AIThinkingTime[i] / AIPositionCounter[i]}")
-                    if moveCount != 0 and AIExists:
-                        print(f"Average possible moves per move: {AIMoveCounter[i] / moveCount}")
+                ConsoleLog.endgameOutput(gameStates, boardPlayers, AIThinkingTime, AIPositionCounter, AIMoveCounter, AIExists)
                 names = deepcopy(plyrNames)
                 working = False
             elif e.type == pg.MOUSEBUTTONDOWN:
@@ -185,6 +158,7 @@ def gamePlay(screen: pg.Surface):
                     if restart_btn.checkForInput(location):  # if restart button clicked, dialog window pops up
                         if createDialogWindow(screen, gameMenu["DW2"]):  # if player wants to restart - set game state to starting position
                             AIThinking = terminateAI(AIThinking, AIProcess)
+                            ConsoleLog.endgameOutput(gameStates, boardPlayers, AIThinkingTime, AIPositionCounter, AIMoveCounter, AIExists)
                             AIExists, gameStates, validMoves, AIProcess, returnQ, activeBoard, gameOver, selectedSq, clicks, moveMade, AIThinkingTime, AIPositionCounter, AIMoveCounter, hourglass = setGameStateToDefault()
                             playerTurn = [(gameStates[0].whiteTurn and boardPlayers[0]) or (not gameStates[0].whiteTurn and boardPlayers[1]),
                                           (gameStates[1].whiteTurn and boardPlayers[2]) or (not gameStates[1].whiteTurn and boardPlayers[3])]
@@ -236,7 +210,7 @@ def gamePlay(screen: pg.Surface):
                                         for validMove in part:  # if our move is a pawn promotion, it is not generated finally, so it may not match
                                             if move == validMove or (move.moveID == validMove.moveID and move.isPawnPromotion and len(validMoves[boardNum][2]) > 0):
                                                 if move.isPawnPromotion:  # if move is a pawn promotion - allow player to choose a promotion
-                                                    pos, piece = getPromotion(screen, gameStates, names, boardNum, toMenu_btn, restart_btn, AIExists)
+                                                    pos, piece = getPromotion(screen, gameStates, boardNum, toMenu_btn, restart_btn, AIExists)
                                                     validMove.promotedTo = None if piece is None else piece[1]
                                                     validMove.promotedPiecePosition = pos
                                                 if not (validMove.isPawnPromotion and validMove.promotedTo is None):  # if it is a valid move - make it
@@ -250,10 +224,8 @@ def gamePlay(screen: pg.Surface):
                                                     activeBoard = 1 - activeBoard  # swap active board
                                                     # update hourglass sprite position
                                                     hourglass = Hourglass(getCurrentPlayer(gameStates, activeBoard), IMAGES["hourglass"], MARGIN, MARGIN_LEFT, SQ_SIZE, SCREEN_HEIGHT)
-                                                    if not soundPlayed and SETTINGS["sounds"]:  # play a move sound
-                                                        SOUNDS["move"].play()
-                                                        soundPlayed = True
-                                                break
+                                                    soundPlayed = playSound(SOUNDS["move"], soundPlayed, SETTINGS["sounds"])
+                                                    break
                                     if not moveMade[boardNum]:  # if move was not made (was not a valid move) reset the first click
                                         clicks[boardNum] = [deepcopy(selectedSq[boardNum])]
                         elif reserveBoardNum != -1:  # if player clicked directly on a reserve field, just save this click
@@ -283,10 +255,10 @@ def gamePlay(screen: pg.Surface):
         for i in range(2):  # AI turn
             if not gameOver and not playerTurn[i] and activeBoard == i:
                 playerNum = i * 2 + (0 if gameStates[i].whiteTurn else 1)  # get the difficulty to correctly start an algorithm
-                playerName = getPlayerName(gameStates[i], names[i * 2:(i + 1) * 2])  # get the name for log info
+                playerName = getPlayerName(gameStates, activeBoard, names)  # get the name for log info
                 if not AIThinking:
                     AIMoveCounter[1 - i] += len(validMoves[1 - i][0]) + len(validMoves[1 - i][1]) + len(validMoves[1 - i][2])
-                    print(f"{playerName} is thinking...")
+                    ConsoleLog.thinkingStart(playerName)
                     AIThinking = True
                     AIProcess = Process(target=negaScoutMoveAI, args=(gameStates[i], gameStates[1 - i], validMoves[i], difficulties[playerNum], returnQ))
                     AIProcess.start()  # starting an algorithm
@@ -294,12 +266,10 @@ def gamePlay(screen: pg.Surface):
                     AIMove, thinkingTime, positionCounter = returnQ.get()  # get the move from the process
                     AIThinkingTime[i] += thinkingTime
                     AIPositionCounter[i] += positionCounter
-                    print(f"{playerName} came up with a move")
-                    print(f"{playerName} thinking time: {thinkingTime} s")
-                    print(f"{playerName} positions calculated: {positionCounter}")
+                    ConsoleLog.thinkingEnd(playerName, thinkingTime, positionCounter)
                     if AIMove is None:  # if move was not found, make a random move (this case must never happen)
                         AIMove = randomMoveAI(validMoves)
-                        print(f"{playerName} made a random move")
+                        ConsoleLog.madeRandomMove(playerName)
                     if AIMove.isPawnPromotion:  # if move is a pawn promotion, AI chooses a random piece to remove
                         possiblePromotions = calculatePossiblePromotions(gameStates, i)  # calculating positions of pieces, that can be removed
                         possibleRequiredPromotions = [bbOfSquares[key[1]][key[0]] for key, value in possiblePromotions.items() if value[1] == AIMove.promotedTo]  # leave those pieces, that AI wants to promote to
@@ -319,24 +289,11 @@ def gamePlay(screen: pg.Surface):
                     clicks[i] = []
             if moveMade[i]:  # updating UI once more to remove lags
                 drawGameState(screen, gameStates, validMoves, selectedSq, toMenu_btn, restart_btn, AIExists)
-                if not soundPlayed and SETTINGS["sounds"]:
-                    SOUNDS["move"].play()
+                playSound(SOUNDS["move"], soundPlayed, SETTINGS["sounds"])
                 soundPlayed = False
                 pg.display.flip()
                 moveMade[i] = False
         pg.display.flip()
-
-
-def updateUIObjects(screen: pg.Surface, UIObjects: list):
-    """Calls update method for every object in UIObjects"""
-    for obj in UIObjects:
-        obj.update(screen)
-
-
-def changeColorOfUIObjects(mousePos: tuple, UIObjects: list):
-    """Calls changeColor method for every object in UIObjects"""
-    for obj in UIObjects:
-        obj.changeColor(mousePos)
 
 
 def drawEndGameText(screen: pg.Surface, gameStates: list, AIExists: bool):
@@ -364,18 +321,6 @@ def gameOverCheck(gameStates: list, AIExists: bool):
     # if len(gameStates[0].gameLog) == 1:
     #     return True
     return False
-
-
-def getCurrentPlayer(gameStates: list, activeBoard: int):
-    """Gets active player if AI exists in the game"""
-    if activeBoard == 0 and gameStates[0].whiteTurn:
-        return 0
-    elif activeBoard == 0 and not gameStates[0].whiteTurn:
-        return 1
-    elif activeBoard == 1 and gameStates[1].whiteTurn:
-        return 2
-    else:
-        return 3
 
 
 def highlightSq(screen: pg.Surface, gameStates: list, validMoves: list, selectedSq: list):
@@ -529,20 +474,13 @@ def drawPieces(screen: pg.Surface, gameStates: list):
                     screen.blit(IMAGES[f"e{piece[1]}"], pg.Rect(marg, marginTop, SQ_SIZE, SQ_SIZE))
 
 
-def getPlayerName(gameState: GameState, playerNames: list):
-    """Gets an active player name on a chosen board"""
-    if gameState.whiteTurn:
-        return playerNames[0]
-    return playerNames[1]
-
-
-def getPromotion(screen: pg.Surface, gameStates: list, playerNames: list, boardNum: int, toMenu_btn: RadioButton, restart_btn: RadioButton, AIExists: bool):
+def getPromotion(screen: pg.Surface, gameStates: list, boardNum: int, toMenu_btn: RadioButton, restart_btn: RadioButton, AIExists: bool):
     """Lets the player choose exact piece, he wants to promote into. Returns a bitboard of a position of a piece and that exact piece"""
     possiblePromotions = calculatePossiblePromotions(gameStates, boardNum)
     if possiblePromotions == {}:
         return 0, None
     drawGameState(screen, gameStates, [], [], toMenu_btn, restart_btn, AIExists, promotion=boardNum, possiblePromotions=possiblePromotions)
-    playerName = getPlayerName(gameStates[boardNum], playerNames[boardNum * 2:(boardNum + 1) * 2])
+    playerName = getPlayerName(gameStates, boardNum, names)
     drawTopText(screen, f"{playerName} {promText}")  # message, that current player chooses a piece to promote
     pg.display.flip()
     working = True
