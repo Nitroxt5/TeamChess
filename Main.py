@@ -116,7 +116,7 @@ def setGameStateToDefault():
     AIMoveCounter = [len(validMoves[0][0]), 0]
     hourglass = Hourglass(0, IMAGES["hourglass"], MARGIN, MARGIN_LEFT, SQ_SIZE, SCREEN_HEIGHT)
     return AIExists, gameStates, validMoves, AIProcess, returnQ, activeBoard, gameOver, selectedSq, \
-           clicks, moveMade, AIThinkingTime, AIPositionCounter, AIMoveCounter, hourglass
+        clicks, moveMade, AIThinkingTime, AIPositionCounter, AIMoveCounter, hourglass
 
 
 def gamePlay(screen: pg.Surface):
@@ -127,6 +127,8 @@ def gamePlay(screen: pg.Surface):
     working = True  # for game loop
     soundPlayed = False
     AIThinking = False
+    potentialScore = [0, 0, 0, 0]
+    bestUnavailableReservePiece = [None, None, None, None]
     toMenu_btn = RadioButton((SCREEN_WIDTH - SQ_SIZE, SQ_SIZE), True, IMAGES["home_button_on"], IMAGES["home_button_off"])
     restart_btn = RadioButton((SCREEN_WIDTH - SQ_SIZE, int(SQ_SIZE * 2.5)), True, IMAGES["restart_button_on"], IMAGES["restart_button_off"])
     while working:
@@ -254,19 +256,22 @@ def gamePlay(screen: pg.Surface):
             gameOver = gameOverCheck(gameStates, AIExists)
         for i in range(2):  # AI turn
             if not gameOver and not playerTurn[i] and activeBoard == i:
-                playerNum = i * 2 + (0 if gameStates[i].whiteTurn else 1)  # get the difficulty to correctly start an algorithm
+                playerNum = i * 2 + (0 if gameStates[i].whiteTurn else 1)  # get player number to correctly start an algorithm
                 playerName = getPlayerName(gameStates, activeBoard, names)  # get the name for log info
                 if not AIThinking:
                     AIMoveCounter[1 - i] += len(validMoves[1 - i][0]) + len(validMoves[1 - i][1]) + len(validMoves[1 - i][2])
                     ConsoleLog.thinkingStart(playerName)
                     AIThinking = True
-                    AIProcess = Process(target=negaScoutMoveAI, args=(gameStates[i], gameStates[1 - i], validMoves[i], difficulties[playerNum], returnQ))
+                    AIProcess = Process(target=negaScoutMoveAI,
+                                        args=(gameStates[i], gameStates[1 - i], validMoves[i], difficulties[playerNum],
+                                              returnQ, potentialScore[getPlayersTeammate(playerNum)],
+                                              bestUnavailableReservePiece[getPlayersTeammate(playerNum)]))
                     AIProcess.start()  # starting an algorithm
                 if not AIProcess.is_alive():  # when AI found a move
-                    AIMove, thinkingTime, positionCounter = returnQ.get()  # get the move from the process
+                    AIMove, potentialScore[playerNum], bestUnavailableReservePiece[playerNum], thinkingTime, positionCounter = returnQ.get()  # get the move from the process
                     AIThinkingTime[i] += thinkingTime
                     AIPositionCounter[i] += positionCounter
-                    ConsoleLog.thinkingEnd(playerName, thinkingTime, positionCounter)
+                    ConsoleLog.thinkingEnd(playerName, thinkingTime, positionCounter, potentialScore[playerNum], bestUnavailableReservePiece[playerNum])
                     if AIMove is None:  # if move was not found, make a random move (this case must never happen)
                         AIMove = randomMoveAI(validMoves)
                         ConsoleLog.madeRandomMove(playerName)

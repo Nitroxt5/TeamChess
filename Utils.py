@@ -29,8 +29,9 @@ class ConsoleLog:
         print(f"{playerName} is thinking...")
 
     @staticmethod
-    def thinkingEnd(playerName: str, thinkingTime: float, positionCounter: int):
+    def thinkingEnd(playerName: str, thinkingTime: float, positionCounter: int, potentialScore: int, requiredPiece: str):
         print(f"{playerName} came up with a move")
+        print(f"{playerName} needs {requiredPiece}, its score = {potentialScore}")
         print(f"{playerName} thinking time: {thinkingTime} s")
         print(f"{playerName} positions calculated: {positionCounter}")
 
@@ -92,3 +93,14 @@ def getCurrentPlayer(gameStates: list, activeBoard: int):
 def getPlayerName(gameStates: list, activeBoard: int, names: list):
     """Gets name of a player who is now to move"""
     return names[getCurrentPlayer(gameStates, activeBoard)]
+
+
+def getPlayersTeammate(playerNum: int):
+    """Gets number of a player's teammate"""
+    if playerNum == 0:
+        return 3
+    if playerNum == 3:
+        return 0
+    if playerNum == 1:
+        return 2
+    return 1

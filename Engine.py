@@ -58,21 +58,6 @@ class GameState:
         self.bbOfOccupiedSquares = {"w": 0b0000000000000000000000000000000000000000000000001111111111111111,
                                     "b": 0b1111111111111111000000000000000000000000000000000000000000000000,
                                     "a": 0b1111111111111111000000000000000000000000000000001111111111111111}
-        # self.bbOfPieces = {"wK": 0b0000000000000000001000000000000000000000000000000000000000000000,
-        #                    "wQ": 0b0000000000000000000000000000000000000000000000000000000000000010,
-        #                    "wR": 0b0000000000000000000000000000000000000000000000000000000000000001,
-        #                    "wB": 0b0000000000000000000000000000000000000000000000000000000000000100,
-        #                    "wN": 0b0000000000000000000000000000000000000000000000000000000000000000,
-        #                    "wp": 0b0000000000100000000000000000000000010000000110100000111100000000,
-        #                    "bK": 0b0000000010000000000000000000000000000000000000000000000000000000,
-        #                    "bQ": 0b0000000000000000000000000000000000000000000000000000000000000000,
-        #                    "bR": 0b0000000000000000000000000000000000000000000000000000000000000000,
-        #                    "bB": 0b0000000000000000000000000000000000000000000000000000000000000000,
-        #                    "bN": 0b0000000000000000000000000000000000000000000000000000000000000000,
-        #                    "bp": 0b0000000000000000000000000000000000000000000000000000000000000000}
-        # self.bbOfOccupiedSquares = {"w": self.bbOfPieces["wK"] | self.bbOfPieces["wQ"] | self.bbOfPieces["wR"] | self.bbOfPieces["wB"] | self.bbOfPieces["wN"] | self.bbOfPieces["wp"],
-        #                             "b": self.bbOfPieces["bK"] | self.bbOfPieces["bQ"] | self.bbOfPieces["bR"] | self.bbOfPieces["bB"] | self.bbOfPieces["bN"] | self.bbOfPieces["bp"],
-        #                             "a": self.bbOfPieces["wK"] | self.bbOfPieces["wQ"] | self.bbOfPieces["wR"] | self.bbOfPieces["wB"] | self.bbOfPieces["wN"] | self.bbOfPieces["wp"] | self.bbOfPieces["bK"] | self.bbOfPieces["bQ"] | self.bbOfPieces["bR"] | self.bbOfPieces["bB"] | self.bbOfPieces["bN"] | self.bbOfPieces["bp"]}
         self.bbOfThreats = {"w": 0, "b": 0}
         self.bbOfThreatsLog = []
         self.moveFunc = {"p": self.getPawnMoves, "R": self.getRookMoves, "N": self.getKnightMoves,
@@ -86,7 +71,6 @@ class GameState:
         self.stalemate = False
         self.enpassantSq = 0
         self.enpassantSqLog = []
-        # self.currentCastlingRight = 0b0
         self.currentCastlingRight = 0b1111
         self.castleRightsLog = []
         self.isWhiteCastled = False
@@ -103,16 +87,120 @@ class GameState:
         self.boardHash = 0
         self.hashBoard()
         self.currentValidMovesCount = 0
+        # self.FENtoBitBoard("8/k1P5/2K5/8/3P4/3PP1P1/4PPPP/5BQR w - 0")
+        # self.FENtoBitBoard("rnbqkb1r/pp3Bpp/3p1n2/1p2p3/4P3/2PP4/PP3PPP/RNBQK1NR b KQkq 0")
+        # print(self)
+
+    def FENtoBitBoard(self, FEN: str):
+        """Turns a FEN string into a bitboard representation, used in program.
+
+        FEN string must be correct, otherwise behaviour of this method is unpredictable.
+        FEN string must not contain halfmove and fullmove counters.
+        Enpassant square must be a number (a8 is 1; h8 is 8; a1 is 56; h1 is 64)
+        If enpassant square is absent, it must be a 0"""
+        FENParts = FEN.split(" ")
+        assert len(FENParts) == 4, "Given FEN string is incorrect"
+        enpassant = int(FENParts[3])
+        assert 0 <= enpassant <= 64, "Given FEN string is incorrect"
+        FENPieceToStr = {"K": "wK", "Q": "wQ", "R": "wR", "B": "wB", "N": "wN", "P": "wp",
+                         "k": "bK", "q": "bQ", "r": "bR", "b": "bB", "n": "bN", "p": "bp"}
+        FENParts[0] = "".join(FENParts[0].split("/"))
+        for piece in COLORED_PIECES:
+            self.bbOfPieces[piece] = 0
+        i = 0
+        for letter in FENParts[0]:
+            if letter.isdigit():
+                i += int(letter)
+                continue
+            self.bbOfPieces[FENPieceToStr[letter]] ^= 1 << (63 - i)
+            i += 1
+        self.bbOfOccupiedSquares = {"w": self.bbOfPieces["wK"] | self.bbOfPieces["wQ"] | self.bbOfPieces["wR"] | self.bbOfPieces["wB"] | self.bbOfPieces["wN"] | self.bbOfPieces["wp"],
+                                    "b": self.bbOfPieces["bK"] | self.bbOfPieces["bQ"] | self.bbOfPieces["bR"] | self.bbOfPieces["bB"] | self.bbOfPieces["bN"] | self.bbOfPieces["bp"],
+                                    "a": self.bbOfPieces["wK"] | self.bbOfPieces["wQ"] | self.bbOfPieces["wR"] | self.bbOfPieces["wB"] | self.bbOfPieces["wN"] | self.bbOfPieces["wp"] | self.bbOfPieces["bK"] | self.bbOfPieces["bQ"] | self.bbOfPieces["bR"] | self.bbOfPieces["bB"] | self.bbOfPieces["bN"] | self.bbOfPieces["bp"]}
+        self.whiteTurn = True if FENParts[1] == "w" else False
+        FENRuleToStr = {"K": "wKs", "Q": "wQs", "k": "bKs", "q": "bQs"}
+        self.currentCastlingRight = 0
+        if FENParts[2] == "-":
+            self.currentCastlingRight = 0
+        else:
+            for rule in FENParts[2]:
+                self.setCastleRight(CASTLE_SIDES[FENRuleToStr[rule]])
+        if enpassant == 0:
+            self.enpassantSq = 0
+        else:
+            self.enpassantSq = 1 << (64 - enpassant)
+        self.assertionEndCheck()
+
+    def bitBoardToFEN(self):
+        """Turns a bitboard representation, used in program, into a FEN string.
+
+        FEN string will not contain halfmove and fullmove counters.
+        Enpassant square will be a number (a8 is 1; h8 is 8; a1 is 56; h1 is 64)
+        If enpassant square is absent, it will be a 0"""
+        FEN = ""
+        StrPieceToFEN = {"wK": "K", "wQ": "Q", "wR": "R", "wB": "B", "wN": "N", "wp": "P",
+                         "bK": "k", "bQ": "q", "bR": "r", "bB": "b", "bN": "n", "bp": "p"}
+        emptySquaresCounter = 0
+        for i in range(len(bbOfSquares)):
+            for sq in bbOfSquares[i]:
+                piece = self.getPieceBySquare(sq)
+                if piece is None:
+                    emptySquaresCounter += 1
+                    continue
+                elif emptySquaresCounter > 0:
+                    FEN += str(emptySquaresCounter)
+                    FEN += StrPieceToFEN[piece]
+                    emptySquaresCounter = 0
+                else:
+                    FEN += StrPieceToFEN[piece]
+                    emptySquaresCounter = 0
+            if emptySquaresCounter > 0:
+                FEN += str(emptySquaresCounter)
+                emptySquaresCounter = 0
+            if i != len(bbOfSquares) - 1:
+                FEN += "/"
+        FEN += " w " if self.whiteTurn else " b "
+        StrRuleToFEN = {"wKs": "K", "wQs": "Q", "bKs": "k", "bQs": "q"}
+        if self.currentCastlingRight == 0:
+            FEN += "-"
+        else:
+            for strRule, FENRule in StrRuleToFEN.items():
+                if self.getCastleRight(CASTLE_SIDES[strRule]):
+                    FEN += FENRule
+        FEN += f" {0}" if self.enpassantSq == 0 else f" {getPower(self.enpassantSq)}"
+        return FEN
+
+    def __str__(self):
+        return self.bitBoardToFEN()
+
+    def __repr__(self):
+        return self.bitBoardToFEN()
+
+    def assertionStartCheck(self, square=None, move=None):
+        """Checks some variables state at the start of a method"""
+        msg = ""
+        if isinstance(move, Move):
+            msg = f"move = {move.movedPiece}, {bin(move.startSquare)}, {bin(move.endSquare)}, {self.isWhiteInCheck}, {self.isBlackInCheck}"
+            assert move.endSquare != 0, msg
+        assert square != 0, msg
+        assert self.bbOfPieces["wK"] != 0, msg
+        assert self.bbOfPieces["bK"] != 0, msg
+
+    def assertionEndCheck(self):
+        """Checks some variables state at the end of a method"""
+        assert self.bbOfPieces["wK"] != 0
+        assert self.bbOfPieces["bK"] != 0
 
     def hashBoard(self):
         """Creates zobrist hashes and hashes the board"""
+        self.assertionStartCheck()
         seed(1)
         for i in range(64):
             newList = []
             for j in range(12):
                 newList.append(randint(0, MAX_INT))
             self.zobristTable.append(newList)
-        for i in range(17):
+        for i in range(18):
             newList = []
             for j in range(12):
                 newList.append(randint(0, MAX_INT))
@@ -131,8 +219,11 @@ class GameState:
 
     def updateHash(self, move):
         """Updates board hash"""
+        self.assertionStartCheck(move=move)
         startLoc = getPower(move.startSquare)
         endLoc = getPower(move.endSquare)
+        assert 0 <= startLoc <= 64, f"startLoc = {startLoc}, move = {move.startSquare}, {move.endSquare}, {move.movedPiece}"
+        assert 0 <= endLoc <= 63, f"endLoc = {endLoc}, move = {move.startSquare}, {move.endSquare}, {move.movedPiece}"
         self.boardHashLog.append(self.boardHash)
         if move.capturedPiece is not None and not move.isEnpassant:
             self.boardHash ^= self.zobristTable[endLoc][COLORED_PIECES_CODES[move.capturedPiece]]
@@ -277,6 +368,7 @@ class GameState:
 
     def makeMove(self, move, other=None):
         """Makes provided move. Switches turn. Updates hash. Rebuilds threat tables"""
+        self.assertionStartCheck(move=move)
         if move.capturedPiece is not None:
             if isinstance(other, GameState):
                 other.reserve[move.capturedPiece[0]][move.capturedPiece[1]] += 1
@@ -333,9 +425,11 @@ class GameState:
         self.bbOfThreatsLog.append(deepcopy(self.bbOfThreats))
         self.createThreatTable()
         self.inCheck()
+        self.assertionEndCheck()
 
     def undoMove(self):
         """Undoes last move. Switches turn. Undoes hash. Undoes threat tables"""
+        self.assertionStartCheck()
         if len(self.gameLog) == 0:
             return
         move = self.gameLog.pop()
@@ -380,9 +474,11 @@ class GameState:
         self.whiteTurn = not self.whiteTurn
         self.bbOfThreats = self.bbOfThreatsLog.pop()
         self.inCheck()
+        self.assertionEndCheck()
 
     def updateCastleRights(self, move):
         """Checks whether any king or rook were moved. Checks whether any rook was captured. Updates castle rights according to this"""
+        self.assertionStartCheck(move=move)
         if move.isReserve:
             return
         if move.movedPiece == "wK":
@@ -418,16 +514,19 @@ class GameState:
 
     def getPossibleMoves(self):
         """Generates all possible moves (ignores their validity in terms of king safety)"""
+        self.assertionStartCheck()
         moves = [[], [], []]
         for piece in COLORED_PIECES:
             if (piece[0] == "w" and self.whiteTurn) or (piece[0] == "b" and not self.whiteTurn):
                 splitPositions = numSplit(self.bbOfPieces[piece])
                 for position in splitPositions:
                     self.moveFunc[piece[1]](position, moves)
+        self.assertionEndCheck()
         return moves
 
     def getPawnMoves(self, square: int, moves: list):
         """Generates all possible moves for pawns"""
+        self.assertionStartCheck(square)
         if self.whiteTurn:
             if not self.getSqState(square << 8):
                 move = Move(square, square << 8, self, movedPiece="wp")
@@ -488,9 +587,11 @@ class GameState:
                         moves[0].append(move)
                 elif square >> 9 == self.enpassantSq:
                     moves[0].append(Move(square, square >> 9, self, movedPiece="bp", isEnpassant=True))
+        self.assertionEndCheck()
 
     def getRookMoves(self, square: int, moves: list, isQueen=False):
         """Generates all possible moves for rooks"""
+        self.assertionStartCheck(square)
         allyColor = "w" if self.whiteTurn else "b"
         enemyColor = "b" if self.whiteTurn else "w"
         if isQueen:
@@ -537,9 +638,11 @@ class GameState:
                 break
             else:
                 break
+        self.assertionEndCheck()
 
     def getKnightMoves(self, square: int, moves: list):
         """Generates all possible moves for knights"""
+        self.assertionStartCheck(square)
         enemyColor = "b" if self.whiteTurn else "w"
         allyColor = "w" if self.whiteTurn else "b"
         piece = f"{allyColor}N"
@@ -575,9 +678,11 @@ class GameState:
             tempSquare = square << 10
             if not self.getSqState(tempSquare) or self.getSqStateByColor(enemyColor, tempSquare):
                 moves[0].append(Move(square, tempSquare, self, movedPiece=piece))
+        self.assertionEndCheck()
 
     def getBishopMoves(self, square: int, moves: list, isQueen=False):
         """Generates all possible moves for bishops"""
+        self.assertionStartCheck(square)
         enemyColor = "b" if self.whiteTurn else "w"
         allyColor = "w" if self.whiteTurn else "b"
         if isQueen:
@@ -624,6 +729,7 @@ class GameState:
                 break
             else:
                 break
+        self.assertionEndCheck()
 
     def getQueenMoves(self, square: int, moves: list):
         """Generates all possible moves for queens"""
@@ -632,6 +738,7 @@ class GameState:
 
     def getKingMoves(self, square: int, moves: list):
         """Generates all possible moves for king"""
+        self.assertionStartCheck(square)
         enemyColor = "b" if self.whiteTurn else "w"
         allyColor = "w" if self.whiteTurn else "b"
         piece = f"{allyColor}K"
@@ -667,9 +774,11 @@ class GameState:
             tempSquare = square << 9
             if not self.getSqState(tempSquare) or self.getSqStateByColor(enemyColor, tempSquare):
                 moves[0].append(Move(square, tempSquare, self, movedPiece=piece))
+        self.assertionEndCheck()
 
     def getCastleMoves(self, square: int, moves: list):
         """Generates all possible castle moves"""
+        self.assertionStartCheck(square)
         if self.isSquareAttacked(square):
             return
         if (self.whiteTurn and self.getCastleRight(CASTLE_SIDES["wKs"])) or (not self.whiteTurn and self.getCastleRight(CASTLE_SIDES["bKs"])):
@@ -683,6 +792,7 @@ class GameState:
         if not self.getSqState(square >> 1) and not self.getSqState(square >> 2):
             if not self.isSquareAttacked(square >> 1) and not self.isSquareAttacked(square >> 2):
                 moves[0].append(Move(square, square >> 2, self, movedPiece=piece, isCastle=True))
+        self.assertionEndCheck()
 
     def getQueenSideCastle(self, square: int, moves: list):
         """Generates queen side castle moves"""
@@ -690,9 +800,11 @@ class GameState:
         if not self.getSqState(square << 1) and not self.getSqState(square << 2) and not self.getSqState(square << 3):
             if not self.isSquareAttacked(square << 1) and not self.isSquareAttacked(square << 2):
                 moves[0].append(Move(square, square << 2, self, movedPiece=piece, isCastle=True))
+        self.assertionEndCheck()
 
     def getReserveMoves(self, moves):
         """Generates reserve moves"""
+        self.assertionStartCheck()
         reserveMoves = []
         allyColor = "w" if self.whiteTurn else "b"
         freeSquares = numSplit(~ctypes.c_uint64(self.bbOfOccupiedSquares["a"]).value)
@@ -702,9 +814,31 @@ class GameState:
                     if not ((sq & bbOfRows["1"] or sq & bbOfRows["8"]) and piece == "p"):
                         reserveMoves.append(Move(0, sq, self, movedPiece=allyColor + piece, isReserve=True))
         moves[1] = reserveMoves
+        self.assertionEndCheck()
+
+    def getUnavailableReserveMoves(self):
+        """Generates reserve moves which are not available due to absence of some pieces"""
+        self.assertionStartCheck()
+        reserveMoves = []
+        allyColor = "w" if self.whiteTurn else "b"
+        freeSquares = numSplit(~ctypes.c_uint64(self.bbOfOccupiedSquares["a"]).value)
+        for sq in freeSquares:
+            for piece, count in self.reserve[allyColor].items():
+                if count == 0:
+                    if not ((sq & bbOfRows["1"] or sq & bbOfRows["8"]) and piece == "p"):
+                        move = Move(0, sq, self, movedPiece=allyColor + piece, isReserve=True)
+                        self.makeMove(move)
+                        self.whiteTurn = not self.whiteTurn
+                        if not self.inCheck():
+                            reserveMoves.append(move)
+                        self.whiteTurn = not self.whiteTurn
+                        self.undoMove()
+        self.assertionEndCheck()
+        return reserveMoves
 
     def updatePawnPromotionMoves(self, moves: list, other):
         """Updates pawn promotion moves. Checks if a piece to promote can be removed from the other board"""
+        self.assertionStartCheck()
         if isinstance(other, GameState):
             color = "w" if self.whiteTurn else "b"
             badPieces = []
@@ -720,24 +854,27 @@ class GameState:
             for i in range(len(moves[2]) - 1, -1, -1):
                 if moves[2][i].promotedTo in badPieces:
                     moves[2].remove(moves[2][i])
+        self.assertionEndCheck()
 
     def getValidMoves(self):
         """Generates all valid moves (checks for threats to kings)"""
+        self.assertionStartCheck()
         moves = self.getPossibleMoves()
         if self.whiteTurn:
             self.getCastleMoves(self.bbOfPieces["wK"], moves)
         else:
             self.getCastleMoves(self.bbOfPieces["bK"], moves)
         self.getReserveMoves(moves)
-        for j in range(3):
-            if len(moves[j]) != 0:
-                for i in range(len(moves[j]) - 1, -1, -1):
-                    self.makeMove(moves[j][i])
-                    self.whiteTurn = not self.whiteTurn
-                    if self.inCheck():
-                        moves[j].remove(moves[j][i])
-                    self.whiteTurn = not self.whiteTurn
-                    self.undoMove()
+        for part in moves:
+            if len(part) == 0:
+                continue
+            for i in range(len(part) - 1, -1, -1):
+                self.makeMove(part[i])
+                self.whiteTurn = not self.whiteTurn
+                if self.inCheck():
+                    part.remove(part[i])
+                self.whiteTurn = not self.whiteTurn
+                self.undoMove()
         if len(moves[0]) + len(moves[1]) + len(moves[2]) == 0:
             if self.inCheck():
                 self.checkmate = True
@@ -753,10 +890,12 @@ class GameState:
                 self.stalemate = True
             else:
                 self.stalemate = False
+        self.assertionEndCheck()
         return moves
 
     def inCheck(self):
         """Checks whether current player is in check"""
+        self.assertionStartCheck()
         if self.whiteTurn:
             self.isWhiteInCheck = self.isSquareAttacked(self.bbOfPieces["wK"])
             self.whiteTurn = not self.whiteTurn
@@ -772,6 +911,7 @@ class GameState:
 
     def isSquareAttacked(self, square: int):
         """Checks whether specified square is under attack by an opponent"""
+        self.assertionStartCheck(square)
         if self.whiteTurn and (self.bbOfThreats["b"] & square):
             return True
         if not self.whiteTurn and (self.bbOfThreats["w"] & square):
@@ -780,6 +920,7 @@ class GameState:
 
     def canBeRemoved(self, square: int, otherTurn: str):
         """Checks whether a piece on a specified square can be removed for a promotion on the other board"""
+        self.assertionStartCheck(square)
         piece = self.getPieceBySquare(square)
         if piece is None or piece[0] != otherTurn or piece[1] == "p" or piece[1] == "K":
             return False
@@ -791,6 +932,7 @@ class GameState:
         self.inCheck()
         self.setSqState(piece, square)
         self.bbOfThreats = deepcopy(currentThreatTable)
+        self.assertionEndCheck()
         if whiteInCheck == self.isWhiteInCheck and blackInCheck == self.isBlackInCheck:
             return True
         self.isWhiteInCheck = whiteInCheck
@@ -842,6 +984,10 @@ class GameState:
         newBit = ctypes.c_uint(right)
         newBit.value = ~newBit.value
         self.currentCastlingRight &= newBit.value
+
+    def setCastleRight(self, right: int):
+        """Sets specified castle right"""
+        self.currentCastlingRight |= right
 
     def getCastleRight(self, right: int):
         """Returns True or False whether castling to the specified side is available or not"""
