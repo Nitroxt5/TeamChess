@@ -133,7 +133,7 @@ class RadioLabel:
 
 
 class DropDownMenu:
-    def __init__(self, center: tuple, text: list, font: pg.font.SysFont, SQ_SIZE: int, head: pg.Surface, body: pg.Surface):
+    def __init__(self, center: tuple, text: list, font: [pg.font.SysFont, None], head: pg.Surface, body: pg.Surface):
         self.xPos = center[0]
         self.yPos = center[1]
         self.headText = text[0]
@@ -144,7 +144,7 @@ class DropDownMenu:
         self.body = body
         self.buttons = [Button(self.head, center, self.headText, font, shift=2)]
         for i in range(1, len(text)):
-            self.buttons.append(Button(self.body, (self.xPos, self.yPos + i * SQ_SIZE * 2 // 3), self.bodyText[i - 1], font, shift=2))
+            self.buttons.append(Button(self.body, (self.xPos, self.yPos + i * self.body.get_height()), self.bodyText[i - 1], font, shift=2))
 
     def switch(self):
         self.state = not self.state
@@ -171,6 +171,45 @@ class DropDownMenu:
         if index != 0:
             self.headText = self.bodyText[index - 1]
             self.buttons[0] = Button(self.head, (self.xPos, self.yPos), self.headText, self.font, shift=2)
+
+
+class ImgDropDownMenu:
+    def __init__(self, pos: tuple, images: list, headImages: list, up=False, topLeft=False):
+        self.xPos = pos[0]
+        self.yPos = pos[1]
+        self.state = False
+        self.images = images
+        self.headImages = headImages
+        self.topLeft = topLeft
+        self.buttons = [Button(self.headImages[0], pos, "", None, topleft=self.topLeft)]
+        mul = -1 if up else 1
+        for i in range(len(images)):
+            self.buttons.append(Button(self.images[i], (self.xPos, self.yPos + mul * (i + 1) * self.images[i].get_height()), "", None, topleft=self.topLeft))
+
+    def switch(self):
+        self.state = not self.state
+
+    def checkForInput(self, position: tuple):
+        return self.buttons[0].checkForInput(position)
+
+    def checkForChoice(self, position: tuple):
+        if self.state:
+            for i in range(1, len(self.buttons)):
+                if self.buttons[i].checkForInput(position):
+                    self.changeHead(i)
+                    self.switch()
+                    return i
+        return None
+
+    def update(self, screen: pg.Surface):
+        self.buttons[0].update(screen)
+        if self.state:
+            for i in range(1, len(self.buttons)):
+                self.buttons[i].update(screen)
+
+    def changeHead(self, index: int):
+        if index != 0:
+            self.buttons[0] = Button(self.headImages[index - 1], (self.xPos, self.yPos), "", None, topleft=self.topLeft)
 
 
 class DialogWindow:
