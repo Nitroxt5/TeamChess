@@ -20,7 +20,7 @@ This repository contains a TeamChess game. It is a part of my graduate work in B
 
 ------------
 
- - You must have Python 3.6+ installed
+ - You must have Python 3.9+ installed
  - Clone the repository
  - (Optional) Set up a virtual environment
  - Install poetry with: *pip install poetry*

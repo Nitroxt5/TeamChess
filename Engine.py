@@ -91,6 +91,21 @@ class GameState:
         # self.FENtoBitBoard("rnbqkb1r/pp3Bpp/3p1n2/1p2p3/4P3/2PP4/PP3PPP/RNBQK1NR b KQkq 0")
         # print(self)
 
+    def assertionStartCheck(self, square=None, move=None):
+        """Checks some variables state at the start of a method"""
+        msg = ""
+        if isinstance(move, Move):
+            msg = f"move = {move.movedPiece}, {bin(move.startSquare)}, {bin(move.endSquare)}, {self.isWhiteInCheck}, {self.isBlackInCheck}"
+            assert move.endSquare != 0, msg
+        assert square != 0, msg
+        assert self.bbOfPieces["wK"] != 0, msg
+        assert self.bbOfPieces["bK"] != 0, msg
+
+    def assertionEndCheck(self):
+        """Checks some variables state at the end of a method"""
+        assert self.bbOfPieces["wK"] != 0
+        assert self.bbOfPieces["bK"] != 0
+
     def FENtoBitBoard(self, FEN: str):
         """Turns a FEN string into a bitboard representation, used in program.
 
@@ -175,21 +190,6 @@ class GameState:
 
     def __repr__(self):
         return self.bitBoardToFEN()
-
-    def assertionStartCheck(self, square=None, move=None):
-        """Checks some variables state at the start of a method"""
-        msg = ""
-        if isinstance(move, Move):
-            msg = f"move = {move.movedPiece}, {bin(move.startSquare)}, {bin(move.endSquare)}, {self.isWhiteInCheck}, {self.isBlackInCheck}"
-            assert move.endSquare != 0, msg
-        assert square != 0, msg
-        assert self.bbOfPieces["wK"] != 0, msg
-        assert self.bbOfPieces["bK"] != 0, msg
-
-    def assertionEndCheck(self):
-        """Checks some variables state at the end of a method"""
-        assert self.bbOfPieces["wK"] != 0
-        assert self.bbOfPieces["bK"] != 0
 
     def hashBoard(self):
         """Creates zobrist hashes and hashes the board"""

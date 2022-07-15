@@ -3,7 +3,9 @@ settingsMenu = {"Name": "Settings", "Sound_btn": ("Sound: ON", "Sound: OFF"), "L
 newGameMenu = {"Name": "New game", "DDM1": ["Player 1", "Player 1", "AI (Easy)", "AI (Normal)", "AI (Hard)"],
                "DDM2": ["Player 2", "Player 2", "AI (Easy)", "AI (Normal)", "AI (Hard)"],
                "DDM3": ["Player 3", "Player 3", "AI (Easy)", "AI (Normal)", "AI (Hard)"],
-               "DDM4": ["Player 4", "Player 4", "AI (Easy)", "AI (Normal)", "AI (Hard)"], "Play_btn": "Play", "Back_btn": "Back"}
+               "DDM4": ["Player 4", "Player 4", "AI (Easy)", "AI (Normal)", "AI (Hard)"],
+               "DDM5": ["Default", "Default", "3 min", "5 min", "10 min", "15 min"],
+               "gameMode": "Game mode", "Play_btn": "Play", "Back_btn": "Back"}
 gameMenu = {"DW1": "Do you really want to exit?", "DW2": "Do you really want to restart?"}
 AItxt = "AI"
 diffNames = {2: "Easy", 3: "Normal", 4: "Hard"}

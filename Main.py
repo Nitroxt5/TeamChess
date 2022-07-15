@@ -6,7 +6,7 @@ import pygame as pg
 from multiprocessing import Queue, freeze_support
 from copy import deepcopy
 from random import randint
-from UI import Button, Hourglass, DialogWindow, RadioButton, RadioLabel, Image, DropDownMenu, ImgDropDownMenu, Label
+from UI import Button, Hourglass, DialogWindow, RadioButton, RadioLabel, Image, DropDownMenu, ImgDropDownMenu, Label, Timer, UIObject
 import json
 from os.path import isfile, join
 from sys import exit as sys_exit
@@ -66,6 +66,7 @@ def loadResources():
     IMAGES["ddm_body"] = pg.transform.scale(pg.image.load(join(workingDirectory, "images/button3.png")), (BOARD_SIZE * 5 // 12, SQ_SIZE * 2 // 3))
     IMAGES["dialogWindow"] = pg.transform.scale(pg.image.load(join(workingDirectory, "images/dialogWindow.png")), (SCREEN_WIDTH // 3, SCREEN_HEIGHT // 4))
     IMAGES["BG"] = pg.transform.scale(pg.image.load(join(workingDirectory, "images/BG.png")), (SCREEN_WIDTH, SCREEN_HEIGHT))
+    IMAGES["timer"] = pg.transform.scale(pg.image.load(join(workingDirectory, "images/timer.png")), (SQ_SIZE * 2, SQ_SIZE))
     SOUNDS["move"] = pg.mixer.Sound(join(workingDirectory, "sounds/move.wav"))
     global SETTINGS
     if isfile("SETTINGS.json"):
@@ -92,6 +93,12 @@ if SETTINGS["language"]:
 else:
     from lang_ru import *
 
+gameModes = ([None, None, None, None],
+             [180, 180, 180, 180],
+             [300, 300, 300, 300],
+             [600, 600, 600, 600],
+             [900, 900, 900, 900])
+currentGameMode = 0
 boardPlayers = [True, True, True, True]  # there are 4 players in the game; True = player, False = AI
 difficulties = [1, 1, 1, 1]  # 1 = player, 2 = EasyAI, 3 = NormalAI, 4 = HardAI
 names = deepcopy(plyrNames)  # current names of every player (they are changing for AI)
@@ -101,7 +108,7 @@ def setGameStateToDefault():
     """Sets some game state variables to default state
 
     Order is: AIExists, gameStates, validMoves, AIProcess, returnQ, activeBoard, gameOver, selectedSq,
-    clicks, moveMade, AIThinkingTime, AIPositionCounter, AIMoveCounter, hourglass, dropdown menus
+    clicks, moveMade, AIThinkingTime, AIPositionCounter, AIMoveCounter, hourglass, dropdown menus, timers
     """
     AIExists = not (boardPlayers[0] and boardPlayers[1] and boardPlayers[2] and boardPlayers[3])  # figures out if there is an AI in the game
     gameStates = [GameState(), GameState()]
@@ -123,15 +130,25 @@ def setGameStateToDefault():
                  (SCREEN_WIDTH // 2 + SQ_SIZE // 2, SCREEN_HEIGHT - SQ_SIZE * 2))
     colors = ("w", "b", "w", "b")
     dropDownMenus = [ImgDropDownMenu(positions[i], [IMAGES[f"{colors[i]}{piece}Sq"] for piece in PIECES if piece != "K"], [IMAGES[f"{colors[i]}{piece}SqH"] for piece in PIECES if piece != "K"], True if i == 0 or i == 3 else False, True) for i in range(4)]
+    font = pg.font.SysFont("Helvetica", FONT_SIZE * 2, True, False)
+    positions = ((MARGIN // 2, (SCREEN_HEIGHT + BOARD_SIZE - SQ_SIZE) // 2),
+                 (MARGIN // 2, (SCREEN_HEIGHT - BOARD_SIZE + SQ_SIZE) // 2),
+                 (SCREEN_WIDTH - MARGIN // 2, (SCREEN_HEIGHT - BOARD_SIZE + SQ_SIZE) // 2),
+                 (SCREEN_WIDTH - MARGIN // 2, (SCREEN_HEIGHT + BOARD_SIZE - SQ_SIZE) // 2))
+    if currentGameMode == 0:
+        timers = None
+    else:
+        timers = [Timer(positions[i], gameModes[currentGameMode][i], IMAGES["timer"], font) for i in range(4)]
     return AIExists, gameStates, validMoves, AIProcess, returnQ, activeBoard, gameOver, selectedSq, \
-        clicks, moveMade, AIThinkingTime, AIPositionCounter, AIMoveCounter, hourglass, dropDownMenus
+        clicks, moveMade, AIThinkingTime, AIPositionCounter, AIMoveCounter, hourglass, dropDownMenus, timers
 
 
 def gamePlay(screen: pg.Surface):
     """Contains main loop that handles game process"""
     global difficulties, boardPlayers, names
     clock = pg.time.Clock()
-    AIExists, gameStates, validMoves, AIProcess, returnQ, activeBoard, gameOver, selectedSq, clicks, moveMade, AIThinkingTime, AIPositionCounter, AIMoveCounter, hourglass, dropDownMenus = setGameStateToDefault()
+    AIExists, gameStates, validMoves, AIProcess, returnQ, activeBoard, gameOver, selectedSq, clicks, moveMade, \
+        AIThinkingTime, AIPositionCounter, AIMoveCounter, hourglass, dropDownMenus, timers = setGameStateToDefault()
     working = True  # for game loop
     soundPlayed = False
     AIThinking = False
@@ -144,16 +161,17 @@ def gamePlay(screen: pg.Surface):
             potentialScore[i] = 400
     toMenu_btn = RadioButton((SCREEN_WIDTH - SQ_SIZE, SQ_SIZE), True, IMAGES["home_button_on"], IMAGES["home_button_off"])
     restart_btn = RadioButton((SCREEN_WIDTH - SQ_SIZE, int(SQ_SIZE * 2.5)), True, IMAGES["restart_button_on"], IMAGES["restart_button_off"])
+    UIObjects = [hourglass, toMenu_btn, restart_btn] + [ddm for i, ddm in enumerate(dropDownMenus) if boardPlayers[i]]
+    if timers is not None:
+        UIObjects += timers
+        timers[0].switch()
     while working:
         clock.tick(FPS)
         mousePos = pg.mouse.get_pos()  # getting position of the cursor
         playerTurn = [(gameStates[0].whiteTurn and boardPlayers[0]) or (not gameStates[0].whiteTurn and boardPlayers[1]),  # calculates whether it is players turn or AI turn
                       (gameStates[1].whiteTurn and boardPlayers[2]) or (not gameStates[1].whiteTurn and boardPlayers[3])]
         changeColorOfUIObjects(mousePos, [toMenu_btn, restart_btn])  # updating UI
-        drawGameState(screen, gameStates, validMoves, selectedSq, toMenu_btn, restart_btn, AIExists, bestUnavailableReservePiece)
-        if not gameOver:
-            updateUIObjects(screen, [hourglass])
-        updateUIObjects(screen, [ddm for i, ddm in enumerate(dropDownMenus) if boardPlayers[i]])
+        updateGamePlayUI(screen, gameStates, validMoves, selectedSq, bestUnavailableReservePiece, timers, gameOver, UIObjects)
         for e in pg.event.get():
             if e.type == pg.KEYDOWN:
                 if e.key == pg.K_F4 and bool(e.mod & pg.KMOD_ALT):  # in case alt+f4 save settings and exit
@@ -175,24 +193,27 @@ def gamePlay(screen: pg.Surface):
                         if createDialogWindow(screen, gameMenu["DW2"]):  # if player wants to restart - set game state to starting position
                             AIThinking = terminateAI(AIThinking, AIProcess)
                             ConsoleLog.endgameOutput(gameStates, boardPlayers, AIThinkingTime, AIPositionCounter, AIMoveCounter, AIExists)
-                            AIExists, gameStates, validMoves, AIProcess, returnQ, activeBoard, gameOver, selectedSq, clicks, moveMade, AIThinkingTime, AIPositionCounter, AIMoveCounter, hourglass, dropDownMenus = setGameStateToDefault()
+                            AIExists, gameStates, validMoves, AIProcess, returnQ, activeBoard, gameOver, selectedSq, \
+                                clicks, moveMade, AIThinkingTime, AIPositionCounter, AIMoveCounter, hourglass, \
+                                dropDownMenus, timers = setGameStateToDefault()
+                            UIObjects = [hourglass, toMenu_btn, restart_btn] + [ddm for i, ddm in enumerate(dropDownMenus) if boardPlayers[i]]
+                            if timers is not None:
+                                UIObjects += timers
+                                timers[0].switch()
                             playerTurn = [(gameStates[0].whiteTurn and boardPlayers[0]) or (not gameStates[0].whiteTurn and boardPlayers[1]),
                                           (gameStates[1].whiteTurn and boardPlayers[2]) or (not gameStates[1].whiteTurn and boardPlayers[3])]
-                            drawGameState(screen, gameStates, validMoves, selectedSq, toMenu_btn, restart_btn, AIExists, bestUnavailableReservePiece)
-                            if not gameOver:
-                                updateUIObjects(screen, [hourglass])
-                            updateUIObjects(screen, [ddm for i, ddm in enumerate(dropDownMenus) if boardPlayers[i]])
+                            updateGamePlayUI(screen, gameStates, validMoves, selectedSq, bestUnavailableReservePiece, timers, gameOver, UIObjects)
                             pg.display.flip()
-                    for i, ddm in enumerate(dropDownMenus):
-                        if boardPlayers[i]:
-                            if ddm.checkForInput(mousePos):
-                                ddm.switch()
-                            choice = ddm.checkForChoice(mousePos)
-                            if choice is not None:
-                                color = "w" if i == 0 or i == 2 else "b"
-                                bestUnavailableReservePiece[i] = color + PIECES[choice]
-                                potentialScore[i] = 400
                     if not gameOver:  # if any other position was clicked
+                        for i, ddm in enumerate(dropDownMenus):
+                            if boardPlayers[i]:
+                                if ddm.checkForInput(mousePos):
+                                    ddm.switch()
+                                choice = ddm.checkForChoice(mousePos)
+                                if choice is not None:
+                                    color = "w" if i == 0 or i == 2 else "b"
+                                    bestUnavailableReservePiece[i] = color + PIECES[choice]
+                                    potentialScore[i] = 400
                         boardNum = -1  # -1 = clicked outside any board; 0 = clicked left board; 1 - clicked right board
                         reserveBoardNum = -1  # -1 = clicked outside any reserve field; 0 = clicked left board reserve field; 1 - clicked right board reserve field
                         if MARGIN < mousePos[0] < MARGIN + BOARD_SIZE and MARGIN < mousePos[1] < MARGIN + BOARD_SIZE:
@@ -238,10 +259,12 @@ def gamePlay(screen: pg.Surface):
                                         for validMove in part:  # if our move is a pawn promotion, it is not generated finally, so it may not match
                                             if move == validMove or (move.moveID == validMove.moveID and move.isPawnPromotion and len(validMoves[boardNum][2]) > 0):
                                                 if move.isPawnPromotion:  # if move is a pawn promotion - allow player to choose a promotion
-                                                    pos, piece = getPromotion(screen, gameStates, boardNum, toMenu_btn, restart_btn, AIExists, bestUnavailableReservePiece)
+                                                    pos, piece = getPromotion(screen, gameStates, boardNum, gameOver, bestUnavailableReservePiece, timers, UIObjects)
                                                     validMove.promotedTo = None if piece is None else piece[1]
                                                     validMove.promotedPiecePosition = pos
                                                 if not (validMove.isPawnPromotion and validMove.promotedTo is None):  # if it is a valid move - make it
+                                                    if timers is not None:
+                                                        timers[getCurrentPlayer(gameStates, activeBoard)].switch()
                                                     gameStates[boardNum].makeMove(validMove, gameStates[1 - boardNum])
                                                     for i in range(2):
                                                         validMoves[i] = gameStates[i].getValidMoves()  # update valid moves
@@ -250,8 +273,11 @@ def gamePlay(screen: pg.Surface):
                                                     selectedSq[boardNum] = ()  # reset clicks
                                                     clicks[boardNum] = []
                                                     activeBoard = 1 - activeBoard  # swap active board
+                                                    gameOver = gameOverCheck(gameStates, timers)
+                                                    if timers is not None and not gameOver:
+                                                        timers[getCurrentPlayer(gameStates, activeBoard)].switch()
                                                     # update hourglass sprite position
-                                                    hourglass = Hourglass(getCurrentPlayer(gameStates, activeBoard), IMAGES["hourglass"], MARGIN, MARGIN_LEFT, SQ_SIZE, SCREEN_HEIGHT)
+                                                    UIObjects[0] = Hourglass(getCurrentPlayer(gameStates, activeBoard), IMAGES["hourglass"], MARGIN, MARGIN_LEFT, SQ_SIZE, SCREEN_HEIGHT)
                                                     soundPlayed = playSound(SOUNDS["move"], soundPlayed, SETTINGS["sounds"])
                                                     break
                                     if not moveMade[boardNum]:  # if move was not made (was not a valid move) reset the first click
@@ -276,16 +302,15 @@ def gamePlay(screen: pg.Surface):
                         else:
                             selectedSq = [(), ()]
                             clicks = [[], []]
-                        drawGameState(screen, gameStates, validMoves, selectedSq, toMenu_btn, restart_btn, AIExists, bestUnavailableReservePiece)  # updating UI once more, to remove lags
-                        if not gameOver:
-                            updateUIObjects(screen, [hourglass])
-                        updateUIObjects(screen, [ddm for i, ddm in enumerate(dropDownMenus) if boardPlayers[i]])
+                        updateGamePlayUI(screen, gameStates, validMoves, selectedSq, bestUnavailableReservePiece, timers, gameOver, UIObjects)
                         pg.display.flip()
         if not gameOver:  # check for game end
-            gameOver = gameOverCheck(gameStates, AIExists)
+            gameOver = gameOverCheck(gameStates, timers)
+        if gameOver:
+            AIThinking = terminateAI(AIThinking, AIProcess)
         for i in range(2):  # AI turn
             if not gameOver and not playerTurn[i] and activeBoard == i:
-                playerNum = i * 2 + (0 if gameStates[i].whiteTurn else 1)  # get player number to correctly start an algorithm
+                playerNum = getCurrentPlayer(gameStates, activeBoard)  # get player number to correctly start an algorithm
                 playerName = getPlayerName(gameStates, activeBoard, names)  # get the name for log info
                 if not AIThinking:
                     AIMoveCounter[1 - i] += len(validMoves[1 - i][0]) + len(validMoves[1 - i][1]) + len(validMoves[1 - i][2])
@@ -294,7 +319,7 @@ def gamePlay(screen: pg.Surface):
                     AIProcess = Process(target=negaScoutMoveAI,
                                         args=(gameStates[i], gameStates[1 - i], validMoves[i], difficulties[playerNum],
                                               returnQ, potentialScore[getPlayersTeammate(playerNum)],
-                                              bestUnavailableReservePiece[getPlayersTeammate(playerNum)]))
+                                              bestUnavailableReservePiece[getPlayersTeammate(playerNum)], timers[playerNum].value))
                     AIProcess.start()  # starting an algorithm
                 if not AIProcess.is_alive():  # when AI found a move
                     AIMove, potentialScore[playerNum], bestUnavailableReservePiece[playerNum], thinkingTime, positionCounter = returnQ.get()  # get the move from the process
@@ -309,28 +334,54 @@ def gamePlay(screen: pg.Surface):
                         possibleRequiredPromotions = [bbOfSquares[key[1]][key[0]] for key, value in possiblePromotions.items() if value[1] == AIMove.promotedTo]  # leave those pieces, that AI wants to promote to
                         promotion = possibleRequiredPromotions[randint(0, len(possibleRequiredPromotions) - 1)]  # randomly choose a position of a piece
                         AIMove = Move(AIMove.startSquare, AIMove.endSquare, gameStates[i], movedPiece=AIMove.movedPiece, promotedTo=AIMove.promotedTo, promotedPiecePosition=promotion)
+                    if timers is not None:
+                        timers[getCurrentPlayer(gameStates, activeBoard)].switch()
                     gameStates[i].makeMove(AIMove, gameStates[1 - i])  # make a move
                     for j in range(2):  # update valid moves
                         validMoves[j] = gameStates[j].getValidMoves()
                         gameStates[j].updatePawnPromotionMoves(validMoves[j], gameStates[1 - j])
                     if not gameOver:  # we should check for game end right here, not to start a new process when the game actually ended
-                        gameOver = gameOverCheck(gameStates, AIExists)
+                        gameOver = gameOverCheck(gameStates, timers)
                     moveMade[i] = True
                     activeBoard = 1 - activeBoard
-                    hourglass = Hourglass(getCurrentPlayer(gameStates, activeBoard), IMAGES["hourglass"], MARGIN, MARGIN_LEFT, SQ_SIZE, SCREEN_HEIGHT)
+                    if timers is not None and not gameOver:
+                        timers[getCurrentPlayer(gameStates, activeBoard)].switch()
+                    UIObjects[0] = Hourglass(getCurrentPlayer(gameStates, activeBoard), IMAGES["hourglass"], MARGIN, MARGIN_LEFT, SQ_SIZE, SCREEN_HEIGHT)
                     AIThinking = False
                     selectedSq[i] = ()
                     clicks[i] = []
             if moveMade[i]:  # updating UI once more to remove lags
-                drawGameState(screen, gameStates, validMoves, selectedSq, toMenu_btn, restart_btn, AIExists, bestUnavailableReservePiece)
-                if not gameOver:
-                    updateUIObjects(screen, [hourglass])
-                updateUIObjects(screen, [ddm for i, ddm in enumerate(dropDownMenus) if boardPlayers[i]])
+                updateGamePlayUI(screen, gameStates, validMoves, selectedSq, bestUnavailableReservePiece, timers, gameOver, UIObjects)
                 playSound(SOUNDS["move"], soundPlayed, SETTINGS["sounds"])
                 soundPlayed = False
                 pg.display.flip()
                 moveMade[i] = False
         pg.display.flip()
+
+
+def updateGamePlayUI(screen: pg.Surface, gameStates: list[GameState], validMoves: list, selectedSq: list, bestUnavailableReservePiece: list, timers: list[Timer], gameOver: bool, UIObjects: list[UIObject], promotion=-1, possiblePromotions=None):
+    drawGameState(screen, gameStates, validMoves, selectedSq, bestUnavailableReservePiece, timers, promotion, possiblePromotions)
+    if not gameOver:
+        updateUIObjects(screen, [obj for obj in UIObjects if isinstance(obj, Hourglass)])
+    updateUIObjects(screen, [obj for obj in UIObjects if not isinstance(obj, Hourglass)])
+
+
+def gameOverCheck(gameStates: list[GameState], timers: list[Timer]):
+    """Checks whether the game has ended"""
+    if gameStates[0].checkmate or gameStates[1].checkmate:
+        return True
+    if gameStates[0].stalemate or gameStates[1].stalemate:
+        return True
+    if timers is None:
+        return False
+    for timer in timers:
+        if timer.countdownEnd():
+            return True
+    # if len(gameStates[1].gameLog) == 30:
+    #     return True
+    # if len(gameStates[0].gameLog) == 1:
+    #     return True
+    return False
 
 
 def drawRequiredPieces(screen: pg.Surface, bestUnavailableReservePiece: list):
@@ -346,34 +397,27 @@ def drawRequiredPieces(screen: pg.Surface, bestUnavailableReservePiece: list):
             screen.blit(image, positions[i])
 
 
-def drawEndGameText(screen: pg.Surface, gameStates: list, AIExists: bool):
+def drawEndGameText(screen: pg.Surface, gameStates: list[GameState], timers: list[Timer]):
     """Draws endgame text at the top of a screen (Team 1 wins, Team 2 wins or Draw)"""
     if (gameStates[0].checkmate and not gameStates[0].whiteTurn) or (gameStates[1].checkmate and gameStates[1].whiteTurn):
         drawTopText(screen, endGame["T1"])
-    elif gameStates[0].stalemate and gameStates[1].stalemate:
+        return
+    if gameStates[0].stalemate or gameStates[1].stalemate:
         drawTopText(screen, endGame["D"])
-    elif AIExists and (gameStates[0].stalemate or gameStates[1].stalemate):
-        drawTopText(screen, endGame["D"])
-    elif (gameStates[0].checkmate and gameStates[0].whiteTurn) or (gameStates[1].checkmate and not gameStates[1].whiteTurn):
+        return
+    if (gameStates[0].checkmate and gameStates[0].whiteTurn) or (gameStates[1].checkmate and not gameStates[1].whiteTurn):
+        drawTopText(screen, endGame["T2"])
+        return
+    if timers is None:
+        return
+    if timers[1].countdownEnd() or timers[2].countdownEnd():
+        drawTopText(screen, endGame["T1"])
+        return
+    if timers[0].countdownEnd() or timers[3].countdownEnd():
         drawTopText(screen, endGame["T2"])
 
 
-def gameOverCheck(gameStates: list, AIExists: bool):
-    """Checks whether the game has ended"""
-    if gameStates[0].checkmate or gameStates[1].checkmate:
-        return True
-    elif gameStates[0].stalemate and gameStates[1].stalemate:
-        return True
-    elif AIExists and (gameStates[0].stalemate or gameStates[1].stalemate):
-        return True
-    # if len(gameStates[1].gameLog) == 30:
-    #     return True
-    # if len(gameStates[0].gameLog) == 1:
-    #     return True
-    return False
-
-
-def highlightSq(screen: pg.Surface, gameStates: list, validMoves: list, selectedSq: list):
+def highlightSq(screen: pg.Surface, gameStates: list[GameState], validMoves: list, selectedSq: list):
     """Highlights square clicked last and all possible moves if a piece was clicked"""
     for i in range(2):
         if selectedSq[i] == ():
@@ -412,7 +456,7 @@ def highlightSq(screen: pg.Surface, gameStates: list, validMoves: list, selected
                                 screen.blit(YELLOW, (c * SQ_SIZE + MARGIN_LEFT, r * SQ_SIZE + MARGIN))
 
 
-def highlightLastMove(screen: pg.Surface, gameStates: list, selectedSq: list):
+def highlightLastMove(screen: pg.Surface, gameStates: list[GameState], selectedSq: list):
     """Highlights last move"""
     for i in range(2):
         piece = None
@@ -450,7 +494,7 @@ def highlightLastMove(screen: pg.Surface, gameStates: list, selectedSq: list):
                                        (DIMENSION - 1 - endLoc // 8) * SQ_SIZE + MARGIN))
 
 
-def calculatePossiblePromotions(gameStates: list, board: int):
+def calculatePossiblePromotions(gameStates: list[GameState], board: int):
     """Creates a dict where: key = tuple which represents coordinates of a piece that can be removed; value = that exact piece"""
     possiblePromotions = {}
     color = "w" if gameStates[board].whiteTurn else "b"
@@ -475,14 +519,14 @@ def highlightPossiblePromotions(screen: pg.Surface, possiblePromotions: dict, bo
             screen.blit(IMAGES["frame"], pg.Rect(column * SQ_SIZE + MARGIN, row * SQ_SIZE + MARGIN, SQ_SIZE, SQ_SIZE))
 
 
-def drawGameState(screen: pg.Surface, gameStates: list, validMoves: list, selectedSq: list, toMenu_btn: RadioButton, restart_btn: RadioButton, AIExists: bool, bestUnavailableReservePiece: list, promotion=-1, possiblePromotions=None):
+def drawGameState(screen: pg.Surface, gameStates: list[GameState], validMoves: list, selectedSq: list,
+                  bestUnavailableReservePiece: list, timers: list[Timer], promotion=-1, possiblePromotions=None):
     """Draws boards, pieces, buttons, highlights during the game"""
     screen.blit(IMAGES["BG"], (0, 0, SCREEN_WIDTH, SCREEN_HEIGHT))
-    drawEndGameText(screen, gameStates, AIExists)
+    drawEndGameText(screen, gameStates, timers)
     drawPlayersNames(screen)
     drawBoard(screen)
     drawRequiredPieces(screen, bestUnavailableReservePiece)
-    updateUIObjects(screen, [toMenu_btn, restart_btn])
     highlightPossiblePromotions(screen, possiblePromotions, promotion)
     if promotion == -1:
         highlightLastMove(screen, gameStates, selectedSq)
@@ -501,7 +545,7 @@ def drawBoard(screen: pg.Surface):
     screen.blit(IMAGES["board"], pg.Rect(MARGIN_LEFT, MARGIN, BOARD_SIZE, BOARD_SIZE))
 
 
-def drawPieces(screen: pg.Surface, gameStates: list):
+def drawPieces(screen: pg.Surface, gameStates: list[GameState]):
     """Draws pieces on both boards"""
     marginTop1 = MARGIN - SQ_SIZE
     marginTop2 = MARGIN + BOARD_SIZE
@@ -525,17 +569,17 @@ def drawPieces(screen: pg.Surface, gameStates: list):
                     screen.blit(IMAGES[f"e{piece[1]}"], pg.Rect(marg, marginTop, SQ_SIZE, SQ_SIZE))
 
 
-def getPromotion(screen: pg.Surface, gameStates: list, boardNum: int, toMenu_btn: RadioButton, restart_btn: RadioButton, AIExists: bool, bestUnavailableReservePiece: list):
+def getPromotion(screen: pg.Surface, gameStates: list[GameState], boardNum: int, gameOver: bool,
+                 bestUnavailableReservePiece: list, timers: list[Timer], UIObjects: list[UIObject]):
     """Lets the player choose exact piece, he wants to promote into. Returns a bitboard of a position of a piece and that exact piece"""
     possiblePromotions = calculatePossiblePromotions(gameStates, boardNum)
     if possiblePromotions == {}:
         return 0, None
-    drawGameState(screen, gameStates, [], [], toMenu_btn, restart_btn, AIExists, bestUnavailableReservePiece, promotion=boardNum, possiblePromotions=possiblePromotions)
     playerName = getPlayerName(gameStates, boardNum, names)
-    drawTopText(screen, f"{playerName} {promText}")  # message, that current player chooses a piece to promote
-    pg.display.flip()
     working = True
     while working:
+        updateGamePlayUI(screen, gameStates, [], [], bestUnavailableReservePiece, timers, gameOver, UIObjects, boardNum, possiblePromotions)
+        drawTopText(screen, f"{playerName} {promText}")  # message, that current player chooses a piece to promote
         for e in pg.event.get():
             if e.type == pg.QUIT:
                 pg.event.post(pg.event.Event(pg.QUIT))
@@ -557,12 +601,13 @@ def getPromotion(screen: pg.Surface, gameStates: list, boardNum: int, toMenu_btn
                             row = DIMENSION - row - 1
                             if (column, row) in possiblePromotions:
                                 return bbOfSquares[row][column], possiblePromotions[(column, row)]
+        pg.display.flip()
 
 
 def drawTopText(screen: pg.Surface, text: str):
     """Draws a text at a top of the screen"""
     font = pg.font.SysFont("Helvetica", FONT_SIZE * 2, True, False)
-    topText_lbl = Label(text, (SCREEN_WIDTH // 2, SQ_SIZE), font)
+    topText_lbl = Label(text, (SCREEN_WIDTH // 2, FONT_SIZE), font)
     updateUIObjects(screen, [topText_lbl])
 
 
@@ -593,8 +638,8 @@ def createMainMenu(screen: pg.Surface):
     clock = pg.time.Clock()
     font = pg.font.SysFont("Helvetica", FONT_SIZE * 3, True, False)
     settings_btn = Button(IMAGES["button"], (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2), mainMenu["Settings_btn"], font)
-    newGame_btn = Button(IMAGES["button"], (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - settings_btn.rect.height * 2), mainMenu["NewGame_btn"], font)
-    quit_btn = Button(IMAGES["button"], (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + settings_btn.rect.height * 2), mainMenu["Quit_btn"], font)
+    newGame_btn = Button(IMAGES["button"], (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - settings_btn.height * 2), mainMenu["NewGame_btn"], font)
+    quit_btn = Button(IMAGES["button"], (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + settings_btn.height * 2), mainMenu["Quit_btn"], font)
     menuName_lbl = Label("SwiChess", (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 10), pg.font.SysFont("Helvetica", FONT_SIZE * 7, True, False), shift=5)
     while working:
         mousePos = pg.mouse.get_pos()
@@ -658,7 +703,7 @@ def createSettingsMenu(screen: pg.Surface):
 
 def createNewGameMenu(screen: pg.Surface):
     """Creates new game menu"""
-    global names
+    global names, currentGameMode
     working = True
     clock = pg.time.Clock()
     font = pg.font.SysFont("Helvetica", FONT_SIZE * 3, True, False)
@@ -677,21 +722,21 @@ def createNewGameMenu(screen: pg.Surface):
             names[i] = plyrNames[i]
         elif difficulties[i] in [2, 3, 4]:
             names[i] = f"{plyrNames[i]} {AItxt} ({diffNames[difficulties[i]]})"
-    player1_ddm = DropDownMenu((xBoard1, yBoard + BOARD_SIZE // 4 + SQ_SIZE // 2),
-                               newGameMenu["DDM1"], smallFont, IMAGES["ddm_head"], IMAGES["ddm_body"])
-    player2_ddm = DropDownMenu((xBoard1, yBoard - BOARD_SIZE // 4 - SQ_SIZE // 2),
-                               newGameMenu["DDM2"], smallFont, IMAGES["ddm_head"], IMAGES["ddm_body"])
-    player3_ddm = DropDownMenu((xBoard2, yBoard - BOARD_SIZE // 4 - SQ_SIZE // 2),
-                               newGameMenu["DDM3"], smallFont, IMAGES["ddm_head"], IMAGES["ddm_body"])
-    player4_ddm = DropDownMenu((xBoard2, yBoard + BOARD_SIZE // 4 + SQ_SIZE // 2),
-                               newGameMenu["DDM4"], smallFont, IMAGES["ddm_head"], IMAGES["ddm_body"])
+    newGameMenu["DDM5"][0] = newGameMenu["DDM5"][currentGameMode + 1]
+    positions = ((xBoard1, yBoard + BOARD_SIZE // 4 + SQ_SIZE // 2),
+                 (xBoard1, yBoard - BOARD_SIZE // 4 - SQ_SIZE // 2),
+                 (xBoard2, yBoard - BOARD_SIZE // 4 - SQ_SIZE // 2),
+                 (xBoard2, yBoard + BOARD_SIZE // 4 + SQ_SIZE // 2))
+    player_ddms = [DropDownMenu(positions[i], newGameMenu[f"DDM{i + 1}"], smallFont, IMAGES["ddm_head"], IMAGES["ddm_body"]) for i in range(4)]
+    gameMode_ddm = DropDownMenu((SCREEN_WIDTH * 3 // 4, SCREEN_HEIGHT // 2), newGameMenu["DDM5"], smallFont, IMAGES["ddm_head"], IMAGES["ddm_body"])
+    gameMode_lbl = Label(newGameMenu["gameMode"], (SCREEN_WIDTH * 3 // 4, SCREEN_HEIGHT // 2 - gameMode_ddm.height), smallFont, shift=2)
     menuName_lbl = Label(newGameMenu["Name"], (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 10), pg.font.SysFont("Helvetica", FONT_SIZE * 7, True, False), shift=5)
     while working:
         mousePos = pg.mouse.get_pos()
         clock.tick(FPS)
         drawMenu(screen, menuName_lbl)
-        updateUIObjects(screen, [board1_img, board2_img, player1_ddm, player2_ddm, player3_ddm, player4_ddm, back_btn, play_btn])
-        changeColorOfUIObjects(mousePos, player1_ddm.buttons + player2_ddm.buttons + player3_ddm.buttons + player4_ddm.buttons + [back_btn, play_btn])
+        updateUIObjects(screen, [board1_img, board2_img, back_btn, play_btn, gameMode_ddm, gameMode_lbl] + player_ddms)
+        changeColorOfUIObjects(mousePos, player_ddms + [back_btn, play_btn, gameMode_ddm])
         for e in pg.event.get():
             if e.type == pg.QUIT:
                 working = False
@@ -702,7 +747,12 @@ def createNewGameMenu(screen: pg.Surface):
                     if play_btn.checkForInput(mousePos):
                         gamePlay(screen)
                         working = False
-                    for i, ddm in enumerate([player1_ddm, player2_ddm, player3_ddm, player4_ddm]):
+                    if gameMode_ddm.checkForInput(mousePos):
+                        gameMode_ddm.switch()
+                    choice = gameMode_ddm.checkForChoice(mousePos)
+                    if choice is not None:
+                        currentGameMode = choice - 1
+                    for i, ddm in enumerate(player_ddms):
                         if ddm.checkForInput(mousePos):
                             ddm.switch()
                         choice = ddm.checkForChoice(mousePos)
@@ -725,15 +775,16 @@ def createDialogWindow(screen: pg.Surface, text: str):
     while working:
         mousePos = pg.mouse.get_pos()
         clock.tick(FPS)
-        dW.update(screen, mousePos)
+        dW.update(screen)
+        dW.changeColor(mousePos)
         for e in pg.event.get():
             if e.type == pg.QUIT:
                 working = False
             elif e.type == pg.MOUSEBUTTONDOWN:
                 if e.button == 1:
-                    if dW.yes_btn.checkForInput(mousePos):
+                    if dW.checkYesForInput(mousePos):
                         return True
-                    if dW.no_btn.checkForInput(mousePos):
+                    if dW.checkNoForInput(mousePos):
                         return False
         pg.display.flip()
     return False

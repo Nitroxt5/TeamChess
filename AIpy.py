@@ -7,6 +7,9 @@ from multiprocessing import Queue
 
 CHECKMATE = 100000
 DEPTH = 4
+LOW_TIME_DEPTH = 3
+VERY_LOW_TIME_DEPTH = 2
+EXTREMELY_LOW_TIME_DEPTH = 1
 R = 1 if DEPTH <= 3 else 2
 nextMove = None
 counter = 0
@@ -21,10 +24,17 @@ def randomMoveAI(validMoves: list) -> Move:
     return validMoves[randint(0, len(validMoves) - 1)]
 
 
-def negaScoutMoveAI(gameState: GameState, otherGameState: GameState, validMoves: list, requiredDepth: int, returnQ: Queue, potentialScore: int, bestUnavailableReservePiece: [str, None]):
+def negaScoutMoveAI(gameState: GameState, otherGameState: GameState, validMoves: list, requiredDepth: int, returnQ: Queue, potentialScore: int, bestUnavailableReservePiece: [str, None], timeLeft: float):
     """This method is an entry point of the new process which calculates AI next move"""
     global nextMove, counter, DEPTH, hashTableForBestMoves, hashTableForValidMoves, killerMoves, R
     DEPTH = requiredDepth
+    if timeLeft is not None:
+        if timeLeft < 60:
+            DEPTH = min(requiredDepth, LOW_TIME_DEPTH)
+        if timeLeft < 20:
+            DEPTH = min(requiredDepth, VERY_LOW_TIME_DEPTH)
+        if timeLeft < 10:
+            DEPTH = min(requiredDepth, EXTREMELY_LOW_TIME_DEPTH)
     R = 1 if DEPTH <= 3 else 2
     nextMove = None
     counter = 0
