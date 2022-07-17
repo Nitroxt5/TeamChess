@@ -2,7 +2,7 @@ from math import sqrt
 from ScoreBoard import scoreBoard
 from random import randint
 from time import perf_counter
-from Engine import GameState, Move
+from TeamChess.Engine.Engine import GameState, Move
 from multiprocessing import Queue
 
 CHECKMATE = 100000
@@ -20,7 +20,6 @@ posMargin = {1: 350, 2: 800}
 
 
 def randomMoveAI(validMoves: list) -> Move:
-    """Returns a random move from a given list"""
     return validMoves[randint(0, len(validMoves) - 1)]
 
 

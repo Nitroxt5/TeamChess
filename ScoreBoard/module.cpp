@@ -153,17 +153,6 @@ bool getCastleRight(long currentCastlingRight, long right)
 	return (currentCastlingRight & right) != 0;
 }
 
-long scoreProtectionsAndThreats(ULL whitebbOfThreats, ULL blackbbOfThreats, ULL whitebbOfOccupiedSq, ULL blackbbOfOccupiedSq)
-{
-	ULL whiteThreats = whitebbOfThreats & blackbbOfOccupiedSq;
-	ULL whiteProtections = whitebbOfThreats & whitebbOfOccupiedSq;
-	ULL blackThreats = blackbbOfThreats & whitebbOfOccupiedSq;
-	ULL blackProtections = blackbbOfThreats & blackbbOfOccupiedSq;
-	long threatsDifference = getBitsCount(whiteThreats) - getBitsCount(blackThreats);
-	long protectionsDifference = getBitsCount(whiteProtections) - getBitsCount(blackProtections);
-	return (threatsDifference + protectionsDifference) << 1;
-}
-
 long scoreRookPositioning(ULL whitebbOfRooks, ULL blackbbOfRooks, ULL whitebbOfPawns, ULL blackbbOfPawns, long whiteRookReserveCount, long blackRookReserveCount)
 {
 	long score = 0;
@@ -542,7 +531,6 @@ static PyObject* scoreBoard(PyObject* self, PyObject* gs)
 	PyObject* bbOfPiecesPy = PyObject_GetAttrString(gs, "bbOfPieces");
 	PyObject* bbOfOccupiedSqPy = PyObject_GetAttrString(gs, "bbOfOccupiedSquares");
 	PyObject* reservePy = PyObject_GetAttrString(gs, "reserve");
-	PyObject* bbOfThreats = PyObject_GetAttrString(gs, "bbOfThreats");
 	PyObject* whiteInCheck = PyObject_GetAttrString(gs, "isWhiteInCheck");
 	PyObject* blackInCheck = PyObject_GetAttrString(gs, "isBlackInCheck");
 	PyObject* whiteCastled = PyObject_GetAttrString(gs, "isWhiteCastled");
@@ -583,11 +571,6 @@ static PyObject* scoreBoard(PyObject* self, PyObject* gs)
 		blackReserve[i] = PyLong_AsLong(tmpObj2);
 	}
 
-	PyObject* whitebbOfThreatsPy = PyDict_GetItemString(bbOfThreats, "w");
-	PyObject* blackbbOfThreatsPy = PyDict_GetItemString(bbOfThreats, "b");
-	ULL whitebbOfThreats = PyLong_AsUnsignedLongLong(whitebbOfThreatsPy);
-	ULL blackbbOfThreats = PyLong_AsUnsignedLongLong(blackbbOfThreatsPy);
-
 	int isWhiteCastled = PyObject_IsTrue(whiteCastled);
 	int isBlackCastled = PyObject_IsTrue(blackCastled);
 	int isWhiteInCheck = PyObject_IsTrue(whiteInCheck);
@@ -617,7 +600,6 @@ static PyObject* scoreBoard(PyObject* self, PyObject* gs)
 		score -= currentValidMovesCount;
 	}
 
-	score += scoreProtectionsAndThreats(whitebbOfThreats, blackbbOfThreats, bbOfOccupiedSquares[0], bbOfOccupiedSquares[1]);
 	score += scoreRookPositioning(bbOfPieces[2], bbOfPieces[8], bbOfPieces[5], bbOfPieces[11], whiteReserve[1], blackReserve[1]);
 	score += scoreKnightPositioning(bbOfPieces[4], bbOfPieces[10], whiteReserve[3], blackReserve[3]);
 	score += scoreBishopPositioning(bbOfPieces[3], bbOfPieces[9], bbOfPieces[5], bbOfPieces[11], whiteReserve[2], blackReserve[2]);
@@ -637,7 +619,7 @@ static PyMethodDef ScoreBoard_methods[] = {
 static PyModuleDef ScoreBoard_module = {
 	PyModuleDef_HEAD_INIT,
 	"ScoreBoard",
-	"C++ extension",
+	"Provides a fast score board function",
 	-1,
 	ScoreBoard_methods
 };

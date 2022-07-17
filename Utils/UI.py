@@ -46,11 +46,6 @@ class Button(UIObject):
             screen.blit(self._text1, self._textRect1)
             screen.blit(self._text2, self._textRect2)
 
-    def checkForInput(self, position: tuple):
-        if self._rect.left < position[0] < self._rect.right and self._rect.top < position[1] < self._rect.bottom:
-            return True
-        return False
-
     def changeColor(self, position: tuple):
         if self._font is not None:
             if self.checkForInput(position):
@@ -59,6 +54,11 @@ class Button(UIObject):
             else:
                 self._text1 = self._font.render(self._textInput, True, BACK_COLOR)
                 self._text2 = self._font.render(self._textInput, True, TOP_COLOR)
+
+    def checkForInput(self, position: tuple):
+        if self._rect.left < position[0] < self._rect.right and self._rect.top < position[1] < self._rect.bottom:
+            return True
+        return False
 
     @property
     def height(self):
@@ -87,16 +87,16 @@ class RadioButton(UIObject):
     def update(self, screen: pg.Surface):
         screen.blit(self._activeImage, self._rect)
 
-    def checkForInput(self, position: tuple):
-        if self._rect.left < position[0] < self._rect.right and self._rect.top < position[1] < self._rect.bottom:
-            return True
-        return False
-
     def changeColor(self, position: tuple):
         if self.checkForInput(position):
             self._activeImage = self._onImage
         else:
             self._activeImage = self._offImage
+
+    def checkForInput(self, position: tuple):
+        if self._rect.left < position[0] < self._rect.right and self._rect.top < position[1] < self._rect.bottom:
+            return True
+        return False
 
     @property
     def state(self):
@@ -159,14 +159,6 @@ class DropDownMenu(UIObject):
         for i in range(1, len(text)):
             self._buttons.append(Button(self._body, (self._xPos, self._yPos + i * self._body.get_height()), self._bodyText[i - 1], font, shift=2))
 
-    def _changeHead(self, index: int):
-        if index != 0:
-            self._headText = self._bodyText[index - 1]
-            self._buttons[0] = Button(self._head, (self._xPos, self._yPos), self._headText, self._font, shift=2)
-
-    def switch(self):
-        self._state = not self._state
-
     def checkForInput(self, position: tuple):
         return self._buttons[0].checkForInput(position)
 
@@ -178,6 +170,14 @@ class DropDownMenu(UIObject):
                     self.switch()
                     return i
         return None
+
+    def _changeHead(self, index: int):
+        if index != 0:
+            self._headText = self._bodyText[index - 1]
+            self._buttons[0] = Button(self._head, (self._xPos, self._yPos), self._headText, self._font, shift=2)
+
+    def switch(self):
+        self._state = not self._state
 
     def update(self, screen: pg.Surface):
         self._buttons[0].update(screen)
@@ -206,10 +206,6 @@ class ImgDropDownMenu(UIObject):
         for i in range(len(images)):
             self._buttons.append(Button(self._images[i], (self._xPos, self._yPos + mul * (i + 1) * self._images[i].get_height()), "", None, topleft=self._topLeft))
 
-    def _changeHead(self, index: int):
-        if index != 0:
-            self._buttons[0] = Button(self._headImages[index - 1], (self._xPos, self._yPos), "", None, topleft=self._topLeft)
-
     def switch(self):
         self._state = not self._state
 
@@ -224,6 +220,10 @@ class ImgDropDownMenu(UIObject):
                     self.switch()
                     return i
         return None
+
+    def _changeHead(self, index: int):
+        if index != 0:
+            self._buttons[0] = Button(self._headImages[index - 1], (self._xPos, self._yPos), "", None, topleft=self._topLeft)
 
     def update(self, screen: pg.Surface):
         self._buttons[0].update(screen)
@@ -307,18 +307,20 @@ class Image(UIObject):
         self._rect = self._image.get_rect(center=(self._xPos, self._yPos))
 
 
-class Hourglass:
+class Hourglass(UIObject):
     def __init__(self, currentPlayer: int, image: pg.Surface, MARGIN: int, MARGIN_LEFT: int, SQ_SIZE: int, SCREEN_HEIGHT: int):
+        if currentPlayer == 0:
+            pos = (MARGIN, SCREEN_HEIGHT - MARGIN + 5)
+        elif currentPlayer == 1:
+            pos = (MARGIN, MARGIN - SQ_SIZE - 5)
+        elif currentPlayer == 2:
+            pos = (MARGIN_LEFT, MARGIN - SQ_SIZE - 5)
+        else:
+            pos = (MARGIN_LEFT, SCREEN_HEIGHT - MARGIN + 5)
+        super().__init__(pos)
         self._image = image
         self._orig_image = self._image
-        if currentPlayer == 0:
-            self._rect = pg.Rect(MARGIN, SCREEN_HEIGHT - MARGIN + 5, SQ_SIZE, SQ_SIZE)
-        elif currentPlayer == 1:
-            self._rect = pg.Rect(MARGIN, MARGIN - SQ_SIZE - 5, SQ_SIZE, SQ_SIZE)
-        elif currentPlayer == 2:
-            self._rect = pg.Rect(MARGIN_LEFT, MARGIN - SQ_SIZE - 5, SQ_SIZE, SQ_SIZE)
-        else:
-            self._rect = pg.Rect(MARGIN_LEFT, SCREEN_HEIGHT - MARGIN + 5, SQ_SIZE, SQ_SIZE)
+        self._rect = pg.Rect(self._xPos, self._yPos, SQ_SIZE, SQ_SIZE)
         self._angle = 0
 
     def _rotate(self):
@@ -350,11 +352,6 @@ class Timer(UIObject):
     def _getMinSec(self):
         return f"{(round(self._value) // 60):02}:{(round(self._value) % 60):02}"
 
-    def _count(self):
-        if self._state and self._currentTime is not None:
-            self._value -= perf_counter() - self._currentTime
-            self._currentTime = perf_counter()
-
     def switch(self):
         self._state = not self._state
         self._currentTime = perf_counter()
@@ -372,6 +369,11 @@ class Timer(UIObject):
         screen.blit(self._image, self._rect)
         screen.blit(self._text1, self._textRect1)
         screen.blit(self._text2, self._textRect2)
+
+    def _count(self):
+        if self._state and self._currentTime is not None:
+            self._value -= perf_counter() - self._currentTime
+            self._currentTime = perf_counter()
 
     @property
     def value(self):

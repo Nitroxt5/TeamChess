@@ -2,7 +2,7 @@ from multiprocessing import Process
 from math import ceil, floor
 
 
-class ConsoleLog:
+class ConsoleLogger:
     @staticmethod
     def endgameOutput(gameStates: list, boardPlayers: list, AIThinkingTime: list, AIPositionCounter: list, AIMoveCounter: list, AIExists: bool):
         for i in range(2):
