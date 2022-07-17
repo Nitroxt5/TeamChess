@@ -1,3 +1,5 @@
-/build/
-/dist/
-/SwiChess.spec
+__pycache__/
+build/
+dist/
+*.spec
+*.py[cod]

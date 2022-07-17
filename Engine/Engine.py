@@ -1,4 +1,4 @@
-from TeamChess.Utils.MagicConsts import *
+from TeamChess.Utils.MagicConsts import bbOfCastle, CASTLE_SIDES, bbOfRows, bbOfColumns, COLORED_PIECES
 from TestDLL import getPower
 from TeamChess.Utils.FENConverter import FENAndGSConverter
 from TeamChess.Generators.GSHasher import GSHasher

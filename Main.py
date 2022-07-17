@@ -2,7 +2,7 @@ from TestDLL import getPower, numSplit
 from TeamChess.Utils.MagicConsts import PIECES, bbOfSquares, COLORED_PIECES, POSSIBLE_PIECES_TO_PROMOTE, RESERVE_PIECES
 from TeamChess.Engine.Engine import GameState
 from TeamChess.Engine.Move import Move
-from TeamChess.AI.AIpy import randomMoveAI, negaScoutMoveAI
+from TeamChess.AI.AIpy import AI
 from TeamChess.Utils.Utils import *
 import pygame as pg
 from multiprocessing import Queue, freeze_support
@@ -106,7 +106,7 @@ difficulties = [1, 1, 1, 1]  # 1 = player, 2 = EasyAI, 3 = NormalAI, 4 = HardAI
 names = deepcopy(plyrNames)  # current names of every player (they are changing for AI)
 
 
-def setGameStateToDefault():
+def setBoardsToDefault():
     """Sets some game state variables to default state
 
     Order is: AIExists, gameStates, validMoves, AIProcess, returnQ, activeBoard, gameOver, selectedSq,
@@ -150,7 +150,7 @@ def gamePlay(screen: pg.Surface):
     global difficulties, boardPlayers, names
     clock = pg.time.Clock()
     AIExists, gameStates, validMoves, AIProcess, returnQ, activeBoard, gameOver, selectedSq, clicks, moveMade, \
-        AIThinkingTime, AIPositionCounter, AIMoveCounter, hourglass, dropDownMenus, timers = setGameStateToDefault()
+        AIThinkingTime, AIPositionCounter, AIMoveCounter, hourglass, dropDownMenus, timers = setBoardsToDefault()
     working = True  # for game loop
     soundPlayed = False
     AIThinking = False
@@ -197,7 +197,7 @@ def gamePlay(screen: pg.Surface):
                             ConsoleLogger.endgameOutput(gameStates, boardPlayers, AIThinkingTime, AIPositionCounter, AIMoveCounter, AIExists)
                             AIExists, gameStates, validMoves, AIProcess, returnQ, activeBoard, gameOver, selectedSq, \
                                 clicks, moveMade, AIThinkingTime, AIPositionCounter, AIMoveCounter, hourglass, \
-                                dropDownMenus, timers = setGameStateToDefault()
+                                dropDownMenus, timers = setBoardsToDefault()
                             UIObjects = [hourglass, toMenu_btn, restart_btn] + [ddm for i, ddm in enumerate(dropDownMenus) if boardPlayers[i]]
                             if timers is not None:
                                 UIObjects += timers
@@ -317,12 +317,12 @@ def gamePlay(screen: pg.Surface):
                 if not AIThinking:
                     AIMoveCounter[1 - i] += len(validMoves[1 - i][0]) + len(validMoves[1 - i][1]) + len(validMoves[1 - i][2])
                     ConsoleLogger.thinkingStart(playerName)
+                    AIPlayer = AI(gameStates[i], gameStates[1 - i])
                     AIThinking = True
-                    AIProcess = Process(target=negaScoutMoveAI,
-                                        args=(gameStates[i], gameStates[1 - i], validMoves[i], difficulties[playerNum],
-                                              returnQ, potentialScore[getPlayersTeammate(playerNum)],
-                                              bestUnavailableReservePiece[getPlayersTeammate(playerNum)],
-                                              None if timers is None else timers[playerNum].value))
+                    timeLeft = None if timers is None else timers[playerNum].value
+                    AIProcess = Process(target=AIPlayer.negaScoutMoveAI,
+                                        args=(difficulties[playerNum], timeLeft, potentialScore[getPlayersTeammate(playerNum)],
+                                              bestUnavailableReservePiece[getPlayersTeammate(playerNum)], returnQ))
                     AIProcess.start()  # starting an algorithm
                 if not AIProcess.is_alive():  # when AI found a move
                     AIMove, potentialScore[playerNum], unavailableReservePiece, thinkingTime, positionCounter = returnQ.get()  # get the move from the process
@@ -332,7 +332,7 @@ def gamePlay(screen: pg.Surface):
                     AIPositionCounter[i] += positionCounter
                     ConsoleLogger.thinkingEnd(playerName, thinkingTime, positionCounter, potentialScore[playerNum], bestUnavailableReservePiece[playerNum])
                     if AIMove is None:  # if move was not found, make a random move (this case must never happen)
-                        AIMove = randomMoveAI(validMoves)
+                        AIMove = AI.randomMoveAI(validMoves)
                         ConsoleLogger.madeRandomMove(playerName)
                     if AIMove.isPawnPromotion:  # if move is a pawn promotion, AI chooses a random piece to remove
                         possiblePromotions = calculatePossiblePromotions(gameStates, i)  # calculating positions of pieces, that can be removed

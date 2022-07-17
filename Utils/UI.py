@@ -1,13 +1,11 @@
 import pygame as pg
 from time import perf_counter
 
-BACK_COLOR = "gray"
-# TOP_COLOR = "black"
-# BACK_COLOR = (201, 112, 68)
-TOP_COLOR = (33, 11, 0)
-
 
 class UIObject:
+    _BACK_COLOR = "gray"
+    _TOP_COLOR = (33, 11, 0)
+
     def __init__(self, pos: tuple):
         self._xPos = pos[0]
         self._yPos = pos[1]
@@ -23,8 +21,8 @@ class Button(UIObject):
         self._font = font
         self._textInput = text
         if self._font is not None:
-            self._text1 = self._font.render(self._textInput, True, BACK_COLOR)
-            self._text2 = self._font.render(self._textInput, True, TOP_COLOR)
+            self._text1 = self._font.render(self._textInput, True, self._BACK_COLOR)
+            self._text2 = self._font.render(self._textInput, True, self._TOP_COLOR)
         if self._image is None:
             self._image = self._text1
         if topleft:
@@ -49,11 +47,11 @@ class Button(UIObject):
     def changeColor(self, position: tuple):
         if self._font is not None:
             if self.checkForInput(position):
-                self._text1 = self._font.render(self._textInput, True, TOP_COLOR)
-                self._text2 = self._font.render(self._textInput, True, BACK_COLOR)
+                self._text1 = self._font.render(self._textInput, True, self._TOP_COLOR)
+                self._text2 = self._font.render(self._textInput, True, self._BACK_COLOR)
             else:
-                self._text1 = self._font.render(self._textInput, True, BACK_COLOR)
-                self._text2 = self._font.render(self._textInput, True, TOP_COLOR)
+                self._text1 = self._font.render(self._textInput, True, self._BACK_COLOR)
+                self._text2 = self._font.render(self._textInput, True, self._TOP_COLOR)
 
     def checkForInput(self, position: tuple):
         if self._rect.left < position[0] < self._rect.right and self._rect.top < position[1] < self._rect.bottom:
@@ -108,8 +106,8 @@ class Label(UIObject):
         super().__init__(pos)
         self._textInput = text
         self._font = font
-        self._text1 = self._font.render(self._textInput, True, BACK_COLOR)
-        self._text2 = self._font.render(self._textInput, True, TOP_COLOR)
+        self._text1 = self._font.render(self._textInput, True, self._BACK_COLOR)
+        self._text2 = self._font.render(self._textInput, True, self._TOP_COLOR)
         if topleft:
             self._textRect1 = self._text1.get_rect(topleft=pos)
             self._textRect2 = self._text2.get_rect(topleft=(self._xPos + shift, self._yPos + shift))
@@ -129,10 +127,14 @@ class RadioLabel(UIObject):
         self._textInput2 = text2
         self._state = state
         self._font = font
-        self._text1 = (self._font.render(self._textInput1, True, BACK_COLOR), self._font.render(self._textInput1, True, TOP_COLOR))
-        self._text2 = (self._font.render(self._textInput2, True, BACK_COLOR), self._font.render(self._textInput2, True, TOP_COLOR))
-        self._textRect1 = (self._text1[0].get_rect(topleft=topleft), self._text1[1].get_rect(topleft=(self._xPos + 2, self._yPos + 2)))
-        self._textRect2 = (self._text2[0].get_rect(topleft=topleft), self._text2[1].get_rect(topleft=(self._xPos + 2, self._yPos + 2)))
+        self._text1 = (self._font.render(self._textInput1, True, self._BACK_COLOR),
+                       self._font.render(self._textInput1, True, self._TOP_COLOR))
+        self._text2 = (self._font.render(self._textInput2, True, self._BACK_COLOR),
+                       self._font.render(self._textInput2, True, self._TOP_COLOR))
+        self._textRect1 = (self._text1[0].get_rect(topleft=topleft),
+                           self._text1[1].get_rect(topleft=(self._xPos + 2, self._yPos + 2)))
+        self._textRect2 = (self._text2[0].get_rect(topleft=topleft),
+                           self._text2[1].get_rect(topleft=(self._xPos + 2, self._yPos + 2)))
 
     def switch(self):
         self._state = not self._state
@@ -157,7 +159,8 @@ class DropDownMenu(UIObject):
         self._body = body
         self._buttons = [Button(self._head, center, self._headText, font, shift=2)]
         for i in range(1, len(text)):
-            self._buttons.append(Button(self._body, (self._xPos, self._yPos + i * self._body.get_height()), self._bodyText[i - 1], font, shift=2))
+            self._buttons.append(Button(self._body, (self._xPos, self._yPos + i * self._body.get_height()),
+                                        self._bodyText[i - 1], font, shift=2))
 
     def checkForInput(self, position: tuple):
         return self._buttons[0].checkForInput(position)
@@ -204,7 +207,8 @@ class ImgDropDownMenu(UIObject):
         self._buttons = [Button(self._headImages[0], pos, "", None, topleft=self._topLeft)]
         mul = -1 if up else 1
         for i in range(len(images)):
-            self._buttons.append(Button(self._images[i], (self._xPos, self._yPos + mul * (i + 1) * self._images[i].get_height()), "", None, topleft=self._topLeft))
+            self._buttons.append(Button(self._images[i], (self._xPos, self._yPos + mul * (i + 1) * self._images[i].get_height()),
+                                        "", None, topleft=self._topLeft))
 
     def switch(self):
         self._state = not self._state
@@ -245,11 +249,13 @@ class DialogWindow(UIObject):
             self._line2_lbl = Label(self._secondLine, (self._xPos, self._yPos), self._font, shift=2)
         else:
             self._line2_lbl = None
-        self._yes_btn = Button(None, ((SCREEN_WIDTH - self._windowRect.width // 2) // 2, (SCREEN_HEIGHT + self._windowRect.height // 2) // 2), "Yes" if lang else "Да", self._font)
-        self._no_btn = Button(None, ((SCREEN_WIDTH + self._windowRect.width // 2) // 2, (SCREEN_HEIGHT + self._windowRect.height // 2) // 2), "No" if lang else "Нет", self._font)
+        self._yes_btn = Button(None, ((SCREEN_WIDTH - self._windowRect.width // 2) // 2,
+                                      (SCREEN_HEIGHT + self._windowRect.height // 2) // 2), "Yes" if lang else "Да", self._font)
+        self._no_btn = Button(None, ((SCREEN_WIDTH + self._windowRect.width // 2) // 2,
+                                     (SCREEN_HEIGHT + self._windowRect.height // 2) // 2), "No" if lang else "Нет", self._font)
 
     def _textAdaptation(self, SCREEN_WIDTH: int, SCREEN_HEIGHT: int):
-        text = self._font.render(self._textInput, True, BACK_COLOR)
+        text = self._font.render(self._textInput, True, self._BACK_COLOR)
         rect = text.get_rect(center=(SCREEN_WIDTH // 2, (SCREEN_HEIGHT - self._windowRect.height // 2) // 2))
         if rect.width + 30 < self._windowRect.width:
             return self._textInput, None
@@ -262,7 +268,7 @@ class DialogWindow(UIObject):
                 index += 1
                 firstLine = line
                 line += f" {word}"
-                text = self._font.render(line, True, BACK_COLOR)
+                text = self._font.render(line, True, self._BACK_COLOR)
                 rect = text.get_rect(center=(SCREEN_WIDTH // 2, (SCREEN_HEIGHT - self._windowRect.height // 2) // 2))
                 if rect.width + 30 >= self._windowRect.width:
                     break
@@ -344,8 +350,8 @@ class Timer(UIObject):
         self._font = font
         self._state = False
         self._currentTime = None
-        self._text1 = self._font.render(self._getMinSec(), True, BACK_COLOR)
-        self._text2 = self._font.render(self._getMinSec(), True, TOP_COLOR)
+        self._text1 = self._font.render(self._getMinSec(), True, self._BACK_COLOR)
+        self._text2 = self._font.render(self._getMinSec(), True, self._TOP_COLOR)
         self._textRect1 = self._text1.get_rect(center=center)
         self._textRect2 = self._text2.get_rect(center=(self._xPos + 2, self._yPos + 2))
 
@@ -364,8 +370,8 @@ class Timer(UIObject):
 
     def update(self, screen: pg.Surface):
         self._count()
-        self._text1 = self._font.render(self._getMinSec(), True, BACK_COLOR)
-        self._text2 = self._font.render(self._getMinSec(), True, TOP_COLOR)
+        self._text1 = self._font.render(self._getMinSec(), True, self._BACK_COLOR)
+        self._text2 = self._font.render(self._getMinSec(), True, self._TOP_COLOR)
         screen.blit(self._image, self._rect)
         screen.blit(self._text1, self._textRect1)
         screen.blit(self._text2, self._textRect2)
