@@ -1,4 +1,4 @@
-from TeamChess.Utils.MagicConsts import CASTLE_SIDES, COLORED_PIECES, COLORS, PIECES, bbOfSquares
+from TeamChess.Utils.MagicConsts import CASTLE_SIDES, COLORED_PIECES, COLORS, PIECES, SQUARES
 from TestDLL import getPower
 
 
@@ -86,8 +86,8 @@ class FENAndGSConverter:
         StrPieceToFEN = {"wK": "K", "wQ": "Q", "wR": "R", "wB": "B", "wN": "N", "wp": "P",
                          "bK": "k", "bQ": "q", "bR": "r", "bB": "b", "bN": "n", "bp": "p"}
         emptySquaresCounter = 0
-        for i in range(len(bbOfSquares)):
-            for sq in bbOfSquares[i]:
+        for i in range(len(SQUARES)):
+            for sq in SQUARES[i]:
                 piece = gs.getPieceBySquare(sq)
                 if piece is None:
                     emptySquaresCounter += 1
@@ -99,7 +99,7 @@ class FENAndGSConverter:
             if emptySquaresCounter > 0:
                 FEN += str(emptySquaresCounter)
                 emptySquaresCounter = 0
-            if i != len(bbOfSquares) - 1:
+            if i != len(SQUARES) - 1:
                 FEN += "/"
         return FEN
 

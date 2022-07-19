@@ -1,4 +1,4 @@
-from TeamChess.Utils.MagicConsts import bbOfCastle, CASTLE_SIDES, bbOfRows, bbOfColumns, COLORED_PIECES
+from TeamChess.Utils.MagicConsts import CASTLE_SQUARES, CASTLE_SIDES, ROWS, COLUMNS, COLORED_PIECES
 from TestDLL import getPower
 from TeamChess.Utils.FENConverter import FENAndGSConverter
 from TeamChess.Generators.GSHasher import GSHasher
@@ -110,9 +110,9 @@ class GameState:
 
     def _moveRookOnCastle(self, move):
         color = self._getAllyColor()
-        if move.endSquare & bbOfCastle[f"{color}Ks"]:
+        if move.endSquare & CASTLE_SQUARES[f"{color}Ks"]:
             self._moveKingSideRookOnCastle(move)
-        elif move.endSquare & bbOfCastle[f"{color}Qs"]:
+        elif move.endSquare & CASTLE_SQUARES[f"{color}Qs"]:
             self._moveQueenSideRookOnCastle(move)
         if self.whiteTurn:
             self.isWhiteCastled = True
@@ -184,9 +184,9 @@ class GameState:
 
     def _undoRookOnCastle(self, move):
         color = self._getAllyColor()
-        if move.endSquare & bbOfCastle[f"{color}Ks"]:
+        if move.endSquare & CASTLE_SQUARES[f"{color}Ks"]:
             self._undoKingSideRookOnCastle(move)
-        elif move.endSquare & bbOfCastle[f"{color}Qs"]:
+        elif move.endSquare & CASTLE_SQUARES[f"{color}Qs"]:
             self._undoQueenSideRookOnCastle(move)
         if self.whiteTurn:
             self.isWhiteCastled = True
@@ -223,9 +223,9 @@ class GameState:
 
     def _unsetCastleRightOnRookAbsence(self, square: int, color: str):
         row = "1" if color == "w" else "8"
-        if square & bbOfColumns["a"] & bbOfRows[row]:
+        if square & COLUMNS["a"] & ROWS[row]:
             self.unsetCastleRight(CASTLE_SIDES[f"{color}Qs"])
-        if square & bbOfColumns["h"] & bbOfRows[row]:
+        if square & COLUMNS["h"] & ROWS[row]:
             self.unsetCastleRight(CASTLE_SIDES[f"{color}Ks"])
 
     def inCheck(self):
@@ -319,7 +319,6 @@ class GameState:
             for piece in COLORED_PIECES:
                 if self.getSqStateByPiece(piece, piecePosition):
                     return piece
-        return None
 
     def unsetCastleRight(self, right: int):
         """Unsets specified castle right"""

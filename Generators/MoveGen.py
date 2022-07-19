@@ -1,4 +1,4 @@
-from TeamChess.Utils.MagicConsts import COLORED_PIECES, bbOfCorrections, POSSIBLE_PIECES_TO_PROMOTE, bbOfPawnStarts, CASTLE_SIDES, bbOfRows
+from TeamChess.Utils.MagicConsts import COLORED_PIECES, CORRECTIONS, POSSIBLE_PIECES_TO_PROMOTE, PAWN_STARTS, CASTLE_SIDES, ROWS
 from TestDLL import numSplit
 from TeamChess.Engine.Move import Move
 import ctypes
@@ -49,9 +49,9 @@ class MoveGenerator:
     def _getWhitePawnMoves(self, square, moves):
         if not self._gameState.getSqState(square << 8):
             self._getWhitePawnForwardMoves(square, moves)
-        if square & bbOfCorrections["a"]:
+        if square & CORRECTIONS["a"]:
             self._getWhitePawnLeftCaptureMoves(square, moves)
-        if square & bbOfCorrections["h"]:
+        if square & CORRECTIONS["h"]:
             self._getWhitePawnRightCaptureMoves(square, moves)
 
     def _getWhitePawnForwardMoves(self, square, moves):
@@ -61,7 +61,7 @@ class MoveGenerator:
                 moves[2].append(Move(square, square << 8, self._gameState, movedPiece="wp", promotedTo=piece))
         else:
             moves[0].append(move)
-        if (square & bbOfPawnStarts["w"]) and not self._gameState.getSqState(square << 16):
+        if (square & PAWN_STARTS["w"]) and not self._gameState.getSqState(square << 16):
             moves[0].append(Move(square, square << 16, self._gameState, movedPiece="wp", isFirst=True))
 
     def _getWhitePawnLeftCaptureMoves(self, square, moves):
@@ -89,9 +89,9 @@ class MoveGenerator:
     def _getBlackPawnMoves(self, square, moves):
         if not self._gameState.getSqState(square >> 8):
             self._getBlackPawnForwardMoves(square, moves)
-        if square & bbOfCorrections["a"]:
+        if square & CORRECTIONS["a"]:
             self._getBlackPawnLeftCaptureMoves(square, moves)
-        if square & bbOfCorrections["h"]:
+        if square & CORRECTIONS["h"]:
             self._getBlackPawnRightCaptureMoves(square, moves)
 
     def _getBlackPawnForwardMoves(self, square, moves):
@@ -101,7 +101,7 @@ class MoveGenerator:
                 moves[2].append(Move(square, square >> 8, self._gameState, movedPiece="bp", promotedTo=piece))
         else:
             moves[0].append(move)
-        if (square & bbOfPawnStarts["b"]) and not self._gameState.getSqState(square >> 16):
+        if (square & PAWN_STARTS["b"]) and not self._gameState.getSqState(square >> 16):
             moves[0].append(Move(square, square >> 16, self._gameState, movedPiece="bp", isFirst=True))
 
     def _getBlackPawnLeftCaptureMoves(self, square, moves):
@@ -129,28 +129,28 @@ class MoveGenerator:
     def _getKnightMoves(self, square: int, moves: list):
         self._gameState.assertionStartCheck(square)
         piece = f"{self._getAllyColor()}N"
-        if square & bbOfCorrections["h"] & bbOfCorrections["78"]:
+        if square & CORRECTIONS["h"] & CORRECTIONS["78"]:
             tempSquare = square << 15
             self._appendMoveIfPossible(square, tempSquare, piece, moves)
-        if square & bbOfCorrections["a"] & bbOfCorrections["78"]:
+        if square & CORRECTIONS["a"] & CORRECTIONS["78"]:
             tempSquare = square << 17
             self._appendMoveIfPossible(square, tempSquare, piece, moves)
-        if square & bbOfCorrections["gh"] & bbOfCorrections["8"]:
+        if square & CORRECTIONS["gh"] & CORRECTIONS["8"]:
             tempSquare = square << 6
             self._appendMoveIfPossible(square, tempSquare, piece, moves)
-        if square & bbOfCorrections["gh"] & bbOfCorrections["1"]:
+        if square & CORRECTIONS["gh"] & CORRECTIONS["1"]:
             tempSquare = square >> 10
             self._appendMoveIfPossible(square, tempSquare, piece, moves)
-        if square & bbOfCorrections["h"] & bbOfCorrections["12"]:
+        if square & CORRECTIONS["h"] & CORRECTIONS["12"]:
             tempSquare = square >> 17
             self._appendMoveIfPossible(square, tempSquare, piece, moves)
-        if square & bbOfCorrections["a"] & bbOfCorrections["12"]:
+        if square & CORRECTIONS["a"] & CORRECTIONS["12"]:
             tempSquare = square >> 15
             self._appendMoveIfPossible(square, tempSquare, piece, moves)
-        if square & bbOfCorrections["ab"] & bbOfCorrections["1"]:
+        if square & CORRECTIONS["ab"] & CORRECTIONS["1"]:
             tempSquare = square >> 6
             self._appendMoveIfPossible(square, tempSquare, piece, moves)
-        if square & bbOfCorrections["ab"] & bbOfCorrections["8"]:
+        if square & CORRECTIONS["ab"] & CORRECTIONS["8"]:
             tempSquare = square << 10
             self._appendMoveIfPossible(square, tempSquare, piece, moves)
 
@@ -167,28 +167,28 @@ class MoveGenerator:
     def _getKingMoves(self, square: int, moves: list):
         self._gameState.assertionStartCheck(square)
         piece = f"{self._getAllyColor()}K"
-        if square & bbOfCorrections["8"]:
+        if square & CORRECTIONS["8"]:
             tempSquare = square << 8
             self._appendMoveIfPossible(square, tempSquare, piece, moves)
-        if square & bbOfCorrections["h"] & bbOfCorrections["8"]:
+        if square & CORRECTIONS["h"] & CORRECTIONS["8"]:
             tempSquare = square << 7
             self._appendMoveIfPossible(square, tempSquare, piece, moves)
-        if square & bbOfCorrections["h"]:
+        if square & CORRECTIONS["h"]:
             tempSquare = square >> 1
             self._appendMoveIfPossible(square, tempSquare, piece, moves)
-        if square & bbOfCorrections["h"] & bbOfCorrections["1"]:
+        if square & CORRECTIONS["h"] & CORRECTIONS["1"]:
             tempSquare = square >> 9
             self._appendMoveIfPossible(square, tempSquare, piece, moves)
-        if square & bbOfCorrections["1"]:
+        if square & CORRECTIONS["1"]:
             tempSquare = square >> 8
             self._appendMoveIfPossible(square, tempSquare, piece, moves)
-        if square & bbOfCorrections["a"] & bbOfCorrections["1"]:
+        if square & CORRECTIONS["a"] & CORRECTIONS["1"]:
             tempSquare = square >> 7
             self._appendMoveIfPossible(square, tempSquare, piece, moves)
-        if square & bbOfCorrections["a"]:
+        if square & CORRECTIONS["a"]:
             tempSquare = square << 1
             self._appendMoveIfPossible(square, tempSquare, piece, moves)
-        if square & bbOfCorrections["a"] & bbOfCorrections["8"]:
+        if square & CORRECTIONS["a"] & CORRECTIONS["8"]:
             tempSquare = square << 9
             self._appendMoveIfPossible(square, tempSquare, piece, moves)
         self._gameState.assertionEndCheck()
@@ -198,7 +198,7 @@ class MoveGenerator:
         enemyColor = self._getEnemyColor()
         coloredPiece = f"{self._getAllyColor()}{piece}"
         tempSquare = square
-        while tempSquare & bbOfCorrections["8"]:
+        while tempSquare & CORRECTIONS["8"]:
             tempSquare <<= 8
             if not self._gameState.getSqState(tempSquare):
                 moves[0].append(Move(square, tempSquare, self._gameState, movedPiece=coloredPiece))
@@ -208,7 +208,7 @@ class MoveGenerator:
             else:
                 break
         tempSquare = square
-        while tempSquare & bbOfCorrections["1"]:
+        while tempSquare & CORRECTIONS["1"]:
             tempSquare >>= 8
             if not self._gameState.getSqState(tempSquare):
                 moves[0].append(Move(square, tempSquare, self._gameState, movedPiece=coloredPiece))
@@ -218,7 +218,7 @@ class MoveGenerator:
             else:
                 break
         tempSquare = square
-        while tempSquare & bbOfCorrections["a"]:
+        while tempSquare & CORRECTIONS["a"]:
             tempSquare <<= 1
             if not self._gameState.getSqState(tempSquare):
                 moves[0].append(Move(square, tempSquare, self._gameState, movedPiece=coloredPiece))
@@ -228,7 +228,7 @@ class MoveGenerator:
             else:
                 break
         tempSquare = square
-        while tempSquare & bbOfCorrections["h"]:
+        while tempSquare & CORRECTIONS["h"]:
             tempSquare >>= 1
             if not self._gameState.getSqState(tempSquare):
                 moves[0].append(Move(square, tempSquare, self._gameState, movedPiece=coloredPiece))
@@ -243,7 +243,7 @@ class MoveGenerator:
         enemyColor = self._getEnemyColor()
         coloredPiece = f"{self._getAllyColor()}{piece}"
         tempSquare = square
-        while tempSquare & bbOfCorrections["h"] & bbOfCorrections["8"]:
+        while tempSquare & CORRECTIONS["h"] & CORRECTIONS["8"]:
             tempSquare <<= 7
             if not self._gameState.getSqState(tempSquare):
                 moves[0].append(Move(square, tempSquare, self._gameState, movedPiece=coloredPiece))
@@ -253,7 +253,7 @@ class MoveGenerator:
             else:
                 break
         tempSquare = square
-        while tempSquare & bbOfCorrections["a"] & bbOfCorrections["8"]:
+        while tempSquare & CORRECTIONS["a"] & CORRECTIONS["8"]:
             tempSquare <<= 9
             if not self._gameState.getSqState(tempSquare):
                 moves[0].append(Move(square, tempSquare, self._gameState, movedPiece=coloredPiece))
@@ -263,7 +263,7 @@ class MoveGenerator:
             else:
                 break
         tempSquare = square
-        while tempSquare & bbOfCorrections["h"] & bbOfCorrections["1"]:
+        while tempSquare & CORRECTIONS["h"] & CORRECTIONS["1"]:
             tempSquare >>= 9
             if not self._gameState.getSqState(tempSquare):
                 moves[0].append(Move(square, tempSquare, self._gameState, movedPiece=coloredPiece))
@@ -273,7 +273,7 @@ class MoveGenerator:
             else:
                 break
         tempSquare = square
-        while tempSquare & bbOfCorrections["a"] & bbOfCorrections["1"]:
+        while tempSquare & CORRECTIONS["a"] & CORRECTIONS["1"]:
             tempSquare >>= 7
             if not self._gameState.getSqState(tempSquare):
                 moves[0].append(Move(square, tempSquare, self._gameState, movedPiece=coloredPiece))
@@ -336,7 +336,7 @@ class MoveGenerator:
             for piece, count in self._gameState.reserve[allyColor].items():
                 if count < 1:
                     continue
-                if not ((sq & bbOfRows["1"] or sq & bbOfRows["8"]) and piece == "p"):
+                if not ((sq & ROWS["1"] or sq & ROWS["8"]) and piece == "p"):
                     reserveMoves.append(Move(0, sq, self._gameState, movedPiece=allyColor + piece, isReserve=True))
         moves[1] = reserveMoves
         self._gameState.assertionEndCheck()
@@ -402,7 +402,7 @@ class MoveGenerator:
             for piece, count in self._gameState.reserve[allyColor].items():
                 if count != 0:
                     continue
-                if not ((sq & bbOfRows["1"] or sq & bbOfRows["8"]) and piece == "p"):
+                if not ((sq & ROWS["1"] or sq & ROWS["8"]) and piece == "p"):
                     move = Move(0, sq, self._gameState, movedPiece=allyColor + piece, isReserve=True)
                     if self._isValid(move):
                         reserveMoves.append(move)

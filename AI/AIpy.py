@@ -2,15 +2,16 @@ from math import sqrt
 from ScoreBoard import scoreBoard
 from random import randint
 from time import perf_counter
+from dataclasses import dataclass, field
 from TeamChess.Engine.Move import Move
 from TeamChess.Utils.MagicConsts import CHECKMATE
 
 
+@dataclass
 class ValidMovesObj:
-    def __init__(self, moves: list, checkmate: bool, stalemate: bool):
-        self.moves = moves
-        self.checkmate = checkmate
-        self.stalemate = stalemate
+    checkmate: bool = field()
+    stalemate: bool = field()
+    moves: list[list[Move]] = field(default_factory=list)
 
 
 class AI:
@@ -32,14 +33,16 @@ class AI:
         self._teammatePotentialScore = 0
         self._teammateBestUnavailableReservePiece = None
 
-    @staticmethod
-    def randomMoveAI(validMoves) -> Move:
+    def randomMoveAI(self) -> Move:
+        validMoves = self._gameState.getValidMoves()
+        self._gameState.updatePawnPromotionMoves(validMoves, self._otherGameState)
         return validMoves[randint(0, len(validMoves) - 1)]
 
     def negaScoutMoveAI(self, requiredDepth: int, timeLeft: float, potentialScore: int, bestUnavailableReservePiece: [str, None], returnQ):
         """This method is an entry point of the new process which calculates AI next move"""
         self._initializeAI(requiredDepth, timeLeft, potentialScore, bestUnavailableReservePiece)
         validMoves = self._gameState.getValidMoves()
+        self._gameState.updatePawnPromotionMoves(validMoves, self._otherGameState)
         self._globalValidMovesCount = len(validMoves[0]) + len(validMoves[1]) + len(validMoves[2])
         start = perf_counter()
         myBestUnavailableReservePiece, myPotentialScore = self._getMyBestUnavailableReservePieceAndScore()
@@ -49,7 +52,7 @@ class AI:
 
     def _initializeAI(self, requiredDepth: int, timeLeft: float, potentialScore: int, bestUnavailableReservePiece: [str, None]):
         self._DEPTH = requiredDepth
-        if timeLeft is not None:
+        if timeLeft > 0:
             if timeLeft < 60:
                 self._DEPTH = min(requiredDepth, self._LOW_TIME_DEPTH)
             if timeLeft < 20:
@@ -171,7 +174,7 @@ class AI:
             return validMovesObj
 
     def _generateValidMovesObj(self):
-        validMovesObj = ValidMovesObj(self._gameState.getValidMoves(), False, False)
+        validMovesObj = ValidMovesObj(self._gameState.checkmate, self._gameState.stalemate, self._gameState.getValidMoves())
         self._gameState.updatePawnPromotionMoves(validMovesObj.moves, self._otherGameState)
         return validMovesObj
 

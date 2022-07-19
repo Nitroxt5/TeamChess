@@ -1,4 +1,4 @@
-from TeamChess.Utils.MagicConsts import bbOfCorrections, bbOfCastle, columnToLetter, rowToNumber
+from TeamChess.Utils.MagicConsts import CORRECTIONS, CASTLE_SQUARES, COLUMN_TO_LETTER, ROW_TO_NUMBER
 from TestDLL import getPower
 
 
@@ -27,8 +27,8 @@ class Move:
             else:
                 self.capturedPiece = "bp" if self.movedPiece == "wp" else "wp"
             self.moveID = self.startSquare ^ self.endSquare
-            self.isPawnPromotion = (self.movedPiece == "wp" and not self.endSquare & bbOfCorrections["8"]) or (
-                    self.movedPiece == "bp" and not self.endSquare & bbOfCorrections["1"])
+            self.isPawnPromotion = (self.movedPiece == "wp" and not self.endSquare & CORRECTIONS["8"]) or (
+                    self.movedPiece == "bp" and not self.endSquare & CORRECTIONS["1"])
             self.promotedTo = promotedTo
             self.promotedPiecePosition = promotedPiecePosition
             self.isCapture = False
@@ -68,9 +68,9 @@ class Move:
             return f"&{self.movedPiece[1]}{self._getSquareNotation(self.endSquare)}"
 
     def _getCastleMoveNotation(self):
-        if (self.endSquare & bbOfCastle["wKs"]) or (self.endSquare & bbOfCastle["bKs"]):
+        if (self.endSquare & CASTLE_SQUARES["wKs"]) or (self.endSquare & CASTLE_SQUARES["bKs"]):
             return "0-0"
-        if (self.endSquare & bbOfCastle["wQs"]) or (self.endSquare & bbOfCastle["bQs"]):
+        if (self.endSquare & CASTLE_SQUARES["wQs"]) or (self.endSquare & CASTLE_SQUARES["bQs"]):
             return "0-0-0"
 
     def _getPawnPromotionMoveNotation(self):
@@ -82,4 +82,4 @@ class Move:
     @staticmethod
     def _getSquareNotation(square: int):
         location = getPower(square)
-        return columnToLetter[location % 8] + rowToNumber[location // 8]
+        return COLUMN_TO_LETTER[location % 8] + ROW_TO_NUMBER[location // 8]

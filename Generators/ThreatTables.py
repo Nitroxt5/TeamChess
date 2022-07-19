@@ -1,4 +1,4 @@
-from TeamChess.Utils.MagicConsts import PIECES, COLORS, bbOfCorrections
+from TeamChess.Utils.MagicConsts import PIECES, COLORS, CORRECTIONS
 from TestDLL import numSplit
 from copy import deepcopy
 
@@ -26,58 +26,58 @@ class ThreatTableGenerator:
             self._createBlackPawnThreatTable()
 
     def _createWhitePawnThreatTable(self):
-        self._bbOfThreats["w"] |= ((self._gameState.bbOfPieces["wp"] & bbOfCorrections["h"]) << 7)
-        self._bbOfThreats["w"] |= ((self._gameState.bbOfPieces["wp"] & bbOfCorrections["a"]) << 9)
+        self._bbOfThreats["w"] |= ((self._gameState.bbOfPieces["wp"] & CORRECTIONS["h"]) << 7)
+        self._bbOfThreats["w"] |= ((self._gameState.bbOfPieces["wp"] & CORRECTIONS["a"]) << 9)
 
     def _createBlackPawnThreatTable(self):
-        self._bbOfThreats["b"] |= ((self._gameState.bbOfPieces["bp"] & bbOfCorrections["h"]) >> 9)
-        self._bbOfThreats["b"] |= ((self._gameState.bbOfPieces["bp"] & bbOfCorrections["a"]) >> 7)
+        self._bbOfThreats["b"] |= ((self._gameState.bbOfPieces["bp"] & CORRECTIONS["h"]) >> 9)
+        self._bbOfThreats["b"] |= ((self._gameState.bbOfPieces["bp"] & CORRECTIONS["a"]) >> 7)
 
     def _createKnightThreatTable(self, color: str):
         piece = color + "N"
-        self._bbOfThreats[color] |= ((self._gameState.bbOfPieces[piece] & bbOfCorrections["h"] & bbOfCorrections["78"]) << 15)
-        self._bbOfThreats[color] |= ((self._gameState.bbOfPieces[piece] & bbOfCorrections["gh"] & bbOfCorrections["8"]) << 6)
-        self._bbOfThreats[color] |= ((self._gameState.bbOfPieces[piece] & bbOfCorrections["gh"] & bbOfCorrections["1"]) >> 10)
-        self._bbOfThreats[color] |= ((self._gameState.bbOfPieces[piece] & bbOfCorrections["h"] & bbOfCorrections["12"]) >> 17)
-        self._bbOfThreats[color] |= ((self._gameState.bbOfPieces[piece] & bbOfCorrections["a"] & bbOfCorrections["12"]) >> 15)
-        self._bbOfThreats[color] |= ((self._gameState.bbOfPieces[piece] & bbOfCorrections["ab"] & bbOfCorrections["1"]) >> 6)
-        self._bbOfThreats[color] |= ((self._gameState.bbOfPieces[piece] & bbOfCorrections["ab"] & bbOfCorrections["8"]) << 10)
-        self._bbOfThreats[color] |= ((self._gameState.bbOfPieces[piece] & bbOfCorrections["a"] & bbOfCorrections["78"]) << 17)
+        self._bbOfThreats[color] |= ((self._gameState.bbOfPieces[piece] & CORRECTIONS["h"] & CORRECTIONS["78"]) << 15)
+        self._bbOfThreats[color] |= ((self._gameState.bbOfPieces[piece] & CORRECTIONS["gh"] & CORRECTIONS["8"]) << 6)
+        self._bbOfThreats[color] |= ((self._gameState.bbOfPieces[piece] & CORRECTIONS["gh"] & CORRECTIONS["1"]) >> 10)
+        self._bbOfThreats[color] |= ((self._gameState.bbOfPieces[piece] & CORRECTIONS["h"] & CORRECTIONS["12"]) >> 17)
+        self._bbOfThreats[color] |= ((self._gameState.bbOfPieces[piece] & CORRECTIONS["a"] & CORRECTIONS["12"]) >> 15)
+        self._bbOfThreats[color] |= ((self._gameState.bbOfPieces[piece] & CORRECTIONS["ab"] & CORRECTIONS["1"]) >> 6)
+        self._bbOfThreats[color] |= ((self._gameState.bbOfPieces[piece] & CORRECTIONS["ab"] & CORRECTIONS["8"]) << 10)
+        self._bbOfThreats[color] |= ((self._gameState.bbOfPieces[piece] & CORRECTIONS["a"] & CORRECTIONS["78"]) << 17)
 
     def _createKingThreatTable(self, color: str):
         piece = color + "K"
-        self._bbOfThreats[color] |= ((self._gameState.bbOfPieces[piece] & bbOfCorrections["8"]) << 8)
-        self._bbOfThreats[color] |= ((self._gameState.bbOfPieces[piece] & bbOfCorrections["h"] & bbOfCorrections["8"]) << 7)
-        self._bbOfThreats[color] |= ((self._gameState.bbOfPieces[piece] & bbOfCorrections["h"]) >> 1)
-        self._bbOfThreats[color] |= ((self._gameState.bbOfPieces[piece] & bbOfCorrections["h"] & bbOfCorrections["1"]) >> 9)
-        self._bbOfThreats[color] |= ((self._gameState.bbOfPieces[piece] & bbOfCorrections["1"]) >> 8)
-        self._bbOfThreats[color] |= ((self._gameState.bbOfPieces[piece] & bbOfCorrections["a"] & bbOfCorrections["1"]) >> 7)
-        self._bbOfThreats[color] |= ((self._gameState.bbOfPieces[piece] & bbOfCorrections["a"]) << 1)
-        self._bbOfThreats[color] |= ((self._gameState.bbOfPieces[piece] & bbOfCorrections["a"] & bbOfCorrections["8"]) << 9)
+        self._bbOfThreats[color] |= ((self._gameState.bbOfPieces[piece] & CORRECTIONS["8"]) << 8)
+        self._bbOfThreats[color] |= ((self._gameState.bbOfPieces[piece] & CORRECTIONS["h"] & CORRECTIONS["8"]) << 7)
+        self._bbOfThreats[color] |= ((self._gameState.bbOfPieces[piece] & CORRECTIONS["h"]) >> 1)
+        self._bbOfThreats[color] |= ((self._gameState.bbOfPieces[piece] & CORRECTIONS["h"] & CORRECTIONS["1"]) >> 9)
+        self._bbOfThreats[color] |= ((self._gameState.bbOfPieces[piece] & CORRECTIONS["1"]) >> 8)
+        self._bbOfThreats[color] |= ((self._gameState.bbOfPieces[piece] & CORRECTIONS["a"] & CORRECTIONS["1"]) >> 7)
+        self._bbOfThreats[color] |= ((self._gameState.bbOfPieces[piece] & CORRECTIONS["a"]) << 1)
+        self._bbOfThreats[color] |= ((self._gameState.bbOfPieces[piece] & CORRECTIONS["a"] & CORRECTIONS["8"]) << 9)
 
     def _createDiagonalMovesThreatTable(self, color: str, piece="B"):
         splitPositions = numSplit(self._gameState.bbOfPieces[color + piece])
         for splitPosition in splitPositions:
             checkingSq = splitPosition
-            while checkingSq & bbOfCorrections["h"] & bbOfCorrections["8"]:
+            while checkingSq & CORRECTIONS["h"] & CORRECTIONS["8"]:
                 checkingSq <<= 7
                 self._bbOfThreats[color] |= checkingSq
                 if checkingSq & self._gameState.bbOfOccupiedSquares["a"]:
                     break
             checkingSq = splitPosition
-            while checkingSq & bbOfCorrections["h"] & bbOfCorrections["1"]:
+            while checkingSq & CORRECTIONS["h"] & CORRECTIONS["1"]:
                 checkingSq >>= 9
                 self._bbOfThreats[color] |= checkingSq
                 if checkingSq & self._gameState.bbOfOccupiedSquares["a"]:
                     break
             checkingSq = splitPosition
-            while checkingSq & bbOfCorrections["a"] & bbOfCorrections["1"]:
+            while checkingSq & CORRECTIONS["a"] & CORRECTIONS["1"]:
                 checkingSq >>= 7
                 self._bbOfThreats[color] |= checkingSq
                 if checkingSq & self._gameState.bbOfOccupiedSquares["a"]:
                     break
             checkingSq = splitPosition
-            while checkingSq & bbOfCorrections["a"] & bbOfCorrections["8"]:
+            while checkingSq & CORRECTIONS["a"] & CORRECTIONS["8"]:
                 checkingSq <<= 9
                 self._bbOfThreats[color] |= checkingSq
                 if checkingSq & self._gameState.bbOfOccupiedSquares["a"]:
@@ -87,25 +87,25 @@ class ThreatTableGenerator:
         splitPositions = numSplit(self._gameState.bbOfPieces[color + piece])
         for splitPosition in splitPositions:
             checkingSq = splitPosition
-            while checkingSq & bbOfCorrections["8"]:
+            while checkingSq & CORRECTIONS["8"]:
                 checkingSq <<= 8
                 self._bbOfThreats[color] |= checkingSq
                 if checkingSq & self._gameState.bbOfOccupiedSquares["a"]:
                     break
             checkingSq = splitPosition
-            while checkingSq & bbOfCorrections["h"]:
+            while checkingSq & CORRECTIONS["h"]:
                 checkingSq >>= 1
                 self._bbOfThreats[color] |= checkingSq
                 if checkingSq & self._gameState.bbOfOccupiedSquares["a"]:
                     break
             checkingSq = splitPosition
-            while checkingSq & bbOfCorrections["1"]:
+            while checkingSq & CORRECTIONS["1"]:
                 checkingSq >>= 8
                 self._bbOfThreats[color] |= checkingSq
                 if checkingSq & self._gameState.bbOfOccupiedSquares["a"]:
                     break
             checkingSq = splitPosition
-            while checkingSq & bbOfCorrections["a"]:
+            while checkingSq & CORRECTIONS["a"]:
                 checkingSq <<= 1
                 self._bbOfThreats[color] |= checkingSq
                 if checkingSq & self._gameState.bbOfOccupiedSquares["a"]:

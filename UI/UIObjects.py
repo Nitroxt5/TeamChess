@@ -1,5 +1,6 @@
 import pygame as pg
 from time import perf_counter
+from TeamChess.UI.WindowSizeConsts import SCREEN_HEIGHT, SCREEN_WIDTH, SQ_SIZE, MARGIN, MARGIN_LEFT
 
 
 class UIObject:
@@ -64,7 +65,7 @@ class Button(UIObject):
 
 
 class RadioButton(UIObject):
-    def __init__(self, center: tuple, state: bool, onImage: pg.Surface, offImage: pg.Surface):
+    def __init__(self, center: tuple, onImage: pg.Surface, offImage: pg.Surface, state=True):
         super().__init__(center)
         self._onImage = onImage
         self._offImage = offImage
@@ -121,7 +122,7 @@ class Label(UIObject):
 
 
 class RadioLabel(UIObject):
-    def __init__(self, text1: str, text2: str, state: bool, topleft: tuple, font: pg.font.SysFont):
+    def __init__(self, topleft: tuple, text1: str, text2: str, font: pg.font.SysFont, state=True):
         super().__init__(topleft)
         self._textInput1 = text1
         self._textInput2 = text2
@@ -172,7 +173,6 @@ class DropDownMenu(UIObject):
                     self._changeHead(i)
                     self.switch()
                     return i
-        return None
 
     def _changeHead(self, index: int):
         if index != 0:
@@ -201,6 +201,7 @@ class ImgDropDownMenu(UIObject):
     def __init__(self, pos: tuple, images: list, headImages: list, up=False, topLeft=False):
         super().__init__(pos)
         self._state = False
+        self._turnedOff = False
         self._images = images
         self._headImages = headImages
         self._topLeft = topLeft
@@ -211,7 +212,8 @@ class ImgDropDownMenu(UIObject):
                                         "", None, topleft=self._topLeft))
 
     def switch(self):
-        self._state = not self._state
+        if not self._turnedOff:
+            self._state = not self._state
 
     def checkForInput(self, position: tuple):
         return self._buttons[0].checkForInput(position)
@@ -223,7 +225,6 @@ class ImgDropDownMenu(UIObject):
                     self._changeHead(i)
                     self.switch()
                     return i
-        return None
 
     def _changeHead(self, index: int):
         if index != 0:
@@ -235,15 +236,21 @@ class ImgDropDownMenu(UIObject):
             for i in range(1, len(self._buttons)):
                 self._buttons[i].update(screen)
 
+    def turnOff(self):
+        self._turnedOff = True
+
+    def hide(self):
+        self._state = False
+
 
 class DialogWindow(UIObject):
-    def __init__(self, text: str, SCREEN_HEIGHT: int, SCREEN_WIDTH: int, FONT_SIZE: int, bg: pg.Surface, lang: bool):
+    def __init__(self, text: str, font: pg.font.SysFont, bg: pg.Surface, lang: bool):
         super().__init__((SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2))
         self._textInput = text
         self._window = bg
         self._windowRect = self._window.get_rect(center=(self._xPos, self._yPos))
-        self._font = pg.font.SysFont("Helvetica", FONT_SIZE * 2, True, False)
-        self._firstLine, self._secondLine = self._textAdaptation(SCREEN_WIDTH, SCREEN_HEIGHT)
+        self._font = font
+        self._firstLine, self._secondLine = self._textAdaptation()
         self._line1_lbl = Label(self._firstLine, (SCREEN_WIDTH // 2, (SCREEN_HEIGHT - self._windowRect.height // 2) // 2), self._font, shift=2)
         if self._secondLine is not None:
             self._line2_lbl = Label(self._secondLine, (self._xPos, self._yPos), self._font, shift=2)
@@ -254,7 +261,7 @@ class DialogWindow(UIObject):
         self._no_btn = Button(None, ((SCREEN_WIDTH + self._windowRect.width // 2) // 2,
                                      (SCREEN_HEIGHT + self._windowRect.height // 2) // 2), "No" if lang else "Нет", self._font)
 
-    def _textAdaptation(self, SCREEN_WIDTH: int, SCREEN_HEIGHT: int):
+    def _textAdaptation(self):
         text = self._font.render(self._textInput, True, self._BACK_COLOR)
         rect = text.get_rect(center=(SCREEN_WIDTH // 2, (SCREEN_HEIGHT - self._windowRect.height // 2) // 2))
         if rect.width + 30 < self._windowRect.width:
@@ -294,7 +301,7 @@ class DialogWindow(UIObject):
 
 
 class Image(UIObject):
-    def __init__(self, image: pg.Surface, center: tuple, imageSize: [tuple, None]):
+    def __init__(self, image: pg.Surface, center: tuple, imageSize: tuple = None):
         super().__init__(center)
         if imageSize is not None:
             self._width = imageSize[0]
@@ -302,19 +309,14 @@ class Image(UIObject):
             self._image = pg.transform.scale(image, (self._width, self._height))
         else:
             self._image = image
-        self._rect = self._image.get_rect(center=(self._xPos, self._yPos))
+        self._rect = self._image.get_rect(center=center)
 
     def update(self, screen: pg.Surface):
         screen.blit(self._image, self._rect)
 
-    def move(self, newPos: tuple):
-        self._xPos = newPos[0]
-        self._yPos = newPos[1]
-        self._rect = self._image.get_rect(center=(self._xPos, self._yPos))
-
 
 class Hourglass(UIObject):
-    def __init__(self, currentPlayer: int, image: pg.Surface, MARGIN: int, MARGIN_LEFT: int, SQ_SIZE: int, SCREEN_HEIGHT: int):
+    def __init__(self, currentPlayer: int, image: pg.Surface):
         if currentPlayer == 0:
             pos = (MARGIN, SCREEN_HEIGHT - MARGIN + 5)
         elif currentPlayer == 1:
@@ -344,7 +346,8 @@ class Hourglass(UIObject):
 class Timer(UIObject):
     def __init__(self, center: tuple, value: [float, None], image: pg.Surface, font: pg.font.SysFont):
         super().__init__(center)
-        self._value = value
+        self._startValue = value
+        self._currentValue = value
         self._image = image
         self._rect = self._image.get_rect(center=(self._xPos, self._yPos))
         self._font = font
@@ -356,19 +359,23 @@ class Timer(UIObject):
         self._textRect2 = self._text2.get_rect(center=(self._xPos + 2, self._yPos + 2))
 
     def _getMinSec(self):
-        return f"{(round(self._value) // 60):02}:{(round(self._value) % 60):02}"
+        return f"{(round(self._currentValue) // 60):02}:{(round(self._currentValue) % 60):02}"
 
     def switch(self):
+        if self._startValue < 0:
+            return
         self._state = not self._state
         self._currentTime = perf_counter()
 
     def countdownEnd(self):
-        if self._value < 0.5:
+        if self._currentValue < 0.5 and self._startValue > 0:
             self._state = False
             return True
         return False
 
     def update(self, screen: pg.Surface):
+        if self._currentValue < 0:
+            return
         self._count()
         self._text1 = self._font.render(self._getMinSec(), True, self._BACK_COLOR)
         self._text2 = self._font.render(self._getMinSec(), True, self._TOP_COLOR)
@@ -378,12 +385,16 @@ class Timer(UIObject):
 
     def _count(self):
         if self._state and self._currentTime is not None:
-            self._value -= perf_counter() - self._currentTime
+            self._currentValue -= perf_counter() - self._currentTime
             self._currentTime = perf_counter()
+
+    def reset(self):
+        self._state = False
+        self._currentValue = self._startValue
 
     @property
     def value(self):
-        return self._value
+        return self._currentValue
 
     @property
     def state(self):

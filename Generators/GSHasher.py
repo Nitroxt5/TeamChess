@@ -1,4 +1,4 @@
-from TeamChess.Utils.MagicConsts import MAX_INT, COLORED_PIECES, COLORED_PIECES_CODES, bbOfCastle
+from TeamChess.Utils.MagicConsts import MAX_INT, COLORED_PIECES, COLORED_PIECES_CODES, CASTLE_SQUARES
 from TestDLL import numSplit, getPower
 from random import randint, seed
 
@@ -74,9 +74,9 @@ class GSHasher:
             self.switchBoardHash(endLoc + 8, move.capturedPiece)
 
     def _updateHashOnCastle(self, endLoc: int, move):
-        if move.endSquare & bbOfCastle["wKs"] or move.endSquare & bbOfCastle["bKs"]:
+        if move.endSquare & CASTLE_SQUARES["wKs"] or move.endSquare & CASTLE_SQUARES["bKs"]:
             self._updateHashOnKingSideCastle(endLoc, move)
-        elif move.endSquare & bbOfCastle["wQs"] or move.endSquare & bbOfCastle["bQs"]:
+        elif move.endSquare & CASTLE_SQUARES["wQs"] or move.endSquare & CASTLE_SQUARES["bQs"]:
             self._updateHashOnQueenSideCastle(endLoc, move)
 
     def _updateHashOnKingSideCastle(self, endLoc: int, move):
