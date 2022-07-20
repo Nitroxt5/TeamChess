@@ -1,6 +1,6 @@
 from multiprocessing import Process, Queue
 from random import randint
-from AI.AIpy import AI
+from AI.AI import AI
 from Engine.Move import Move
 from Generators.PossiblePromotions import PossiblePromotionsGen
 from Utils.Logger import ConsoleLogger

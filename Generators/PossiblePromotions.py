@@ -1,5 +1,5 @@
 from TestDLL import numSplit, getPower
-from Utils.MagicConsts import POSSIBLE_PIECES_TO_PROMOTE
+from Utils.MagicConsts import POSSIBLE_PIECES_TO_PROMOTE, DIM
 
 
 class PossiblePromotionsGen:
@@ -19,5 +19,5 @@ class PossiblePromotionsGen:
             for position in splitPositions:
                 if self._gameStates[1 - boardNum].canBeRemoved(position, color):
                     pos = getPower(position)
-                    possiblePromotions[(pos % 8, pos // 8)] = color + piece
+                    possiblePromotions[(pos % DIM, pos // DIM)] = color + piece
         return possiblePromotions

@@ -2,7 +2,7 @@ import pygame as pg
 from TestDLL import getPower
 from UI.UIObjects import Image
 from UI.WindowSizeConsts import SQ_SIZE, MARGIN, MARGIN_LEFT, RESERVE_MARGIN, BOARD_SIZE
-from Utils.MagicConsts import PIECES, SQUARES, DIMENSION, RESERVE_PIECES
+from Utils.MagicConsts import PIECES, SQUARES, DIM, RESERVE_PIECES
 
 
 class Highlighter:
@@ -65,7 +65,7 @@ class Highlighter:
 
     @staticmethod
     def _invertCoord(coord: int):
-        return DIMENSION - 1 - coord
+        return DIM - 1 - coord
 
     def _getBoardHighlightPositionInPixelsByLocation(self, boardNum: int, pos: tuple):
         if boardNum == 0:
@@ -98,7 +98,7 @@ class Highlighter:
                 for move in movesPart:
                     if move.startSquare == square and move.endSquare not in endSquares and move.movedPiece == piece:
                         endLoc = getPower(move.endSquare)
-                        highlightPosition = self._getBoardHighlightPositionInPixelsByLocation(i, (endLoc % 8, endLoc // 8))
+                        highlightPosition = self._getBoardHighlightPositionInPixelsByLocation(i, (endLoc % DIM, endLoc // DIM))
                         Image(self._YELLOW, highlightPosition).update(self._screen)
                         endSquares.append(move.endSquare)
 
@@ -121,8 +121,8 @@ class Highlighter:
             if lastMove.isReserve:
                 highlightStartPosition = self._getLastMoveReserveHighlightPositionInPixels(i, lastMove)
             else:
-                highlightStartPosition = self._getBoardHighlightPositionInPixelsByLocation(i, (startLoc % 8, startLoc // 8))
-            highlightEndPosition = self._getBoardHighlightPositionInPixelsByLocation(i, (endLoc % 8, endLoc // 8))
+                highlightStartPosition = self._getBoardHighlightPositionInPixelsByLocation(i, (startLoc % DIM, startLoc // DIM))
+            highlightEndPosition = self._getBoardHighlightPositionInPixelsByLocation(i, (endLoc % DIM, endLoc // DIM))
             Image(self._BLUE, highlightStartPosition).update(self._screen)
             Image(self._BLUE, highlightEndPosition).update(self._screen)
 

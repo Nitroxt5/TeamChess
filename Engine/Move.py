@@ -1,11 +1,11 @@
-from Utils.MagicConsts import CORRECTIONS, CASTLE_SQUARES, COLUMN_TO_LETTER, ROW_TO_NUMBER
+from Utils.MagicConsts import CORRECTIONS, CASTLE_SQUARES, COLUMN_TO_LETTER, ROW_TO_NUMBER, DIM
 from TestDLL import getPower
 
 
 class Move:
-    __slots__ = "startSquare", "endSquare", "movedPiece", "capturedPiece", "moveID", "isReserve", "isEnpassant",\
-                "isCastle", "isFirst", "isPawnPromotion", "isCapture", "promotedTo", "promotedPiecePosition",\
-                "estimatedScore", "exactScore", "goodScore", "isKiller"
+    __slots__ = ("startSquare", "endSquare", "movedPiece", "capturedPiece", "moveID", "isReserve", "isEnpassant",
+                 "isCastle", "isFirst", "isPawnPromotion", "isCapture", "promotedTo", "promotedPiecePosition",
+                 "estimatedScore", "exactScore", "goodScore", "isKiller")
 
     def __init__(self, startSq, endSq, gameState, movedPiece: str = None, isEnpassant=False,
                  isCastle=False, isFirst=False, isReserve=False, promotedTo="", promotedPiecePosition=0):
@@ -86,4 +86,4 @@ class Move:
     @staticmethod
     def _getSquareNotation(square: int):
         location = getPower(square)
-        return COLUMN_TO_LETTER[location % 8] + ROW_TO_NUMBER[location // 8]
+        return COLUMN_TO_LETTER[location % DIM] + ROW_TO_NUMBER[location // DIM]

@@ -11,7 +11,7 @@ from UI.Menus.Menu import Menu
 from UI.UIObjects import Label, Hourglass, Timer, Image, RadioButton, ImgDropDownMenu
 from UI.WindowSizeConsts import FONT_SIZE, MARGIN, MARGIN_LEFT, RESERVE_MARGIN, SCREEN_HEIGHT, SCREEN_WIDTH, BOARD_SIZE, SQ_SIZE, FPS
 from Utils.Logger import ConsoleLogger
-from Utils.MagicConsts import COLORED_PIECES, DIMENSION, RESERVE_PIECES, GAME_MODES, PIECES, SQUARES
+from Utils.MagicConsts import COLORED_PIECES, DIM, RESERVE_PIECES, GAME_MODES, PIECES, SQUARES
 from Utils.ResourceManager import SettingsSaver
 
 
@@ -246,9 +246,9 @@ class GamePlayMenu(Menu):
 
     def _getPiecePositionInPixelsByBoard(self, boardNum: int, location: int):
         if boardNum == 0:
-            return self._convertSquareToPixelsOnLeftBoard((location % DIMENSION, location // DIMENSION))
+            return self._convertSquareToPixelsOnLeftBoard((location % DIM, location // DIM))
         else:
-            return self._convertSquareToPixelsOnRightBoard((location % DIMENSION, location // DIMENSION))
+            return self._convertSquareToPixelsOnRightBoard((location % DIM, location // DIM))
 
     @staticmethod
     def _convertSquareToPixelsOnLeftBoard(pos: tuple):
@@ -265,7 +265,7 @@ class GamePlayMenu(Menu):
 
     @staticmethod
     def _invertCoord(coord: int):
-        return DIMENSION - 1 - coord
+        return DIM - 1 - coord
 
     def _drawReservePiecesWithCount(self):
         for i in range(2):
