@@ -1,6 +1,9 @@
 # TeamChess
 
-This repository contains a TeamChess game. It is a part of my graduate work in Belarusian State University.
+This repository contains a TeamChess game. It is a swedish variation of chess, 
+which you can play against an AI with the help of this program. 
+
+It is a part of my graduate work in Belarusian State University.
 
 ### Description
 
@@ -8,13 +11,12 @@ This repository contains a TeamChess game. It is a part of my graduate work in B
 
  - ScoreBoard and TestDLL are libraries written in C++. They contain helper functions for AI and move generating.
  - Images and Sound folders contain all the multimedia required.
- - lang_ru.py and lang_eu.py files contain localization.
  - SETTINGS.json is for saving settings.
- - Utils.py contains helper functions for creating UI and logging.
- - UI.py contains classes which are widgets. They are used in UI constructing.
- - Main.py contains methods that create UI and handle events. It is an entry point of the game.
- - Engine.py contains classes for validating moves and tracking game state.
- - AIpy.py contains AI to play with or against.
+ - Utils folder contains entities for logging, multimedia handling and more.
+ - UI folder contains menus and widget classes for their construction.
+ - Generators folder includes generators for moves, threat tables and more.
+ - Engine folder contains classes for keeping game state in computer memory.
+ - AI folder contains AI to play with or against.
 
 ### Running the code
 
