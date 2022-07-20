@@ -35,20 +35,12 @@ class AIHandler:
         if not self._process.is_alive():
             self.move, potentialScore, requiredPiece, thinkingTime, positionCounter = self._returnQ.get()
             ConsoleLogger.thinkingEnd(playerName, thinkingTime, positionCounter, potentialScore, requiredPiece)
-            self._potentialScores[playerNum] = potentialScore
-            self._requiredPieces[playerNum] = requiredPiece
-            self.thinkingTime[activeBoard] += thinkingTime
-            self.positionCounter[activeBoard] += positionCounter
-            if self.move is None:
-                AIPlayer = AI(self._gameStates[activeBoard], self._gameStates[1 - activeBoard])
-                self.move = AIPlayer.randomMoveAI()
+            self._updateStats(potentialScore, requiredPiece, thinkingTime, positionCounter, activeBoard)
+            if self.move is None:  # this section should never be entered
+                self._getRandomMove(activeBoard)
                 ConsoleLogger.madeRandomMove(playerName)
             if self.move.isPawnPromotion:
-                possiblePromotions = self._promotionsGen.calculatePossiblePromotions(activeBoard)
-                requiredPromotions = [SQUARES[key[1]][key[0]] for key, value in possiblePromotions.items() if value[1] == self.move.promotedTo]
-                promotion = requiredPromotions[randint(0, len(requiredPromotions) - 1)]
-                self.move = Move(self.move.startSquare, self.move.endSquare, self._gameStates[activeBoard],
-                                 movedPiece=self.move.movedPiece, promotedTo=self.move.promotedTo, promotedPiecePosition=promotion)
+                self._updateMoveWithPromotionPos(activeBoard)
             self._thinking = False
             self.cameUpWithMove = True
 
@@ -68,6 +60,25 @@ class AIHandler:
         if playerNum == 1:
             return 2
         return 1
+
+    def _updateStats(self, potentialScore: int, requiredPiece: str, thinkingTime: int, positionCounter: int, activeBoard: int):
+        playerNum = self._getCurrentPlayer(activeBoard)
+        self._potentialScores[playerNum] = potentialScore
+        self._requiredPieces[playerNum] = requiredPiece
+        self.thinkingTime[activeBoard] += thinkingTime
+        self.positionCounter[activeBoard] += positionCounter
+
+    def _getRandomMove(self, activeBoard):
+        AIPlayer = AI(self._gameStates[activeBoard], self._gameStates[1 - activeBoard])
+        self._move = AIPlayer.randomMoveAI()
+
+    def _updateMoveWithPromotionPos(self, activeBoard):
+        promotions = self._promotionsGen.calculatePossiblePromotions(activeBoard)
+        requiredPromotions = [SQUARES[loc[1]][loc[0]] for loc, piece in promotions.items() if piece[1] == self.move.promotedTo]
+        promotionPos = requiredPromotions[randint(0, len(requiredPromotions) - 1)]
+        self.move = Move(self.move.startSquare, self.move.endSquare, self._gameStates[activeBoard],
+                         movedPiece=self.move.movedPiece, promotedTo=self.move.promotedTo,
+                         promotedPiecePosition=promotionPos)
 
     def terminate(self):
         """Safely ends AI calculation"""
