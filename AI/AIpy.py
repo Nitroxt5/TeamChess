@@ -69,43 +69,45 @@ class AI:
         turn = 1 if self._gameState.whiteTurn else -1
         validMoves = [[], self._gameState.getUnavailableReserveMoves(), []]
         score = 0
-        if self._globalValidMovesCount > 8:
+        if self._globalValidMovesCount < 9:
+            score = self._negaScoutAI(validMoves, -CHECKMATE - 1, CHECKMATE + 1, turn, self._DEPTH, self._DEPTH)
+        else:
             for currentDepth in range(1, self._DEPTH // 2 + 1):
                 score = self._negaScoutAI(validMoves, -CHECKMATE - 1, CHECKMATE + 1, turn, currentDepth, currentDepth)
-        else:
-            score = self._negaScoutAI(validMoves, -CHECKMATE - 1, CHECKMATE + 1, turn, self._DEPTH, self._DEPTH)
         myBestUnavailableReservePiece = None
         if isinstance(self._nextMove, Move):
             myBestUnavailableReservePiece = self._nextMove.movedPiece
+        self._resetTablesCounterMove()
+        return myBestUnavailableReservePiece, score
+
+    def _resetTablesCounterMove(self):
         self._hashTableForBestMoves = {}
         self._hashTableForValidMoves = {}
         self._killerMoves = {}
         self._counter = 0
         self._nextMove = None
-        return myBestUnavailableReservePiece, score
 
     def _calculatePosition(self, validMoves: list) -> int:
         turn = 1 if self._gameState.whiteTurn else -1
         score = 0
-        if self._globalValidMovesCount > 8:
+        if self._globalValidMovesCount < 9:
+            score = self._negaScoutAI(validMoves, -CHECKMATE - 1, CHECKMATE + 1, turn, self._DEPTH, self._DEPTH)
+        else:
             for currentDepth in range(1, self._DEPTH + 1):
                 score = self._negaScoutAI(validMoves, -CHECKMATE - 1, CHECKMATE + 1, turn, currentDepth, currentDepth)
                 if score == CHECKMATE:
                     break
-        else:
-            score = self._negaScoutAI(validMoves, -CHECKMATE - 1, CHECKMATE + 1, turn, self._DEPTH, self._DEPTH)
         return score
 
     def _negaScoutAI(self, validMoves: list, alpha: int, beta: int, turn: int, currentDepth: int, searchDepth: int) -> int:
         """Algorithm for searching the best move"""
         self._counter += 1
         moves = validMoves[0] + validMoves[1] + validMoves[2]
-        if currentDepth <= 0 or self._gameState.checkmate or self._gameState.stalemate:
+        if self._isSearchStopped(currentDepth):
             self._gameState.currentValidMovesCount = len(moves)
             return turn * scoreBoard(self._gameState)
         self._oneDepthSearch(moves, turn, currentDepth)
-        moves.sort(key=lambda mov: mov.estimatedScore, reverse=True)
-        moves.sort(key=lambda mov: mov.isKiller, reverse=True)
+        self._sortMoves(moves)
         silentMoveCounter = 19 + int(2 * sqrt(max(len(validMoves[1]), 100)))
         for move in moves:
             if not silentMoveCounter:
@@ -130,6 +132,9 @@ class AI:
                     break
         return alpha
 
+    def _isSearchStopped(self, depth):
+        return depth <= 0 or self._gameState.checkmate or self._gameState.stalemate
+
     def _oneDepthSearch(self, validMoves: list, turn: int, currentDepth: int):
         """Lightweight algorithm for searching the best move. Goes only for a depth of 1. Does not use any heuristics."""
         self._gameState.currentValidMovesCount = len(validMoves)
@@ -143,6 +148,11 @@ class AI:
                 self._gameState.undoMove()
             if move.capturedPiece == self._teammateBestUnavailableReservePiece and self._teammatePotentialScore > 0:
                 move.estimatedScore += self._teammatePotentialScore // 10
+
+    @staticmethod
+    def _sortMoves(moves):
+        moves.sort(key=lambda mov: mov.estimatedScore, reverse=True)
+        moves.sort(key=lambda mov: mov.isKiller, reverse=True)
 
     def _extractBestMoveFromHashTable(self, currentDepth: int):
         if self._gameState.boardHash in self._hashTableForBestMoves:
