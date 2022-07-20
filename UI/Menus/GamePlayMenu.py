@@ -116,77 +116,26 @@ class GamePlayMenu(Menu):
                 elif e.type == pg.MOUSEBUTTONDOWN:
                     if e.button != 1:
                         continue
-                    if self._toMenu_btn.checkForInput(mousePos):
-                        if dialogWindowMenu.create(self._textContent["DW1"], self):
-                            pg.event.post(pg.event.Event(pg.QUIT))
-                    if self._restart_btn.checkForInput(mousePos):
-                        if dialogWindowMenu.create(self._textContent["DW2"], self):
-                            self._AI.terminate()
-                            ConsoleLogger.endgameOutput(self._gameStates, difficulties, self._AI)
-                            self._setBoardsToDefault(difficulties)
-                            self.drawGameState()
-                            self._timers[0].switch()
-                            pg.display.flip()
+                    self._handleToMenuBtn(dialogWindowMenu, mousePos)
+                    self._handleRestartBtn(dialogWindowMenu, mousePos, difficulties)
                     if not self._gameOver:
-                        for i, ddm in enumerate(self._requiredPiece_ddms):
-                            if ddm.checkForInput(mousePos):
-                                ddm.switch()
-                            choice = ddm.checkForChoice(mousePos)
-                            if choice is not None:
-                                color = "w" if i == 0 or i == 2 else "b"
-                                self._requiredPieces[i] = color + PIECES[choice]
+                        self._handleDDMs(mousePos)
                         boardNum, reserveBoardNum = self._getClickPlace(mousePos)
                         if self._activeBoard == boardNum:
                             column, row = self._getBoardSqByPixels(mousePos)
                             self._validateClick((column, row))
-                            if len(self._clicks[self._activeBoard]) == 2 and self._isPlayerTurn(difficulties):
-                                isReserve = False
-                                movedPiece = None
-                                color = "w" if self._clicks[self._activeBoard][0][1] == 8 else "b"
-                                if self._clicks[self._activeBoard][0][1] == -1 or self._clicks[self._activeBoard][0][1] == 8:
-                                    startSq = 0
-                                    isReserve = True
-                                    movedPiece = color + PIECES[self._clicks[self._activeBoard][0][0] + 1]
-                                else:
-                                    startSq = SQUARES[self._clicks[self._activeBoard][0][1]][self._clicks[self._activeBoard][0][0]]
-                                if 0 <= self._clicks[self._activeBoard][1][1] <= 7:
-                                    endSq = SQUARES[self._clicks[self._activeBoard][1][1]][self._clicks[self._activeBoard][1][0]]
-                                else:
-                                    endSq = 0
-                                move = Move(startSq, endSq, self._gameStates[self._activeBoard], movedPiece=movedPiece, isReserve=isReserve)
-                                for movesPart in self._validMoves[self._activeBoard]:
-                                    for validMove in movesPart:
-                                        if move == validMove or (move.moveID == validMove.moveID and move.isPawnPromotion and len(self._validMoves[self._activeBoard][2]) > 0):
-                                            if move.isPawnPromotion:
-                                                pos, piece = self._getPromotion(self._getPlayerName(playerNames))
-                                                validMove.promotedTo = None if piece is None else piece[1]
-                                                validMove.promotedPiecePosition = pos
-                                            if not (validMove.isPawnPromotion and validMove.promotedTo is None):
-                                                self._timers[self._getCurrentPlayer()].switch()
-                                                self._gameStates[self._activeBoard].makeMove(validMove, self._gameStates[1 - self._activeBoard])
-                                                for i in range(2):
-                                                    self._validMoves[i] = self._gameStates[i].getValidMoves()
-                                                    self._gameStates[i].updatePawnPromotionMoves(self._validMoves[i], self._gameStates[1 - i])
-                                                self._moveMade[self._activeBoard] = True
-                                                self._selectedSq[self._activeBoard] = ()
-                                                self._clicks[self._activeBoard] = []
-                                                self._activeBoard = 1 - self._activeBoard
-                                                self._gameOverCheck()
-                                                if not self._gameOver:
-                                                    self._timers[self._getCurrentPlayer()].switch()
-                                                self._hourglass = Hourglass(self._getCurrentPlayer(), self._RL.IMAGES["hourglass"])
-                                                self._playSoundIfAllowed()
-                                                break
+                            if self._playerTriedToMakeMove(difficulties):
+                                move = self._configurateMove()
+                                self._makeMoveIfValid(move, playerNames)
                                 if not self._moveMade[boardNum]:
                                     self._resetFirstClick()
                         elif self._activeBoard == reserveBoardNum:
                             column, row = self._getReserveSqByPixels(mousePos)
                             self._validateClick((column, row))
-                            if self._didNotMakeMove():
+                            if self._triedToMakeIllegalMove():
                                 self._resetFirstClick()
                         else:
                             self._resetSelectAndClicks()
-                        self.drawGameState()
                         pg.display.flip()
             self._gameOverCheck()
             if self._gameOver:
@@ -197,23 +146,11 @@ class GamePlayMenu(Menu):
             if self._AI.cameUpWithMove:
                 player = self._getCurrentPlayer()
                 self._requiredPiece_ddms[player].changeHead(RESERVE_PIECES[self._requiredPieces[player][1]] + 1)
-                self._timers[player].switch()
-                self._gameStates[self._activeBoard].makeMove(self._AI.move, self._gameStates[1 - self._activeBoard])
-                for j in range(2):
-                    self._validMoves[j] = self._gameStates[j].getValidMoves()
-                    self._gameStates[j].updatePawnPromotionMoves(self._validMoves[j], self._gameStates[1 - j])
-                self._moveMade[self._activeBoard] = True
-                self._activeBoard = 1 - self._activeBoard
-                self._gameOverCheck()
-                if not self._gameOver:
-                    self._timers[self._getCurrentPlayer()].switch()
-                self.drawGameState()
-                self._hourglass = Hourglass(self._getCurrentPlayer(), self._RL.IMAGES["hourglass"])
-                self._resetActiveBoardSelectAndClicks()
+                self._handleNonPromotionMove(self._AI.move)
                 self._AI.cameUpWithMove = False
-                self._playSoundIfAllowed()
             for i in range(2):
                 if self._moveMade[i]:
+                    self._resetActiveBoardSelectAndClicks()
                     self._soundPlayed = False
                     self._moveMade[i] = False
             pg.display.flip()
@@ -415,6 +352,30 @@ class GamePlayMenu(Menu):
             self._timers[i].reset()
             self._requiredPiece_ddms[i].hide()
 
+    def _handleToMenuBtn(self, dialogWindowMenu, mousePos: tuple):
+        if self._toMenu_btn.checkForInput(mousePos):
+            if dialogWindowMenu.create(self._textContent["DW1"], self):
+                pg.event.post(pg.event.Event(pg.QUIT))
+
+    def _handleRestartBtn(self, dialogWindowMenu, mousePos: tuple, difficulties: list):
+        if self._restart_btn.checkForInput(mousePos):
+            if dialogWindowMenu.create(self._textContent["DW2"], self):
+                self._AI.terminate()
+                ConsoleLogger.endgameOutput(self._gameStates, difficulties, self._AI)
+                self._setBoardsToDefault(difficulties)
+                self.drawGameState()
+                self._timers[0].switch()
+                pg.display.flip()
+
+    def _handleDDMs(self, mousePos: tuple):
+        for i, ddm in enumerate(self._requiredPiece_ddms):
+            if ddm.checkForInput(mousePos):
+                ddm.switch()
+            choice = ddm.checkForChoice(mousePos)
+            if choice is not None:
+                color = "w" if i == 0 or i == 2 else "b"
+                self._requiredPieces[i] = color + PIECES[choice]
+
     def _getClickPlace(self, mousePos: tuple):
         boardNum = -1
         reserveBoardNum = -1
@@ -531,7 +492,95 @@ class GamePlayMenu(Menu):
         self._selectedSq[self._activeBoard] = pos
         self._clicks[self._activeBoard].append(deepcopy(self._selectedSq[self._activeBoard]))
 
-    def _didNotMakeMove(self):
+    def _playerTriedToMakeMove(self, difficulties: list):
+        return len(self._clicks[self._activeBoard]) == 2 and self._isPlayerTurn(difficulties)
+
+    def _configurateMove(self):
+        isReserve = False
+        movedPiece = None
+        color = "w" if self._clicks[self._activeBoard][0][1] == 8 else "b"
+        if self._firstClickOnReserveField():
+            startSq = 0
+            isReserve = True
+            movedPiece = color + PIECES[self._clicks[self._activeBoard][0][0] + 1]
+        else:
+            startSq = SQUARES[self._clicks[self._activeBoard][0][1]][self._clicks[self._activeBoard][0][0]]
+        endSq = SQUARES[self._clicks[self._activeBoard][1][1]][self._clicks[self._activeBoard][1][0]]
+        return Move(startSq, endSq, self._gameStates[self._activeBoard], movedPiece=movedPiece, isReserve=isReserve)
+
+    def _firstClickOnReserveField(self):
+        return self._clicks[self._activeBoard][0][1] == -1 or self._clicks[self._activeBoard][0][1] == 8
+
+    def _makeMoveIfValid(self, move, playerNames: list):
+        for movesPart in self._validMoves[self._activeBoard]:
+            for validMove in movesPart:
+                if self._isSimilarMove(move, validMove):
+                    if move.isPawnPromotion:
+                        self._handlePromotionMove(validMove, playerNames)
+                    if not (validMove.isPawnPromotion and validMove.promotedTo is None):
+                        self._handleNonPromotionMove(validMove)
+                        break
+
+    def _isSimilarMove(self, move, validMove):
+        return move == validMove or self._isPossiblePromotionMove(move, validMove)
+
+    def _isPossiblePromotionMove(self, move, validMove):
+        return move.moveID == validMove.moveID and move.isPawnPromotion and len(self._validMoves[self._activeBoard][2]) > 0
+
+    def _handlePromotionMove(self, validMove, playerNames: list):
+        pos, piece = self._getPromotion(self._getPlayerName(playerNames))
+        validMove.promotedTo = None if piece is None else piece[1]
+        validMove.promotedPiecePosition = pos
+
+    def _getPromotion(self, name: str):
+        """Lets the player choose exact piece, he wants to promote into. Returns a bitboard of a position of a piece and that exact piece"""
+        self._isPromoting = True
+        self._possiblePromotions = self._promotionsGen.calculatePossiblePromotions(self._activeBoard)
+        if self._possiblePromotions == {}:
+            return 0, None
+        working = True
+        while working:
+            self._gameOverCheck()
+            if self._gameOver:
+                pg.event.post(pg.event.Event(pg.QUIT))
+            self.drawGameState()
+            self._drawTopText(f"{name} {self._textContent['promText']}")
+            for e in pg.event.get():
+                if e.type == pg.QUIT:
+                    self._isPromoting = False
+                    return 0, None
+                if e.type == pg.MOUSEBUTTONDOWN:
+                    if e.button != 1:
+                        continue
+                    mousePos = pg.mouse.get_pos()
+                    if self._activeBoard == 1 and self._clickedOnLeftBoard(mousePos):
+                        column, row = self._getBoardSqOnLeftBoardByPixels(mousePos)
+                        if (column, row) in self._possiblePromotions:
+                            self._isPromoting = False
+                            return SQUARES[row][column], self._possiblePromotions[(column, row)]
+                    if self._activeBoard == 0 and self._clickedOnRightBoard(mousePos):
+                        column, row = self._getBoardSqOnRightBoardByPixels(mousePos)
+                        if (column, row) in self._possiblePromotions:
+                            self._isPromoting = False
+                            return SQUARES[row][column], self._possiblePromotions[(column, row)]
+            pg.display.flip()
+
+    def _handleNonPromotionMove(self, move):
+        self._timers[self._getCurrentPlayer()].switch()
+        self._gameStates[self._activeBoard].makeMove(move, self._gameStates[1 - self._activeBoard])
+        for i in range(2):
+            self._validMoves[i] = self._gameStates[i].getValidMoves()
+            self._gameStates[i].updatePawnPromotionMoves(self._validMoves[i], self._gameStates[1 - i])
+        self._moveMade[self._activeBoard] = True
+        self._activeBoard = 1 - self._activeBoard
+        self._gameOverCheck()
+        if not self._gameOver:
+            self._timers[self._getCurrentPlayer()].switch()
+        self.drawGameState()
+        self._hourglass = Hourglass(self._getCurrentPlayer(), self._RL.IMAGES["hourglass"])
+        self._playSoundIfAllowed()
+
+    def _triedToMakeIllegalMove(self):
         return not self._moveMade[self._activeBoard] and len(self._clicks[self._activeBoard]) == 2
 
     def _resetFirstClick(self):
@@ -568,36 +617,3 @@ class GamePlayMenu(Menu):
         #     self._gameOver = True
         # if len(self._gameStates[0].gameLog) == 1:
         #     self._gameOver = True
-
-    def _getPromotion(self, name: str):
-        """Lets the player choose exact piece, he wants to promote into. Returns a bitboard of a position of a piece and that exact piece"""
-        self._isPromoting = True
-        self._possiblePromotions = self._promotionsGen.calculatePossiblePromotions(self._activeBoard)
-        if self._possiblePromotions == {}:
-            return 0, None
-        working = True
-        while working:
-            self._gameOverCheck()
-            if self._gameOver:
-                pg.event.post(pg.event.Event(pg.QUIT))
-            self.drawGameState()
-            self._drawTopText(f"{name} {self._textContent['promText']}")
-            for e in pg.event.get():
-                if e.type == pg.QUIT:
-                    self._isPromoting = False
-                    return 0, None
-                if e.type == pg.MOUSEBUTTONDOWN:
-                    if e.button != 1:
-                        continue
-                    mousePos = pg.mouse.get_pos()
-                    if self._activeBoard == 1 and self._clickedOnLeftBoard(mousePos):
-                        column, row = self._getBoardSqOnLeftBoardByPixels(mousePos)
-                        if (column, row) in self._possiblePromotions:
-                            self._isPromoting = False
-                            return SQUARES[row][column], self._possiblePromotions[(column, row)]
-                    if self._activeBoard == 0 and self._clickedOnRightBoard(mousePos):
-                        column, row = self._getBoardSqOnRightBoardByPixels(mousePos)
-                        if (column, row) in self._possiblePromotions:
-                            self._isPromoting = False
-                            return SQUARES[row][column], self._possiblePromotions[(column, row)]
-            pg.display.flip()

@@ -16,11 +16,13 @@ class NewGameMenu(Menu):
         self._NAMES = deepcopy(playerNames)
         self._names = deepcopy(self._NAMES)
 
-        backBtnPos, playBtnPos, board1ImgPos, board2ImgPos, gameModeDDMPos, ddm1pos, ddm2pos, ddm3pos, ddm4pos = self._generatePositionsInPixels()
+        backBtnPos, playBtnPos = self._generateBtnPositionsInPixels()
         self._back_btn = Button(self._RL.IMAGES["button"], backBtnPos, self._textContent["Back_btn"], self._font)
         self._play_btn = Button(self._RL.IMAGES["button"], playBtnPos, self._textContent["Play_btn"], self._font)
+        board1ImgPos, board2ImgPos = self._generateImgPositionsInPixels()
         self._board1_img = Image(self._RL.IMAGES["board_with_pieces1"], board1ImgPos, (BOARD_SIZE // 2, BOARD_SIZE // 2))
         self._board2_img = Image(self._RL.IMAGES["board_with_pieces2"], board2ImgPos, (BOARD_SIZE // 2, BOARD_SIZE // 2))
+        gameModeDDMPos, ddm1pos, ddm2pos, ddm3pos, ddm4pos = self._generateDDMPositionsInPixels()
         positions = (ddm1pos, ddm2pos, ddm3pos, ddm4pos)
         self._player_ddms = [DropDownMenu(positions[i], self._textContent[f"DDM{i + 1}"], self._smallFont,
                                           self._RL.IMAGES["ddm_head"], self._RL.IMAGES["ddm_body"]) for i in range(4)]
@@ -33,9 +35,6 @@ class NewGameMenu(Menu):
 
         self._difficulties = [1, 1, 1, 1]  # 1 = player, 2 = EasyAI, 3 = NormalAI, 4 = HardAI
         self._currentGameMode = 0
-
-    def _generatePositionsInPixels(self):
-        return self._generateBtnPositionsInPixels() + self._generateImgPositionsInPixels() + self._generateDDMPositionsInPixels()
 
     @staticmethod
     def _generateBtnPositionsInPixels():

@@ -64,7 +64,8 @@ class AIHandler:
     def _updateStats(self, potentialScore: int, requiredPiece: str, thinkingTime: int, positionCounter: int, activeBoard: int):
         playerNum = self._getCurrentPlayer(activeBoard)
         self._potentialScores[playerNum] = potentialScore
-        self._requiredPieces[playerNum] = requiredPiece
+        if requiredPiece is not None:
+            self._requiredPieces[playerNum] = requiredPiece
         self.thinkingTime[activeBoard] += thinkingTime
         self.positionCounter[activeBoard] += positionCounter
 
