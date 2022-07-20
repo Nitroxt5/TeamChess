@@ -23,21 +23,30 @@ class Highlighter:
         for i in range(2):
             if selectedSq[i] == ():
                 continue
-            color = "w" if selectedSq[i][1] == 8 else "b"
-            isReserve = True if selectedSq[i][1] == -1 or selectedSq[i][1] == 8 else False
-            square = SQUARES[selectedSq[i][1]][selectedSq[i][0]] if not isReserve else 0
-            piece = self._gameStates[i].getPieceBySquare(square) if not isReserve else color + PIECES[selectedSq[i][0] + 1]
+            isReserve, square, piece = self._getSquareState(selectedSq[i], i)
             if piece is None:
                 continue
             highlightPosition = self._getSelectedSqHighlightPositionInPixelsByBoard(i, selectedSq[i], isReserve)
-            highlighting = Image(self._DARK_GREEN, highlightPosition)
-            highlighting.update(self._screen)
+            Image(self._DARK_GREEN, highlightPosition).update(self._screen)
+
+    def _getSquareState(self, pos: tuple, boardNum: int):
+        """Gets square state:
+
+        figures out if the given square is a board square or reserve square;
+        gets bitboard of this square;
+        gets piece, located on this square
+        """
+        isReserve = True if pos[1] == -1 or pos[1] == 8 else False
+        square = SQUARES[pos[1]][pos[0]] if not isReserve else 0
+        color = "w" if pos[1] == 8 else "b"
+        piece = self._gameStates[boardNum].getPieceBySquare(square) if not isReserve else color + PIECES[pos[0] + 1]
+        return isReserve, square, piece
 
     def _getSelectedSqHighlightPositionInPixelsByBoard(self, boardNum: int, pos: tuple, isReserve: bool):
         if isReserve:
             return self._getSelectedSqReserveHighlightPositionInPixelsByBoard(boardNum, pos)
         else:
-            return self._getBoardHighlightPositionInPixelsByBoard(boardNum, pos)
+            return self._getBoardHighlightPositionInPixelsByLocation(boardNum, pos)
 
     def _getSelectedSqReserveHighlightPositionInPixelsByBoard(self, boardNum: int, pos: tuple):
         if boardNum == 0:
@@ -58,7 +67,7 @@ class Highlighter:
     def _invertCoord(coord: int):
         return DIMENSION - 1 - coord
 
-    def _getBoardHighlightPositionInPixelsByBoard(self, boardNum: int, pos: tuple):
+    def _getBoardHighlightPositionInPixelsByLocation(self, boardNum: int, pos: tuple):
         if boardNum == 0:
             return self._convertBoardSqToPixelsOnLeftBoard(pos)
         else:
@@ -81,26 +90,22 @@ class Highlighter:
         for i in range(2):
             if selectedSq[i] == ():
                 continue
-            isReserve = True if selectedSq[i][1] == -1 or selectedSq[i][1] == 8 else False
-            square = SQUARES[selectedSq[i][1]][selectedSq[i][0]] if not isReserve else 0
-            color = "w" if selectedSq[i][1] == 8 else "b"
-            piece = self._gameStates[i].getPieceBySquare(square) if not isReserve else color + PIECES[selectedSq[i][0] + 1]
-            if not self._needHighlightPossibleMoves(i, isReserve, color, piece):
+            isReserve, square, piece = self._getSquareState(selectedSq[i], i)
+            if not self._needHighlightPossibleMoves(i, isReserve, piece):
                 continue
             endSquares = []
             for movesPart in validMoves[i]:
                 for move in movesPart:
                     if move.startSquare == square and move.endSquare not in endSquares and move.movedPiece == piece:
                         endLoc = getPower(move.endSquare)
+                        highlightPosition = self._getBoardHighlightPositionInPixelsByLocation(i, (endLoc % 8, endLoc // 8))
+                        Image(self._YELLOW, highlightPosition).update(self._screen)
                         endSquares.append(move.endSquare)
-                        highlightPosition = self._getBoardHighlightPositionInPixelsByBoard(i, (endLoc % 8, endLoc // 8))
-                        highlighting = Image(self._YELLOW, highlightPosition)
-                        highlighting.update(self._screen)
 
-    def _needHighlightPossibleMoves(self, boardNum: int, isReserve: bool, color: str, piece: str):
+    def _needHighlightPossibleMoves(self, boardNum: int, isReserve: bool, piece: str):
         if piece is None:
             return False
-        if isReserve and self._gameStates[boardNum].reserve[color][piece[1]] < 1:
+        if isReserve and self._gameStates[boardNum].reserve[piece[0]][piece[1]] < 1:
             return False
         if piece[0] != ("w" if self._gameStates[boardNum].whiteTurn else "b"):
             return False
@@ -114,14 +119,12 @@ class Highlighter:
             startLoc = getPower(lastMove.startSquare)
             endLoc = getPower(lastMove.endSquare)
             if lastMove.isReserve:
-                highlightStartPosition = self._getLastMoveReserveHighlightPositionInPixelsByBoard(i, lastMove)
+                highlightStartPosition = self._getLastMoveReserveHighlightPositionInPixels(i, lastMove)
             else:
-                highlightStartPosition = self._getBoardHighlightPositionInPixelsByBoard(i, (startLoc % 8, startLoc // 8))
-            highlightEndPosition = self._getBoardHighlightPositionInPixelsByBoard(i, (endLoc % 8, endLoc // 8))
-            startHighlighting = Image(self._BLUE, highlightStartPosition)
-            endHighlighting = Image(self._BLUE, highlightEndPosition)
-            startHighlighting.update(self._screen)
-            endHighlighting.update(self._screen)
+                highlightStartPosition = self._getBoardHighlightPositionInPixelsByLocation(i, (startLoc % 8, startLoc // 8))
+            highlightEndPosition = self._getBoardHighlightPositionInPixelsByLocation(i, (endLoc % 8, endLoc // 8))
+            Image(self._BLUE, highlightStartPosition).update(self._screen)
+            Image(self._BLUE, highlightEndPosition).update(self._screen)
 
     def _needHighlightLastMove(self, boardNum: int, pos: tuple):
         if pos == ():
@@ -140,7 +143,7 @@ class Highlighter:
         turn = "w" if self._gameStates[boardNum].whiteTurn else "b"
         return self._gameStates[boardNum].reserve[color][PIECES[pos[0] + 1]] == 0 or color != turn
 
-    def _getLastMoveReserveHighlightPositionInPixelsByBoard(self, boardNum: int, move):
+    def _getLastMoveReserveHighlightPositionInPixels(self, boardNum: int, move):
         if boardNum == 0:
             return self._convertLastMoveReserveSqToPixelsOnLeftBoard(move)
         else:
@@ -160,6 +163,5 @@ class Highlighter:
         if possiblePromotions == {} or boardNum == -1:
             return
         for pos in possiblePromotions.keys():
-            highlightPosition = self._getBoardHighlightPositionInPixelsByBoard(1 - boardNum, pos)
-            highlighting = Image(self._RL.IMAGES["frame"], highlightPosition)
-            highlighting.update(self._screen)
+            highlightPosition = self._getBoardHighlightPositionInPixelsByLocation(1 - boardNum, pos)
+            Image(self._RL.IMAGES["frame"], highlightPosition).update(self._screen)
