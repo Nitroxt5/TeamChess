@@ -354,11 +354,14 @@ class GamePlayMenu(Menu):
 
     def _handleToMenuBtn(self, dialogWindowMenu, mousePos: tuple):
         if self._toMenu_btn.checkForInput(mousePos):
+            self._timers[self._getCurrentPlayer()].switch()
             if dialogWindowMenu.create(self._textContent["DW1"], self):
                 pg.event.post(pg.event.Event(pg.QUIT))
+            self._timers[self._getCurrentPlayer()].switch()
 
     def _handleRestartBtn(self, dialogWindowMenu, mousePos: tuple, difficulties: list):
         if self._restart_btn.checkForInput(mousePos):
+            self._timers[self._getCurrentPlayer()].switch()
             if dialogWindowMenu.create(self._textContent["DW2"], self):
                 self._AI.terminate()
                 ConsoleLogger.endgameOutput(self._gameStates, difficulties, self._AI)
@@ -366,6 +369,7 @@ class GamePlayMenu(Menu):
                 self.drawGameState()
                 self._timers[0].switch()
                 pg.display.flip()
+            self._timers[self._getCurrentPlayer()].switch()
 
     def _handleDDMs(self, mousePos: tuple):
         for i, ddm in enumerate(self._requiredPiece_ddms):
