@@ -1,8 +1,12 @@
-from TeamChess.Utils.MagicConsts import CORRECTIONS, CASTLE_SQUARES, COLUMN_TO_LETTER, ROW_TO_NUMBER
+from Utils.MagicConsts import CORRECTIONS, CASTLE_SQUARES, COLUMN_TO_LETTER, ROW_TO_NUMBER
 from TestDLL import getPower
 
 
 class Move:
+    __slots__ = "startSquare", "endSquare", "movedPiece", "capturedPiece", "moveID", "isReserve", "isEnpassant",\
+                "isCastle", "isFirst", "isPawnPromotion", "isCapture", "promotedTo", "promotedPiecePosition",\
+                "estimatedScore", "exactScore", "goodScore", "isKiller"
+
     def __init__(self, startSq, endSq, gameState, movedPiece: str = None, isEnpassant=False,
                  isCastle=False, isFirst=False, isReserve=False, promotedTo="", promotedPiecePosition=0):
         self.isReserve = isReserve

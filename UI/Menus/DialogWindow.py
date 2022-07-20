@@ -1,7 +1,7 @@
-from TeamChess.UI.WindowSizeConsts import FONT_SIZE, FPS
-from TeamChess.UI.UIObjects import Label, DialogWindow
-from TeamChess.UI.Menus.Menu import Menu
 import pygame as pg
+from UI.Menus.Menu import Menu
+from UI.UIObjects import Label, DialogWindow
+from UI.WindowSizeConsts import FONT_SIZE, FPS
 
 
 class DialogWindowMenu(Menu):

@@ -1,8 +1,8 @@
-from TeamChess.UI.WindowSizeConsts import FONT_SIZE, FPS, SCREEN_HEIGHT, SCREEN_WIDTH, SQ_SIZE, BOARD_SIZE
-from TeamChess.UI.UIObjects import Label, Button, Image, DropDownMenu
-from TeamChess.UI.Menus.Menu import Menu
 import pygame as pg
 from copy import deepcopy
+from UI.Menus.Menu import Menu
+from UI.UIObjects import Label, Button, Image, DropDownMenu
+from UI.WindowSizeConsts import FONT_SIZE, FPS, SCREEN_HEIGHT, SCREEN_WIDTH, SQ_SIZE, BOARD_SIZE
 
 
 class NewGameMenu(Menu):

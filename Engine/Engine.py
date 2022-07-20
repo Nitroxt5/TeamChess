@@ -1,11 +1,11 @@
-from TeamChess.Utils.MagicConsts import CASTLE_SQUARES, CASTLE_SIDES, ROWS, COLUMNS, COLORED_PIECES
-from TestDLL import getPower
-from TeamChess.Utils.FENConverter import FENAndGSConverter
-from TeamChess.Generators.GSHasher import GSHasher
-from TeamChess.Generators.ThreatTables import ThreatTableGenerator
-from TeamChess.Generators.MoveGen import MoveGenerator
-from TeamChess.Engine.Move import Move
 import ctypes
+from TestDLL import getPower
+from Generators.GSHasher import GSHasher
+from Generators.MoveGen import MoveGenerator
+from Generators.ThreatTables import ThreatTableGenerator
+from Utils.Asserter import Asserter
+from Utils.FENConverter import FENAndGSConverter
+from Utils.MagicConsts import CASTLE_SQUARES, CASTLE_SIDES, ROWS, COLUMNS, COLORED_PIECES
 
 
 class GameState:
@@ -47,24 +47,12 @@ class GameState:
         self.isBlackInCheck = False
         self.currentValidMovesCount = 0
 
-    def assertionStartCheck(self, move=None):
-        msg = ""
-        if isinstance(move, Move):
-            msg = f"move = {move.movedPiece}, {bin(move.startSquare)}, {bin(move.endSquare)}, {self.isWhiteInCheck}, {self.isBlackInCheck}"
-            assert move.endSquare != 0, msg
-        assert self.bbOfPieces["wK"] != 0, msg
-        assert self.bbOfPieces["bK"] != 0, msg
-
-    def assertionEndCheck(self):
-        assert self.bbOfPieces["wK"] != 0
-        assert self.bbOfPieces["bK"] != 0
-
     def __repr__(self):
         return FENAndGSConverter.gameStateToFEN(self)
 
     def makeMove(self, move, other=None):
         """Makes provided move. Switches turn. Updates hash. Rebuilds threat tables"""
-        self.assertionStartCheck(move=move)
+        Asserter.assertionStartCheck(self, move=move)
         self._appendToGameStateLogs(move)
         if move.isCapture and isinstance(other, GameState):
             other._updateGameStateReserve(move.capturedPiece, 1)
@@ -89,7 +77,7 @@ class GameState:
         self._updateCastleRights(move)
         self._threatTableGenerator.createThreatTable()
         self.inCheck()
-        self.assertionEndCheck()
+        Asserter.assertionEndCheck(self)
 
     def _appendToGameStateLogs(self, move):
         self._hasher.appendHashToLog()
@@ -145,7 +133,7 @@ class GameState:
 
     def undoMove(self):
         """Undoes last move. Switches turn. Undoes hash. Undoes threat tables"""
-        self.assertionStartCheck()
+        Asserter.assertionStartCheck(self)
         if len(self.gameLog) == 0:
             return
         move = self._popFromLogs()
@@ -167,7 +155,7 @@ class GameState:
         self.checkmate = False
         self.stalemate = False
         self.inCheck()
-        self.assertionEndCheck()
+        Asserter.assertionEndCheck(self)
 
     def _popFromLogs(self):
         self._hasher.popHashFromLog()
@@ -203,7 +191,7 @@ class GameState:
 
     def _updateCastleRights(self, move):
         """Checks whether any king or rook were moved. Checks whether any rook was captured. Updates castle rights according to this"""
-        self.assertionStartCheck(move=move)
+        Asserter.assertionStartCheck(self, move=move)
         if move.isReserve:
             return
         if move.movedPiece == "wK":
@@ -230,7 +218,7 @@ class GameState:
 
     def inCheck(self):
         """Checks whether current player is in check. Updates both inCheck flags"""
-        self.assertionStartCheck()
+        Asserter.assertionStartCheck(self)
         if self.whiteTurn:
             self.isWhiteInCheck = self.isSquareAttackedByOpponent(self.bbOfPieces["wK"])
             self.whiteTurn = not self.whiteTurn
@@ -245,7 +233,6 @@ class GameState:
             return self.isBlackInCheck
 
     def isSquareAttackedByOpponent(self, square: int):
-        self.assertionStartCheck(square)
         if self.whiteTurn and (self._threatTableGenerator.bbOfThreats["b"] & square):
             return True
         if not self.whiteTurn and (self._threatTableGenerator.bbOfThreats["w"] & square):
@@ -254,7 +241,7 @@ class GameState:
 
     def canBeRemoved(self, square: int, otherColor: str):
         """Checks whether a piece on a specified square can be removed for a promotion on the other board"""
-        self.assertionStartCheck(square)
+        Asserter.assertionStartCheck(self, square=square)
         piece = self.getPieceBySquare(square)
         if piece is None:
             return False

@@ -1,12 +1,12 @@
-from TeamChess.UI.WindowSizeConsts import SCREEN_WIDTH, SCREEN_HEIGHT
-from TeamChess.Utils.ResourceManager import ResourceLoader
-from TeamChess.UI.Menus.MainMenu import MainMenu
-from TeamChess.UI.Menus.SettingsMenu import SettingsMenu
-from TeamChess.UI.Menus.DialogWindow import DialogWindowMenu
-from TeamChess.UI.Menus.NewGameMenu import NewGameMenu
-from TeamChess.UI.Menus.GamePlayMenu import GamePlayMenu
 import pygame as pg
 from multiprocessing import freeze_support
+from UI.Menus.DialogWindow import DialogWindowMenu
+from UI.Menus.GamePlayMenu import GamePlayMenu
+from UI.Menus.MainMenu import MainMenu
+from UI.Menus.NewGameMenu import NewGameMenu
+from UI.Menus.SettingsMenu import SettingsMenu
+from UI.WindowSizeConsts import SCREEN_WIDTH, SCREEN_HEIGHT
+from Utils.ResourceManager import ResourceLoader
 
 if __name__ == "__main__":
     freeze_support()
@@ -14,9 +14,9 @@ if __name__ == "__main__":
     RL = ResourceLoader()
     RL.loadResources()
     if RL.SETTINGS["language"]:
-        from TeamChess.Localization.lang_en import *
+        from Localization.lang_en import *
     else:
-        from TeamChess.Localization.lang_ru import *
+        from Localization.lang_ru import *
     mainScreen = pg.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
     pg.display.set_caption("SwiChess")
     pg.display.set_icon(RL.IMAGES["icon"])

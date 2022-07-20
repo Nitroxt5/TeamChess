@@ -1,7 +1,8 @@
-from TeamChess.Utils.MagicConsts import COLORED_PIECES, CORRECTIONS, POSSIBLE_PIECES_TO_PROMOTE, PAWN_STARTS, CASTLE_SIDES, ROWS
-from TestDLL import numSplit
-from TeamChess.Engine.Move import Move
 import ctypes
+from TestDLL import numSplit
+from Engine.Move import Move
+from Utils.Asserter import Asserter
+from Utils.MagicConsts import COLORED_PIECES, CORRECTIONS, POSSIBLE_PIECES_TO_PROMOTE, PAWN_STARTS, CASTLE_SIDES, ROWS
 
 
 class MoveGenerator:
@@ -12,7 +13,7 @@ class MoveGenerator:
 
     def getValidMoves(self):
         """Generates all valid moves (checks for threats to kings)"""
-        self._gameState.assertionStartCheck()
+        Asserter.assertionStartCheck(self._gameState)
         moves = self._getPossibleMoves()
         self._getCastleMoves(self._gameState.bbOfPieces[f"{self._getAllyColor()}K"], moves)
         self._getReserveMoves(moves)
@@ -24,23 +25,23 @@ class MoveGenerator:
                     movesPart.remove(movesPart[i])
         self._gameEndCheck(moves)
         self._drawOnRepeatCheck()
-        self._gameState.assertionEndCheck()
+        Asserter.assertionEndCheck(self._gameState)
         return moves
 
     def _getPossibleMoves(self):
         """Generates all possible moves (ignores their validity in terms of king safety)"""
-        self._gameState.assertionStartCheck()
+        Asserter.assertionStartCheck(self._gameState)
         moves = [[], [], []]
         for piece in COLORED_PIECES:
             if (piece[0] == "w" and self._gameState.whiteTurn) or (piece[0] == "b" and not self._gameState.whiteTurn):
                 splitPositions = numSplit(self._gameState.bbOfPieces[piece])
                 for position in splitPositions:
                     self._moveFunc[piece[1]](position, moves)
-        self._gameState.assertionEndCheck()
+        Asserter.assertionEndCheck(self._gameState)
         return moves
 
     def _getPawnMoves(self, square: int, moves: list):
-        self._gameState.assertionStartCheck(square)
+        Asserter.assertionStartCheck(self._gameState, square=square)
         if self._gameState.whiteTurn:
             self._getWhitePawnMoves(square, moves)
         if not self._gameState.whiteTurn:
@@ -127,7 +128,7 @@ class MoveGenerator:
             moves[0].append(Move(square, square >> 9, self._gameState, movedPiece="bp", isEnpassant=True))
 
     def _getKnightMoves(self, square: int, moves: list):
-        self._gameState.assertionStartCheck(square)
+        Asserter.assertionStartCheck(self._gameState, square=square)
         piece = f"{self._getAllyColor()}N"
         if square & CORRECTIONS["h"] & CORRECTIONS["78"]:
             tempSquare = square << 15
@@ -165,7 +166,7 @@ class MoveGenerator:
         return "b" if self._gameState.whiteTurn else "w"
 
     def _getKingMoves(self, square: int, moves: list):
-        self._gameState.assertionStartCheck(square)
+        Asserter.assertionStartCheck(self._gameState, square=square)
         piece = f"{self._getAllyColor()}K"
         if square & CORRECTIONS["8"]:
             tempSquare = square << 8
@@ -191,10 +192,10 @@ class MoveGenerator:
         if square & CORRECTIONS["a"] & CORRECTIONS["8"]:
             tempSquare = square << 9
             self._appendMoveIfPossible(square, tempSquare, piece, moves)
-        self._gameState.assertionEndCheck()
+        Asserter.assertionEndCheck(self._gameState)
 
     def _getVerticalAndHorizontalMoves(self, square: int, moves: list, piece="R"):
-        self._gameState.assertionStartCheck(square)
+        Asserter.assertionStartCheck(self._gameState, square=square)
         enemyColor = self._getEnemyColor()
         coloredPiece = f"{self._getAllyColor()}{piece}"
         tempSquare = square
@@ -239,7 +240,7 @@ class MoveGenerator:
                 break
 
     def _getDiagonalMoves(self, square: int, moves: list, piece="B"):
-        self._gameState.assertionStartCheck(square)
+        Asserter.assertionStartCheck(self._gameState, square=square)
         enemyColor = self._getEnemyColor()
         coloredPiece = f"{self._getAllyColor()}{piece}"
         tempSquare = square
@@ -288,7 +289,7 @@ class MoveGenerator:
         self._getDiagonalMoves(square, moves, "Q")
 
     def _getCastleMoves(self, square: int, moves: list):
-        self._gameState.assertionStartCheck(square)
+        Asserter.assertionStartCheck(self._gameState, square=square)
         if self._gameState.isSquareAttackedByOpponent(square):
             return
         if self._isCastleAvailableForWhite("wKs") or self._isCastleAvailableForBlack("bKs"):
@@ -305,7 +306,7 @@ class MoveGenerator:
     def _getKingSideCastle(self, square: int, moves: list):
         if self._areKingSideSquaresEmpty(square) and not self._areKingSideSquaresUnderEnemyAttack(square):
             moves[0].append(Move(square, square >> 2, self._gameState, movedPiece=f"{self._getAllyColor()}K", isCastle=True))
-        self._gameState.assertionEndCheck()
+        Asserter.assertionEndCheck(self._gameState)
 
     def _areKingSideSquaresEmpty(self, square):
         return not (self._gameState.getSqState(square >> 1) or self._gameState.getSqState(square >> 2))
@@ -317,7 +318,7 @@ class MoveGenerator:
     def _getQueenSideCastle(self, square: int, moves: list):
         if self._areQueenSideSquaresEmpty(square) and not self._areQueenSideSquaresUnderEnemyAttack(square):
             moves[0].append(Move(square, square << 2, self._gameState, movedPiece=f"{self._getAllyColor()}K", isCastle=True))
-        self._gameState.assertionEndCheck()
+        Asserter.assertionEndCheck(self._gameState)
 
     def _areQueenSideSquaresEmpty(self, square):
         return not (self._gameState.getSqState(square << 1) or self._gameState.getSqState(square << 2) or
@@ -328,7 +329,7 @@ class MoveGenerator:
                self._gameState.isSquareAttackedByOpponent(square << 2)
 
     def _getReserveMoves(self, moves):
-        self._gameState.assertionStartCheck()
+        Asserter.assertionStartCheck(self._gameState)
         reserveMoves = []
         allyColor = self._getAllyColor()
         freeSquares = numSplit(~ctypes.c_uint64(self._gameState.bbOfOccupiedSquares["a"]).value)
@@ -339,7 +340,7 @@ class MoveGenerator:
                 if not ((sq & ROWS["1"] or sq & ROWS["8"]) and piece == "p"):
                     reserveMoves.append(Move(0, sq, self._gameState, movedPiece=allyColor + piece, isReserve=True))
         moves[1] = reserveMoves
-        self._gameState.assertionEndCheck()
+        Asserter.assertionEndCheck(self._gameState)
 
     def _isValid(self, move):
         self._gameState.makeMove(move)
@@ -354,12 +355,12 @@ class MoveGenerator:
 
         Mostly, this method should be called right after getValidMoves()
         """
-        self._gameState.assertionStartCheck()
+        Asserter.assertionStartCheck(self._gameState)
         badPieces = self._getPiecesUnavailableToPromoteTo(other)
         for i in range(len(moves[2]) - 1, -1, -1):
             if moves[2][i].promotedTo in badPieces:
                 moves[2].remove(moves[2][i])
-        self._gameState.assertionEndCheck()
+        Asserter.assertionEndCheck(self._gameState)
 
     def _getPiecesUnavailableToPromoteTo(self, other):
         color = self._getAllyColor()
@@ -394,7 +395,7 @@ class MoveGenerator:
 
     def getUnavailableReserveMoves(self):
         """Generates and validates reserve moves which are not available due to absence of some pieces"""
-        self._gameState.assertionStartCheck()
+        Asserter.assertionStartCheck(self._gameState)
         reserveMoves = []
         allyColor = self._getAllyColor()
         freeSquares = numSplit(~ctypes.c_uint64(self._gameState.bbOfOccupiedSquares["a"]).value)
@@ -406,5 +407,5 @@ class MoveGenerator:
                     move = Move(0, sq, self._gameState, movedPiece=allyColor + piece, isReserve=True)
                     if self._isValid(move):
                         reserveMoves.append(move)
-        self._gameState.assertionEndCheck()
+        Asserter.assertionEndCheck(self._gameState)
         return reserveMoves

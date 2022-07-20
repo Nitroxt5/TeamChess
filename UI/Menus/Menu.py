@@ -1,4 +1,4 @@
-from TeamChess.UI.WindowSizeConsts import SCREEN_HEIGHT, SCREEN_WIDTH
+from UI.WindowSizeConsts import SCREEN_HEIGHT, SCREEN_WIDTH
 
 
 class Menu:

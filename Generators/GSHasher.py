@@ -1,6 +1,6 @@
-from TeamChess.Utils.MagicConsts import MAX_INT, COLORED_PIECES, COLORED_PIECES_CODES, CASTLE_SQUARES
-from TestDLL import numSplit, getPower
 from random import randint, seed
+from TestDLL import numSplit, getPower
+from Utils.MagicConsts import MAX_INT, COLORED_PIECES, COLORED_PIECES_CODES, CASTLE_SQUARES
 
 
 class GSHasher:

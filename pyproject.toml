@@ -6,9 +6,9 @@ authors = ["Nitroxt5 <filippov.maxim52@gmail.com>"]
 
 [tool.poetry.dependencies]
 python = "^3.9"
-testdll = {path = "../teamchess/TestDLL"}
-scoreboard = {path = "../teamchess/ScoreBoard"}
 pygame = "^2.1.2"
+testdll = {path = "TestDLL"}
+scoreboard = {path = "ScoreBoard"}
 
 [tool.poetry.dev-dependencies]
 

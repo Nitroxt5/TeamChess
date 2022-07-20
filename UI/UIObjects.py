@@ -1,6 +1,6 @@
 import pygame as pg
 from time import perf_counter
-from TeamChess.UI.WindowSizeConsts import SCREEN_HEIGHT, SCREEN_WIDTH, SQ_SIZE, MARGIN, MARGIN_LEFT
+from UI.WindowSizeConsts import SCREEN_HEIGHT, SCREEN_WIDTH, SQ_SIZE, MARGIN, MARGIN_LEFT
 
 
 class UIObject:
@@ -222,13 +222,13 @@ class ImgDropDownMenu(UIObject):
         if self._state:
             for i in range(1, len(self._buttons)):
                 if self._buttons[i].checkForInput(position):
-                    self._changeHead(i)
+                    self.changeHead(i)
                     self.switch()
                     return i
 
-    def _changeHead(self, index: int):
-        if index != 0:
-            self._buttons[0] = Button(self._headImages[index - 1], (self._xPos, self._yPos), "", None, topleft=self._topLeft)
+    def changeHead(self, head: int):
+        if head != 0:
+            self._buttons[0] = Button(self._headImages[head - 1], (self._xPos, self._yPos), "", None, topleft=self._topLeft)
 
     def update(self, screen: pg.Surface):
         self._buttons[0].update(screen)

@@ -1,10 +1,10 @@
-from TeamChess.Utils.MagicConsts import SQUARES
-from TeamChess.Engine.Move import Move
-from TeamChess.Generators.PossiblePromotions import PossiblePromotionsGen
-from TeamChess.AI.AIpy import AI
-from TeamChess.Utils.Logger import ConsoleLogger
 from multiprocessing import Process, Queue
 from random import randint
+from AI.AIpy import AI
+from Engine.Move import Move
+from Generators.PossiblePromotions import PossiblePromotionsGen
+from Utils.Logger import ConsoleLogger
+from Utils.MagicConsts import SQUARES
 
 
 class AIHandler:

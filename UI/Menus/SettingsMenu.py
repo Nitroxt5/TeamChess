@@ -1,7 +1,7 @@
-from TeamChess.UI.WindowSizeConsts import FONT_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH, SQ_SIZE, FPS
-from TeamChess.UI.Menus.Menu import Menu
-from TeamChess.UI.UIObjects import Button, Label, RadioLabel, RadioButton, Image
 import pygame as pg
+from UI.Menus.Menu import Menu
+from UI.UIObjects import Button, Label, RadioLabel, RadioButton, Image
+from UI.WindowSizeConsts import FONT_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH, SQ_SIZE, FPS
 
 
 class SettingsMenu(Menu):

@@ -1,10 +1,10 @@
-from math import sqrt
-from ScoreBoard import scoreBoard
-from random import randint
-from time import perf_counter
 from dataclasses import dataclass, field
-from TeamChess.Engine.Move import Move
-from TeamChess.Utils.MagicConsts import CHECKMATE
+from math import sqrt
+from random import randint
+from ScoreBoard import scoreBoard
+from time import perf_counter
+from Engine.Move import Move
+from Utils.MagicConsts import CHECKMATE
 
 
 @dataclass

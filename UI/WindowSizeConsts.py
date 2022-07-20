@@ -1,5 +1,5 @@
 import pygame as pg
-from TeamChess.Utils.MagicConsts import DIMENSION
+from Utils.MagicConsts import DIMENSION
 
 pg.init()
 SCREEN_WIDTH, SCREEN_HEIGHT = pg.display.Info().current_w, pg.display.Info().current_h

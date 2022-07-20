@@ -1,5 +1,5 @@
-from TeamChess.Utils.MagicConsts import POSSIBLE_PIECES_TO_PROMOTE
 from TestDLL import numSplit, getPower
+from Utils.MagicConsts import POSSIBLE_PIECES_TO_PROMOTE
 
 
 class PossiblePromotionsGen:

@@ -1,8 +1,8 @@
-from TeamChess.UI.WindowSizeConsts import FONT_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH, FPS
-from TeamChess.UI.Menus.Menu import Menu
-from TeamChess.UI.UIObjects import Button, Label
-from TeamChess.Utils.ResourceManager import SettingsSaver
 import pygame as pg
+from UI.Menus.Menu import Menu
+from UI.UIObjects import Button, Label
+from UI.WindowSizeConsts import FONT_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH, FPS
+from Utils.ResourceManager import SettingsSaver
 
 
 class MainMenu(Menu):

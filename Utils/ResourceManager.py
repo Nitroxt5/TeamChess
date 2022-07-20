@@ -1,10 +1,10 @@
-from TeamChess.Utils.MagicConsts import EMPTY_PIECES, COLORED_PIECES
-from TeamChess.UI.WindowSizeConsts import SQ_SIZE, SCREEN_WIDTH, SCREEN_HEIGHT, BOARD_SIZE
-import pygame as pg
 import json
 from os.path import isfile, join
-import sys
 from os import getcwd
+import pygame as pg
+import sys
+from UI.WindowSizeConsts import SQ_SIZE, SCREEN_WIDTH, SCREEN_HEIGHT, BOARD_SIZE
+from Utils.MagicConsts import EMPTY_PIECES, COLORED_PIECES
 
 
 class ResourceLoader:

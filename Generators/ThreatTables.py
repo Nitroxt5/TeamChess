@@ -1,6 +1,6 @@
-from TeamChess.Utils.MagicConsts import PIECES, COLORS, CORRECTIONS
-from TestDLL import numSplit
 from copy import deepcopy
+from TestDLL import numSplit
+from Utils.MagicConsts import PIECES, COLORS, CORRECTIONS
 
 
 class ThreatTableGenerator:

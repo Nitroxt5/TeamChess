@@ -1,18 +1,18 @@
-from TeamChess.Utils.MagicConsts import COLORED_PIECES, DIMENSION, RESERVE_PIECES, GAME_MODES, PIECES, SQUARES
-from TeamChess.Utils.ResourceManager import SettingsSaver
-from TeamChess.Utils.Logger import ConsoleLogger
-from TeamChess.UI.WindowSizeConsts import FONT_SIZE, MARGIN, MARGIN_LEFT, RESERVE_MARGIN, SCREEN_HEIGHT, SCREEN_WIDTH, BOARD_SIZE, SQ_SIZE, FPS
-from TeamChess.UI.UIObjects import Label, Hourglass, Timer, Image, RadioButton, ImgDropDownMenu
-from TeamChess.UI.Menus.Menu import Menu
-from TeamChess.UI.Highlighter import Highlighter
-from TeamChess.Engine.Engine import GameState
-from TeamChess.Engine.Move import Move
-from TeamChess.AI.AIHandler import AIHandler
-from TeamChess.Generators.PossiblePromotions import PossiblePromotionsGen
-from TestDLL import numSplit, getPower
-from copy import deepcopy
 import pygame as pg
+from copy import deepcopy
 from sys import exit as sys_exit
+from TestDLL import numSplit, getPower
+from AI.AIHandler import AIHandler
+from Engine.Engine import GameState
+from Engine.Move import Move
+from Generators.PossiblePromotions import PossiblePromotionsGen
+from UI.Highlighter import Highlighter
+from UI.Menus.Menu import Menu
+from UI.UIObjects import Label, Hourglass, Timer, Image, RadioButton, ImgDropDownMenu
+from UI.WindowSizeConsts import FONT_SIZE, MARGIN, MARGIN_LEFT, RESERVE_MARGIN, SCREEN_HEIGHT, SCREEN_WIDTH, BOARD_SIZE, SQ_SIZE, FPS
+from Utils.Logger import ConsoleLogger
+from Utils.MagicConsts import COLORED_PIECES, DIMENSION, RESERVE_PIECES, GAME_MODES, PIECES, SQUARES
+from Utils.ResourceManager import SettingsSaver
 
 
 class GamePlayMenu(Menu):
@@ -195,7 +195,9 @@ class GamePlayMenu(Menu):
                 player = self._getCurrentPlayer()
                 self._AI.start(self._timers[player].value, difficulties[player], self._activeBoard, self._getPlayerName(playerNames))
             if self._AI.cameUpWithMove:
-                self._timers[self._getCurrentPlayer()].switch()
+                player = self._getCurrentPlayer()
+                self._requiredPiece_ddms[player].changeHead(RESERVE_PIECES[self._requiredPieces[player][1]] + 1)
+                self._timers[player].switch()
                 self._gameStates[self._activeBoard].makeMove(self._AI.move, self._gameStates[1 - self._activeBoard])
                 for j in range(2):
                     self._validMoves[j] = self._gameStates[j].getValidMoves()
@@ -205,11 +207,11 @@ class GamePlayMenu(Menu):
                 self._gameOverCheck()
                 if not self._gameOver:
                     self._timers[self._getCurrentPlayer()].switch()
+                self.drawGameState()
                 self._hourglass = Hourglass(self._getCurrentPlayer(), self._RL.IMAGES["hourglass"])
                 self._resetActiveBoardSelectAndClicks()
                 self._AI.cameUpWithMove = False
                 self._playSoundIfAllowed()
-                self.drawGameState()
             for i in range(2):
                 if self._moveMade[i]:
                     self._soundPlayed = False

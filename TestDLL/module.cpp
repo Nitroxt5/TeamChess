@@ -48,16 +48,16 @@ static PyObject* getBitsCount(PyObject* self, PyObject* args)
 }
 
 static PyMethodDef TestDLL_methods[] = {
-    { "numSplit", (PyCFunction)numSplit, METH_VARARGS, ""},
-    { "getPower", (PyCFunction)getPower, METH_VARARGS, ""},
-    { "getBitsCount", (PyCFunction)getBitsCount, METH_VARARGS, ""},
+    { "numSplit", (PyCFunction)numSplit, METH_VARARGS, "Splits a number into a sum of powers of 2"},
+    { "getPower", (PyCFunction)getPower, METH_VARARGS, "Gets a number of the most right bit. Works with 64 bit variables. The most left bit is 0 the most right is 63"},
+    { "getBitsCount", (PyCFunction)getBitsCount, METH_VARARGS, "Counts set bits in given number"},
     { NULL, NULL, 0, NULL }
 };
 
 static PyModuleDef TestDLL_module = {
     PyModuleDef_HEAD_INIT,
     "TestDLL",
-    "C++ extension",
+    "Provides some fast functions to work with bitboards",
     -1,
     TestDLL_methods
 };

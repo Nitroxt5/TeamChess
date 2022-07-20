@@ -9,7 +9,7 @@ python-versions = ">=3.6"
 [[package]]
 name = "ScoreBoard"
 version = "1.0"
-description = "C++ extension"
+description = "Provides a fast score board function"
 category = "main"
 optional = false
 python-versions = "*"
@@ -22,7 +22,7 @@ url = "ScoreBoard"
 [[package]]
 name = "TestDLL"
 version = "1.1"
-description = "C++ extension"
+description = "Provides some fast functions to work with bitboards"
 category = "main"
 optional = false
 python-versions = "*"
@@ -35,7 +35,7 @@ url = "TestDLL"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "896a02ad54991a63e0822f3e13ae0f10f402be613bb3463e3e4e7debd74969ee"
+content-hash = "b78b06b7ebabe699077c8b9feb477fb2145059935c885f23c610ed1010d59572"
 
 [metadata.files]
 pygame = [

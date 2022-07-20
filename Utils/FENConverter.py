@@ -1,5 +1,5 @@
-from TeamChess.Utils.MagicConsts import CASTLE_SIDES, COLORED_PIECES, COLORS, PIECES, SQUARES
 from TestDLL import getPower
+from Utils.MagicConsts import CASTLE_SIDES, COLORED_PIECES, COLORS, PIECES, SQUARES
 
 
 class FENAndGSConverter:

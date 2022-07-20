@@ -1,8 +1,8 @@
-from TeamChess.Utils.MagicConsts import PIECES, SQUARES, DIMENSION, RESERVE_PIECES
-from TeamChess.UI.WindowSizeConsts import SQ_SIZE, MARGIN, MARGIN_LEFT, RESERVE_MARGIN, BOARD_SIZE
-from TeamChess.UI.UIObjects import Image
-from TestDLL import getPower
 import pygame as pg
+from TestDLL import getPower
+from UI.UIObjects import Image
+from UI.WindowSizeConsts import SQ_SIZE, MARGIN, MARGIN_LEFT, RESERVE_MARGIN, BOARD_SIZE
+from Utils.MagicConsts import PIECES, SQUARES, DIMENSION, RESERVE_PIECES
 
 
 class Highlighter:
