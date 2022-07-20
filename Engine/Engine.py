@@ -243,8 +243,7 @@ class GameState:
         """Checks whether a piece on a specified square can be removed for a promotion on the other board"""
         Asserter.assertionStartCheck(self, square=square)
         piece = self.getPieceBySquare(square)
-        if piece is None:
-            return False
+        assert piece is not None
         if piece[0] != otherColor or piece[1] == "p" or piece[1] == "K":
             return False
         canBeRemoved = False

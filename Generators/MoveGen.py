@@ -17,12 +17,7 @@ class MoveGenerator:
         moves = self._getPossibleMoves()
         self._getCastleMoves(self._gameState.bbOfPieces[f"{self._getAllyColor()}K"], moves)
         self._getReserveMoves(moves)
-        for movesPart in moves:
-            if len(movesPart) == 0:
-                continue
-            for i in range(len(movesPart) - 1, -1, -1):
-                if not self._isValid(movesPart[i]):
-                    movesPart.remove(movesPart[i])
+        self._validateMoves(moves)
         self._gameEndCheck(moves)
         self._drawOnRepeatCheck()
         Asserter.assertionEndCheck(self._gameState)
@@ -341,6 +336,14 @@ class MoveGenerator:
                     reserveMoves.append(Move(0, sq, self._gameState, movedPiece=allyColor + piece, isReserve=True))
         moves[1] = reserveMoves
         Asserter.assertionEndCheck(self._gameState)
+
+    def _validateMoves(self, moves):
+        for movesPart in moves:
+            if len(movesPart) == 0:
+                continue
+            for i in range(len(movesPart) - 1, -1, -1):
+                if not self._isValid(movesPart[i]):
+                    movesPart.remove(movesPart[i])
 
     def _isValid(self, move):
         self._gameState.makeMove(move)

@@ -92,15 +92,23 @@ class FENAndGSConverter:
                 if piece is None:
                     emptySquaresCounter += 1
                     continue
-                if emptySquaresCounter > 0:
-                    FEN += str(emptySquaresCounter)
-                    emptySquaresCounter = 0
+                FEN, emptySquaresCounter = FENAndGSConverter._appendEmptySquaresNumberIfPositive(FEN, emptySquaresCounter)
                 FEN += StrPieceToFEN[piece]
-            if emptySquaresCounter > 0:
-                FEN += str(emptySquaresCounter)
-                emptySquaresCounter = 0
-            if i != len(SQUARES) - 1:
-                FEN += "/"
+            FEN, emptySquaresCounter = FENAndGSConverter._appendEmptySquaresNumberIfPositive(FEN, emptySquaresCounter)
+            FEN = FENAndGSConverter._appendSlashIfNotEnd(FEN, i)
+        return FEN
+
+    @staticmethod
+    def _appendEmptySquaresNumberIfPositive(FEN: str, emptySquaresCounter: int):
+        if emptySquaresCounter > 0:
+            FEN += str(emptySquaresCounter)
+            emptySquaresCounter = 0
+        return FEN, emptySquaresCounter
+
+    @staticmethod
+    def _appendSlashIfNotEnd(FEN: str, pos: int):
+        if pos != len(SQUARES) - 1:
+            FEN += "/"
         return FEN
 
     @staticmethod

@@ -7,12 +7,7 @@ class ConsoleLogger:
         for i in range(2):
             print(f"Board {i + 1}:")
             print(gameStates[i].gameLog)
-            if difficulties[i * 2] != 1 and difficulties[i * 2 + 1] != 1:
-                moveCount = len(gameStates[i].gameLog)
-            else:
-                moveCountCeil = ceil(len(gameStates[i].gameLog) / 2)
-                moveCountFloor = floor(len(gameStates[i].gameLog) / 2)
-                moveCount = moveCountCeil if difficulties[i * 2] != 1 else moveCountFloor
+            moveCount = ConsoleLogger._evaluateMoveCount(gameStates, difficulties, i)
             print(f"Moves: {moveCount}")
             print(f"Overall thinking time: {AI.thinkingTime[i]}")
             print(f"Overall positions calculated: {AI.positionCounter[i]}")
@@ -20,6 +15,16 @@ class ConsoleLogger:
                 print(f"Average time per move: {AI.thinkingTime[i] / moveCount}")
                 print(f"Average calculated positions per move: {AI.positionCounter[i] / moveCount}")
                 print(f"Average time per position: {AI.thinkingTime[i] / AI.positionCounter[i]}")
+
+    @staticmethod
+    def _evaluateMoveCount(gameStates: list, difficulties: list, boardNum: int):
+        if difficulties[boardNum * 2] != 1 and difficulties[boardNum * 2 + 1] != 1:
+            moveCount = len(gameStates[boardNum].gameLog)
+        else:
+            moveCountCeil = ceil(len(gameStates[boardNum].gameLog) / 2)
+            moveCountFloor = floor(len(gameStates[boardNum].gameLog) / 2)
+            moveCount = moveCountCeil if difficulties[boardNum * 2] != 1 else moveCountFloor
+        return moveCount
 
     @staticmethod
     def thinkingStart(playerName: str):
