@@ -402,4 +402,7 @@ class Timer(UIObject):
 
     @state.setter
     def state(self, value: bool):
+        if self._startValue < 0:
+            return
         self._state = value
+        self._currentTime = perf_counter()

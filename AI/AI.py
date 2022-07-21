@@ -47,7 +47,7 @@ class AI:
         self._globalValidMovesCount = len(validMoves[0]) + len(validMoves[1]) + len(validMoves[2])
         start = perf_counter()
         myBestUnavailableReservePiece, myPotentialScore = self._getMyBestUnavailableReservePieceAndScore()
-        score = self._calculatePosition(validMoves)
+        score = self._calculatePosition(validMoves, self._DEPTH)
         thinkingTime = perf_counter() - start
         returnQ.put((self._nextMove, myPotentialScore - score, myBestUnavailableReservePiece, thinkingTime, self._counter))
 
@@ -70,14 +70,8 @@ class AI:
                 self._DEPTH = min(requiredDepth, self._EXTREMELY_LOW_TIME_DEPTH)
 
     def _getMyBestUnavailableReservePieceAndScore(self):
-        turn = 1 if self._gameState.whiteTurn else -1
         validMoves = [[], self._gameState.getUnavailableReserveMoves(), []]
-        score = 0
-        if self._globalValidMovesCount < 9:
-            score = self._negaScoutAI(validMoves, -CHECKMATE - 1, CHECKMATE + 1, turn, self._DEPTH, self._DEPTH)
-        else:
-            for currentDepth in range(1, self._DEPTH // 2 + 1):
-                score = self._negaScoutAI(validMoves, -CHECKMATE - 1, CHECKMATE + 1, turn, currentDepth, currentDepth)
+        score = self._calculatePosition(validMoves, self._DEPTH // 2, False)
         myBestUnavailableReservePiece = None
         if isinstance(self._nextMove, Move):
             myBestUnavailableReservePiece = self._nextMove.movedPiece
@@ -91,19 +85,19 @@ class AI:
         self._counter = 0
         self._nextMove = None
 
-    def _calculatePosition(self, validMoves: list) -> int:
+    def _calculatePosition(self, validMoves: list, requiredDepth: int, log=True) -> int:
         turn = 1 if self._gameState.whiteTurn else -1
         score = 0
         if self._globalValidMovesCount < 9:
-            score = self._negaScoutAI(validMoves, -CHECKMATE - 1, CHECKMATE + 1, turn, self._DEPTH, self._DEPTH)
+            score = self._negaScoutAI(validMoves, -CHECKMATE - 1, CHECKMATE + 1, turn, requiredDepth, requiredDepth, log)
         else:
-            for currentDepth in range(1, self._DEPTH + 1):
-                score = self._negaScoutAI(validMoves, -CHECKMATE - 1, CHECKMATE + 1, turn, currentDepth, currentDepth)
+            for currentDepth in range(1, requiredDepth + 1):
+                score = self._negaScoutAI(validMoves, -CHECKMATE - 1, CHECKMATE + 1, turn, currentDepth, currentDepth, log)
                 if score >= CHECKMATE:
                     break
         return score
 
-    def _negaScoutAI(self, validMoves: list, alpha: int, beta: int, turn: int, currentDepth: int, searchDepth: int) -> int:
+    def _negaScoutAI(self, validMoves: list, alpha: int, beta: int, turn: int, currentDepth: int, searchDepth: int, log=True):
         """Algorithm for searching the best move"""
         self._counter += 1
         moves = validMoves[0] + validMoves[1] + validMoves[2]
@@ -127,7 +121,7 @@ class AI:
                 alpha = score
                 self._updateBestMoveHashTable(currentDepth, score)
                 if currentDepth == searchDepth:
-                    self._updateNextMove(currentDepth, score, move)
+                    self._updateNextMove(currentDepth, score, move, log)
             if alpha >= beta:
                 self._killerMoves[currentDepth] = move.moveID
                 break
@@ -216,25 +210,19 @@ class AI:
                (currentDepth == self._hashTableForBestMoves[self._gameState.boardHash][0] and
                 score > self._hashTableForBestMoves[self._gameState.boardHash][1])
 
-    def _updateNextMove(self, currentDepth: int, score: int, move):
+    def _updateNextMove(self, currentDepth: int, score: int, move, log=True):
         move.exactScore = score
         move.estimatedScore = score
         move.goodScore = True
         self._nextMove = move
-        if currentDepth == self._DEPTH:
+        if currentDepth == self._DEPTH and log:
             ConsoleLogger.foundBetterMove(move, score)
 
     def scoreBoardWithRemovedPieceAtPos(self, piece: str, position: int):
-        turn = 1 if self._gameState.whiteTurn else -1
         self._gameState.unsetSqState(piece, position)
         validMoves = self._gameState.getValidMoves()
         self._gameState.updatePawnPromotionMoves(validMoves, self._otherGameState)
-        score = 0
-        if self._globalValidMovesCount < 9:
-            score = self._negaScoutAI(validMoves, -CHECKMATE - 1, CHECKMATE + 1, turn, self._DEPTH, self._DEPTH)
-        else:
-            for currentDepth in range(1, self._DEPTH // 2 + 1):
-                score = self._negaScoutAI(validMoves, -CHECKMATE - 1, CHECKMATE + 1, turn, currentDepth, currentDepth)
+        score = self._calculatePosition(validMoves, self._DEPTH // 2, False)
         self._gameState.setSqState(piece, position)
         self._resetTablesCounterMove()
         return score
