@@ -1,4 +1,5 @@
 from math import ceil, floor
+from Engine.Move import Move
 
 
 class ConsoleLogger:
@@ -40,3 +41,11 @@ class ConsoleLogger:
     @staticmethod
     def madeRandomMove(playerName: str):
         print(f"{playerName} made a random move")
+
+    @staticmethod
+    def foundBetterMove(move, score: int):
+        print(move, score)
+
+    @staticmethod
+    def foundBetterPromotionAtSq(square: int, score: int):
+        print(f"Found better promotion at square {Move.getSquareNotation(square)} with score {score}")

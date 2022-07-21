@@ -4,13 +4,14 @@ from random import randint
 from ScoreBoard import scoreBoard
 from time import perf_counter
 from Engine.Move import Move
+from Utils.Logger import ConsoleLogger
 from Utils.MagicConsts import CHECKMATE
 
 
 @dataclass
 class ValidMovesObj:
-    checkmate: bool = field()
-    stalemate: bool = field()
+    checkmate: bool = field(default=False)
+    stalemate: bool = field(default=False)
     moves: list[list[Move]] = field(default_factory=list)
 
 
@@ -51,6 +52,14 @@ class AI:
         returnQ.put((self._nextMove, myPotentialScore - score, myBestUnavailableReservePiece, thinkingTime, self._counter))
 
     def _initializeAI(self, requiredDepth: int, timeLeft: float, potentialScore: int, bestUnavailableReservePiece: [str, None]):
+        self._configureSearchDepthByTimeLeft(timeLeft, requiredDepth)
+        self._R = 1 if self._DEPTH <= 3 else 2
+        self._nextMove = None
+        self._counter = 0
+        self._teammatePotentialScore = potentialScore
+        self._teammateBestUnavailableReservePiece = bestUnavailableReservePiece
+
+    def _configureSearchDepthByTimeLeft(self, timeLeft: float, requiredDepth: int):
         self._DEPTH = requiredDepth
         if timeLeft > 0:
             if timeLeft < 60:
@@ -59,11 +68,6 @@ class AI:
                 self._DEPTH = min(requiredDepth, self._VERY_LOW_TIME_DEPTH)
             if timeLeft < 10:
                 self._DEPTH = min(requiredDepth, self._EXTREMELY_LOW_TIME_DEPTH)
-        self._R = 1 if self._DEPTH <= 3 else 2
-        self._nextMove = None
-        self._counter = 0
-        self._teammatePotentialScore = potentialScore
-        self._teammateBestUnavailableReservePiece = bestUnavailableReservePiece
 
     def _getMyBestUnavailableReservePieceAndScore(self):
         turn = 1 if self._gameState.whiteTurn else -1
@@ -95,7 +99,7 @@ class AI:
         else:
             for currentDepth in range(1, self._DEPTH + 1):
                 score = self._negaScoutAI(validMoves, -CHECKMATE - 1, CHECKMATE + 1, turn, currentDepth, currentDepth)
-                if score == CHECKMATE:
+                if score >= CHECKMATE:
                     break
         return score
 
@@ -181,11 +185,15 @@ class AI:
         if self._gameState.boardHash in self._hashTableForValidMoves:
             validMovesObj = self._hashTableForValidMoves[self._gameState.boardHash]
             self._gameState.updatePawnPromotionMoves(validMovesObj.moves, self._otherGameState)
+            self._gameState.checkmate = validMovesObj.checkmate
+            self._gameState.stalemate = validMovesObj.stalemate
             return validMovesObj
 
     def _generateValidMovesObj(self):
-        validMovesObj = ValidMovesObj(self._gameState.checkmate, self._gameState.stalemate, self._gameState.getValidMoves())
+        validMovesObj = ValidMovesObj(moves=self._gameState.getValidMoves())
         self._gameState.updatePawnPromotionMoves(validMovesObj.moves, self._otherGameState)
+        validMovesObj.checkmate = self._gameState.checkmate
+        validMovesObj.stalemate = self._gameState.stalemate
         return validMovesObj
 
     def _isSilentMove(self, move):
@@ -214,4 +222,19 @@ class AI:
         move.goodScore = True
         self._nextMove = move
         if currentDepth == self._DEPTH:
-            print(move, score)
+            ConsoleLogger.foundBetterMove(move, score)
+
+    def scoreBoardWithRemovedPieceAtPos(self, piece: str, position: int):
+        turn = 1 if self._gameState.whiteTurn else -1
+        self._gameState.unsetSqState(piece, position)
+        validMoves = self._gameState.getValidMoves()
+        self._gameState.updatePawnPromotionMoves(validMoves, self._otherGameState)
+        score = 0
+        if self._globalValidMovesCount < 9:
+            score = self._negaScoutAI(validMoves, -CHECKMATE - 1, CHECKMATE + 1, turn, self._DEPTH, self._DEPTH)
+        else:
+            for currentDepth in range(1, self._DEPTH // 2 + 1):
+                score = self._negaScoutAI(validMoves, -CHECKMATE - 1, CHECKMATE + 1, turn, currentDepth, currentDepth)
+        self._gameState.setSqState(piece, position)
+        self._resetTablesCounterMove()
+        return score

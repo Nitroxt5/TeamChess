@@ -1,10 +1,9 @@
 from multiprocessing import Process, Queue
-from random import randint
 from AI.AI import AI
 from Engine.Move import Move
 from Generators.PossiblePromotions import PossiblePromotionsGen
 from Utils.Logger import ConsoleLogger
-from Utils.MagicConsts import SQUARES
+from Utils.MagicConsts import SQUARES, CHECKMATE
 
 
 class AIHandler:
@@ -32,6 +31,8 @@ class AIHandler:
                                     args=(depth, timeLeft, self._potentialScores[teammateNum],
                                           self._requiredPieces[teammateNum], self._returnQ))
             self._process.start()
+            # for debug
+            # AIPlayer.negaScoutMoveAI(depth, timeLeft, self._potentialScores[teammateNum], self._requiredPieces[teammateNum], self._returnQ)
         if not self._process.is_alive():
             self.move, potentialScore, requiredPiece, thinkingTime, positionCounter = self._returnQ.get()
             ConsoleLogger.thinkingEnd(playerName, thinkingTime, positionCounter, potentialScore, requiredPiece)
@@ -69,17 +70,31 @@ class AIHandler:
         self.thinkingTime[activeBoard] += thinkingTime
         self.positionCounter[activeBoard] += positionCounter
 
-    def _getRandomMove(self, activeBoard):
+    def _getRandomMove(self, activeBoard: int):
         AIPlayer = AI(self._gameStates[activeBoard], self._gameStates[1 - activeBoard])
         self._move = AIPlayer.randomMoveAI()
 
-    def _updateMoveWithPromotionPos(self, activeBoard):
+    def _updateMoveWithPromotionPos(self, activeBoard: int):
         promotions = self._promotionsGen.calculatePossiblePromotions(activeBoard)
-        requiredPromotions = [SQUARES[loc[1]][loc[0]] for loc, piece in promotions.items() if piece[1] == self.move.promotedTo]
-        promotionPos = requiredPromotions[randint(0, len(requiredPromotions) - 1)]
+        requiredPromotions = [(SQUARES[loc[1]][loc[0]], piece) for loc, piece in promotions.items() if piece[1] == self.move.promotedTo]
+        promotionPos = self._findBestPromotionPos(requiredPromotions, activeBoard)
         self.move = Move(self.move.startSquare, self.move.endSquare, self._gameStates[activeBoard],
                          movedPiece=self.move.movedPiece, promotedTo=self.move.promotedTo,
                          promotedPiecePosition=promotionPos)
+
+    def _findBestPromotionPos(self, promotions: list, activeBoard: int):
+        if len(promotions) == 1:
+            return promotions[0][0]
+        AIPlayer = AI(self._gameStates[1 - activeBoard], self._gameStates[activeBoard])
+        bestScore = -CHECKMATE
+        bestPromotion = promotions[0]
+        for promotion in promotions:
+            score = AIPlayer.scoreBoardWithRemovedPieceAtPos(promotion[1], promotion[0])
+            if score > bestScore:
+                bestScore = score
+                bestPromotion = promotion
+                ConsoleLogger.foundBetterPromotionAtSq(bestPromotion[0], bestScore)
+        return bestPromotion[0]
 
     def terminate(self):
         """Safely ends AI calculation"""

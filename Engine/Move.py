@@ -60,16 +60,16 @@ class Move:
         if self.isPawnPromotion:
             return self._getPawnPromotionMoveNotation()
         moveNotation = "" if self.movedPiece[1] == "p" else self.movedPiece[1]
-        moveNotation += self._getSquareNotation(self.startSquare)
+        moveNotation += self.getSquareNotation(self.startSquare)
         moveNotation += "x" if self.isCapture else "-"
-        moveNotation += self._getSquareNotation(self.endSquare)
+        moveNotation += self.getSquareNotation(self.endSquare)
         return moveNotation
 
     def _getReserveMoveNotation(self):
         if self.movedPiece[1] == "p":
-            return f"&{self._getSquareNotation(self.endSquare)}"
+            return f"&{self.getSquareNotation(self.endSquare)}"
         else:
-            return f"&{self.movedPiece[1]}{self._getSquareNotation(self.endSquare)}"
+            return f"&{self.movedPiece[1]}{self.getSquareNotation(self.endSquare)}"
 
     def _getCastleMoveNotation(self):
         if (self.endSquare & CASTLE_SQUARES["wKs"]) or (self.endSquare & CASTLE_SQUARES["bKs"]):
@@ -78,12 +78,12 @@ class Move:
             return "0-0-0"
 
     def _getPawnPromotionMoveNotation(self):
-        moveNotation = self._getSquareNotation(self.startSquare)
+        moveNotation = self.getSquareNotation(self.startSquare)
         moveNotation += "x" if self.isCapture else "-"
-        moveNotation += self._getSquareNotation(self.endSquare) + self.promotedTo
+        moveNotation += self.getSquareNotation(self.endSquare) + self.promotedTo
         return moveNotation
 
     @staticmethod
-    def _getSquareNotation(square: int):
+    def getSquareNotation(square: int):
         location = getPower(square)
         return COLUMN_TO_LETTER[location % DIM] + ROW_TO_NUMBER[location // DIM]
