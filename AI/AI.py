@@ -1,3 +1,4 @@
+from copy import deepcopy
 from dataclasses import dataclass, field
 from math import sqrt
 from random import randint
@@ -46,10 +47,15 @@ class AI:
         self._gameState.updatePawnPromotionMoves(validMoves, self._otherGameState)
         self._globalValidMovesCount = len(validMoves[0]) + len(validMoves[1]) + len(validMoves[2])
         start = perf_counter()
-        myBestUnavailableReservePiece, myPotentialScore = self._getMyBestUnavailableReservePieceAndScore()
-        score = self._calculatePosition(validMoves, self._DEPTH)
+        score = self._calculatePosition(-CHECKMATE - 1, validMoves, self._DEPTH)
+        move = deepcopy(self._nextMove)
+        self._resetTablesCounterMove()
+        if score < CHECKMATE:
+            myBestUnavailableReservePiece, myPotentialScore = self._getMyBestUnavailableReservePieceAndScore(score)
+        else:
+            myBestUnavailableReservePiece, myPotentialScore = None, 0
         thinkingTime = perf_counter() - start
-        returnQ.put((self._nextMove, myPotentialScore - score, myBestUnavailableReservePiece, thinkingTime, self._counter))
+        returnQ.put((move, myPotentialScore - score, myBestUnavailableReservePiece, thinkingTime, self._counter))
 
     def _initializeAI(self, requiredDepth: int, timeLeft: float, potentialScore: int, bestUnavailableReservePiece: [str, None]):
         self._configureSearchDepthByTimeLeft(timeLeft, requiredDepth)
@@ -69,13 +75,12 @@ class AI:
             if timeLeft < 10:
                 self._DEPTH = min(requiredDepth, self._EXTREMELY_LOW_TIME_DEPTH)
 
-    def _getMyBestUnavailableReservePieceAndScore(self):
+    def _getMyBestUnavailableReservePieceAndScore(self, alpha: int):
         validMoves = [[], self._gameState.getUnavailableReserveMoves(), []]
-        score = self._calculatePosition(validMoves, self._DEPTH // 2, False)
+        score = self._calculatePosition(alpha, validMoves, self._DEPTH // 2, False)
         myBestUnavailableReservePiece = None
         if isinstance(self._nextMove, Move):
             myBestUnavailableReservePiece = self._nextMove.movedPiece
-        self._resetTablesCounterMove()
         return myBestUnavailableReservePiece, score
 
     def _resetTablesCounterMove(self):
@@ -85,14 +90,14 @@ class AI:
         self._counter = 0
         self._nextMove = None
 
-    def _calculatePosition(self, validMoves: list, requiredDepth: int, log=True) -> int:
+    def _calculatePosition(self, alpha: int, validMoves: list, requiredDepth: int, log=True) -> int:
         turn = 1 if self._gameState.whiteTurn else -1
         score = 0
         if self._globalValidMovesCount < 9:
-            score = self._negaScoutAI(validMoves, -CHECKMATE - 1, CHECKMATE + 1, turn, requiredDepth, requiredDepth, log)
+            score = self._negaScoutAI(validMoves, alpha, CHECKMATE + 1, turn, requiredDepth, requiredDepth, log)
         else:
             for currentDepth in range(1, requiredDepth + 1):
-                score = self._negaScoutAI(validMoves, -CHECKMATE - 1, CHECKMATE + 1, turn, currentDepth, currentDepth, log)
+                score = self._negaScoutAI(validMoves, alpha, CHECKMATE + 1, turn, currentDepth, currentDepth, log)
                 if score >= CHECKMATE:
                     break
         return score
@@ -222,7 +227,7 @@ class AI:
         self._gameState.unsetSqState(piece, position)
         validMoves = self._gameState.getValidMoves()
         self._gameState.updatePawnPromotionMoves(validMoves, self._otherGameState)
-        score = self._calculatePosition(validMoves, self._DEPTH // 2, False)
+        score = self._calculatePosition(-CHECKMATE - 1, validMoves, self._DEPTH // 2, False)
         self._gameState.setSqState(piece, position)
         self._resetTablesCounterMove()
         return score
