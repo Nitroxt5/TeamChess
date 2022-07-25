@@ -1,4 +1,3 @@
-from copy import deepcopy
 from dataclasses import dataclass, field
 from math import sqrt
 from random import randint
@@ -48,8 +47,7 @@ class AI:
         self._globalValidMovesCount = len(validMoves[0]) + len(validMoves[1]) + len(validMoves[2])
         start = perf_counter()
         score = self._calculatePosition(-CHECKMATE - 1, validMoves, self._DEPTH)
-        move = deepcopy(self._nextMove)
-        self._resetTablesCounterMove()
+        move = self._nextMove
         if score < CHECKMATE:
             myBestUnavailableReservePiece, myPotentialScore = self._getMyBestUnavailableReservePieceAndScore(score)
         else:
