@@ -99,8 +99,6 @@ class GamePlayMenu(Menu):
         while working:
             clock.tick(FPS)
             mousePos = pg.mouse.get_pos()
-            self._changeColorOfUIObjects(mousePos, [self._toMenu_btn, self._restart_btn])
-            self.drawGameState()
             for e in pg.event.get():
                 if e.type == pg.KEYDOWN:
                     if e.key == pg.K_F4 and bool(e.mod & pg.KMOD_ALT):
@@ -136,7 +134,6 @@ class GamePlayMenu(Menu):
                                 self._resetFirstClick()
                         else:
                             self._resetSelectAndClicks()
-                        pg.display.flip()
             self._gameOverCheck()
             if self._gameOver:
                 self._AI.terminate()
@@ -153,6 +150,8 @@ class GamePlayMenu(Menu):
                     self._resetActiveBoardSelectAndClicks()
                     self._soundPlayed = False
                     self._moveMade[i] = False
+            self._changeColorOfUIObjects(mousePos, [self._toMenu_btn, self._restart_btn])
+            self.drawGameState()
             pg.display.flip()
 
     @staticmethod
@@ -370,7 +369,6 @@ class GamePlayMenu(Menu):
                 self._setBoardsToDefault(difficulties)
                 self.drawGameState()
                 self._timers[0].switch()
-                pg.display.flip()
             self._timers[self._getCurrentPlayer()].state = timerState
 
     def _handleDDMs(self, mousePos: tuple):
@@ -549,8 +547,6 @@ class GamePlayMenu(Menu):
             self._gameOverCheck()
             if self._gameOver:
                 pg.event.post(pg.event.Event(pg.QUIT))
-            self.drawGameState()
-            self._drawTopText(f"{name} {self._textContent['promText']}")
             for e in pg.event.get():
                 if e.type == pg.QUIT:
                     self._isPromoting = False
@@ -569,6 +565,8 @@ class GamePlayMenu(Menu):
                         if (column, row) in self._possiblePromotions:
                             self._isPromoting = False
                             return SQUARES[row][column], self._possiblePromotions[(column, row)]
+            self.drawGameState()
+            self._drawTopText(f"{name} {self._textContent['promText']}")
             pg.display.flip()
 
     def _handleNonPromotionMove(self, move):
@@ -582,7 +580,6 @@ class GamePlayMenu(Menu):
         self._gameOverCheck()
         if not self._gameOver:
             self._timers[self._getCurrentPlayer()].switch()
-        self.drawGameState()
         self._hourglass = Hourglass(self._getCurrentPlayer(), self._RL.IMAGES["hourglass"])
         self._playSoundIfAllowed()
 

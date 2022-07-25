@@ -48,6 +48,7 @@ class AI:
         start = perf_counter()
         score = self._calculatePosition(-CHECKMATE - 1, validMoves, self._DEPTH)
         move = self._nextMove
+        self._nextMove = None
         if score < CHECKMATE:
             myBestUnavailableReservePiece, myPotentialScore = self._getMyBestUnavailableReservePieceAndScore(score)
         else:
