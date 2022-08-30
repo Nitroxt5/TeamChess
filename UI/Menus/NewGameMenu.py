@@ -1,5 +1,4 @@
 import pygame as pg
-from copy import deepcopy
 from UI.Menus.Menu import Menu
 from UI.UIObjects import Label, Button, Image, DropDownMenu
 from UI.WindowSizeConsts import FONT_SIZE, FPS, SCREEN_HEIGHT, SCREEN_WIDTH, SQ_SIZE, BOARD_SIZE
@@ -13,8 +12,8 @@ class NewGameMenu(Menu):
         self._textContent = textContent
         menuName_lbl = Label(self._textContent["Name"], (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 10), self._bigFont, shift=5)
         super().__init__(screen, resourceLoader, menuName_lbl)
-        self._NAMES = deepcopy(playerNames)
-        self._names = deepcopy(self._NAMES)
+        self._NAMES = playerNames.copy()
+        self._names = self._NAMES.copy()
 
         backBtnPos, playBtnPos = self._generateBtnPositionsInPixels()
         self._back_btn = Button(self._RL.IMAGES["button"], backBtnPos, self._textContent["Back_btn"], self._font)

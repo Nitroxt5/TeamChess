@@ -2,8 +2,8 @@ from Engine.Move import Move
 
 
 class Asserter:
-    @staticmethod
-    def assertionStartCheck(gs, square=None, move=None):
+    @classmethod
+    def assertionStartCheck(cls, gs, square=None, move=None):
         msg = ""
         if isinstance(move, Move):
             msg = f"move = {move.movedPiece}, {bin(move.startSquare)}, {bin(move.endSquare)}, {gs.isWhiteInCheck}, {gs.isBlackInCheck}"
@@ -12,7 +12,7 @@ class Asserter:
         assert gs.bbOfPieces["wK"] != 0, msg
         assert gs.bbOfPieces["bK"] != 0, msg
 
-    @staticmethod
-    def assertionEndCheck(gs):
+    @classmethod
+    def assertionEndCheck(cls, gs):
         assert gs.bbOfPieces["wK"] != 0
         assert gs.bbOfPieces["bK"] != 0

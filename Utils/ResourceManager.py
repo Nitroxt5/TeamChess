@@ -80,8 +80,8 @@ class ResourceLoader:
 
 
 class SettingsSaver:
-    @staticmethod
-    def saveResources(settings: dict):
+    @classmethod
+    def saveResources(cls, settings: dict):
         """Saves SETTINGS in a json file"""
         with open("SETTINGS.json", "w", encoding="utf-8") as f:
             json.dump(settings, f)

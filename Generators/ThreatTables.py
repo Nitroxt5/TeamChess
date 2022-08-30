@@ -1,4 +1,3 @@
-from copy import deepcopy
 from TestDLL import numSplit
 from Utils.MagicConsts import PIECES, COLORS, CORRECTIONS
 
@@ -116,7 +115,7 @@ class ThreatTableGenerator:
         self._createVerticalAndHorizontalMovesThreatTable(color, "Q")
 
     def appendThreatTableToLog(self):
-        self._bbOfThreatsLog.append(deepcopy(self._bbOfThreats))
+        self._bbOfThreatsLog.append(self._bbOfThreats.copy())
 
     def popThreatTableFromLog(self):
         self._bbOfThreats = self._bbOfThreatsLog.pop()
