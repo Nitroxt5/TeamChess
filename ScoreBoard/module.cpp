@@ -2,6 +2,22 @@
 #define ULL unsigned long long
 #define PY_SSIZE_T_CLEAN
 
+long weights[] = {15,  // for positioning the rook on the semi-open file with pawn of the same color
+                  20,  // for positioning the rook on the semi-open file with pawn of the opposite color
+                  30,  // for positioning the rook on the open file
+                  20,  // for positioning the rook on the penultimate row
+                  3,   // for every possible (not necessary valid) knight move
+                  4,   // for every possible (not necessary valid) bishop move
+                  50,  // for castling
+                  20,  // for checking opponent king
+                  70,  // for castling deprivation (for each side)
+                  30,  // for pawn shield in front of king
+                  10,  // for pseudo passed pawn
+                  20,  // penalty for doubled pawns
+                  30,  // penalty for tripled pawns
+                  20,  // penalty for early queen participation
+                  30}; // for center control (for each square)
+
 long knightPositionScore[8][8] = { 1, 2, 1, 1, 1, 1, 2, 1,
 								   1, 2, 2, 2, 2, 2, 2, 1,
 								   1, 2, 3, 3, 3, 3, 2, 1,
@@ -170,30 +186,30 @@ long scoreRookPositioning(ULL whitebbOfRooks, ULL blackbbOfRooks, ULL whitebbOfP
 			{
 				if (blackPawnsCount == 0 && whitePawnsCount == 1)
 				{
-					score += 15;
+					score += weights[0];
 				}
 				else if (whitePawnsCount == 0 && blackPawnsCount >= 1)
 				{
-					score += 20;
+					score += weights[1];
 				}
 				else if (whitePawnsCount + blackPawnsCount == 0)
 				{
-					score += 30;
+					score += weights[2];
 				}
 			}
 			if (blackRookPos)
 			{
 				if (whitePawnsCount == 0 && blackPawnsCount == 1)
 				{
-					score -= 15;
+					score -= weights[0];
 				}
 				else if (blackPawnsCount == 0 && whitePawnsCount >= 1)
 				{
-					score -= 20;
+					score -= weights[1];
 				}
 				else if (whitePawnsCount + blackPawnsCount == 0)
 				{
-					score -= 30;
+					score -= weights[2];
 				}
 			}
 		}
@@ -202,11 +218,11 @@ long scoreRookPositioning(ULL whitebbOfRooks, ULL blackbbOfRooks, ULL whitebbOfP
 	ULL blackRookRowPos = bbOfRows[6] & blackbbOfRooks;
 	if (blackRookRowPos)
 	{
-		score -= getBitsCount(blackRookRowPos) * 20;
+		score -= getBitsCount(blackRookRowPos) * weights[3];
 	}
 	if (whiteRookRowPos)
 	{
-		score += getBitsCount(whiteRookRowPos) * 20;
+		score += getBitsCount(whiteRookRowPos) * weights[3];
 	}
 	MyArr whiteSplitPositions = numSplit(whitebbOfRooks);
 	MyArr blackSplitPositions = numSplit(blackbbOfRooks);
@@ -240,7 +256,7 @@ long scoreKnightPositioning(ULL whitebbOfKnights, ULL blackbbOfKnights, long whi
 		knightMoves[i] |= ((bb & bbOfCorrections[1] & bbOfCorrections[6]) << 10);
 		knightMoves[i] |= ((bb & bbOfCorrections[0] & bbOfCorrections[7]) << 17);
 	}
-	long score = (getBitsCount(knightMoves[0]) - getBitsCount(knightMoves[1])) * 3;
+	long score = (getBitsCount(knightMoves[0]) - getBitsCount(knightMoves[1])) * weights[4];
 	MyArr whiteSplitPositions = numSplit(whitebbOfKnights);
 	MyArr blackSplitPositions = numSplit(blackbbOfKnights);
 	score += (whiteSplitPositions.size - blackSplitPositions.size) * knightScore;
@@ -335,7 +351,7 @@ long scoreBishopPositioning(ULL whitebbOfBishops, ULL blackbbOfBishops, ULL whit
 	}
 	MyArr whiteSplitPositions = numSplit(whitebbOfBishops);
 	MyArr blackSplitPositions = numSplit(blackbbOfBishops);
-	score <<= 2;
+	score *= weights[5];
 	score += (whiteSplitPositions.size - blackSplitPositions.size) * bishopScore;
 	score += (long)((whiteBishopReserveCount - blackBishopReserveCount) * bishopScore * 0.8);
 	for (int i = 0;i < whiteSplitPositions.size; i++)
@@ -356,19 +372,19 @@ long scoreKingSafety(ULL whitebbOfKing, ULL blackbbOfKing, ULL whitebbOfPawns, U
 	long score = 0;
 	if (isWhiteCastled)
 	{
-		score += 50;
+		score += weights[6];
 	}
 	if (isBlackCastled)
 	{
-		score -= 50;
+		score -= weights[6];
 	}
 	if (isWhiteInCheck)
 	{
-		score -= 20;
+		score -= weights[7];
 	}
 	if (isBlackInCheck)
 	{
-		score += 20;
+		score += weights[7];
 	}
 	for (int i = 0;i < 4;i++)
 	{
@@ -376,11 +392,11 @@ long scoreKingSafety(ULL whitebbOfKing, ULL blackbbOfKing, ULL whitebbOfPawns, U
 		{
 			if ((i == 0 || i == 1) && !isWhiteCastled)
 			{
-				score -= 70;
+				score -= weights[8];
 			}
 			else if ((i == 2 || i == 3) && !isBlackCastled)
 			{
-				score += 70;
+				score += weights[8];
 			}
 		}
 	}
@@ -394,7 +410,7 @@ long scoreKingSafety(ULL whitebbOfKing, ULL blackbbOfKing, ULL whitebbOfPawns, U
 			long whitePawnsCount = getBitsCount(whitePawnsPos);
 			if (whitePawnsCount == 0)
 			{
-				score -= 30;
+				score -= weights[9];
 			}
 		}
 		if (blackKingPos)
@@ -403,7 +419,7 @@ long scoreKingSafety(ULL whitebbOfKing, ULL blackbbOfKing, ULL whitebbOfPawns, U
 			long blackPawnsCount = getBitsCount(blackPawnsPos);
 			if (blackPawnsCount == 0)
 			{
-				score += 30;
+				score += weights[9];
 			}
 		}
 	}
@@ -419,29 +435,29 @@ long scorePawnPositioning(ULL whitebbOfPawns, ULL blackbbOfPawns, long whitePawn
 		ULL	blackPawnsColumn = bbOfColumns[i] & blackbbOfPawns;
 		if ((whitePawnsColumn | blackPawnsColumn) - whitePawnsColumn == 0)
 		{
-			score += 10;
+			score += weights[10];
 		}
 		if ((whitePawnsColumn | blackPawnsColumn) - blackPawnsColumn == 0)
 		{
-			score -= 10;
+			score -= weights[10];
 		}
 		long whitePawnsCount = getBitsCount(whitePawnsColumn);
 		long blackPawnsCount = getBitsCount(blackPawnsColumn);
 		if (whitePawnsCount == 2)
 		{
-			score -= 20;
+			score -= weights[11];
 		}
 		if (whitePawnsCount >= 3)
 		{
-			score -= 30;
+			score -= weights[12];
 		}
 		if (blackPawnsCount == 2)
 		{
-			score += 20;
+			score += weights[11];
 		}
 		if (blackPawnsCount >= 3)
 		{
-			score += 30;
+			score += weights[12];
 		}
 	}
 	MyArr whiteSplitPositions = numSplit(whitebbOfPawns);
@@ -470,11 +486,11 @@ long scoreQueenPositioning(ULL whitebbOfQueens, ULL blackbbOfQueens, long whiteQ
 		{
 			if (turn)
 			{
-				score += 20;
+				score += weights[13];
 			}
 			else
 			{
-				score -= 20;
+				score -= weights[13];
 			}
 		}
 	}
@@ -499,7 +515,7 @@ long scoreCenterControl(ULL whitebbOfOccupiedSq, ULL blackbbOfOccupiedSq)
 {
 	ULL whiteCenterControl = bbOfCenter & whitebbOfOccupiedSq;
 	ULL blackCenterControl = bbOfCenter & blackbbOfOccupiedSq;
-	return (getBitsCount(whiteCenterControl) - getBitsCount(blackCenterControl)) * 30;
+	return (getBitsCount(whiteCenterControl) - getBitsCount(blackCenterControl)) * weights[14];
 }
 
 static PyObject* scoreBoard(PyObject* self, PyObject* gs)
