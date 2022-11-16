@@ -37,7 +37,6 @@ class GamePlayMenu(Menu):
             headImages = [self._RL.IMAGES[f"{colors[i]}{piece}SqH"] for piece in PIECES if piece != "K"]
             botPositioning = True if i == 0 or i == 3 else False
             self._requiredPiece_ddms.append(ImgDropDownMenu(reqPiecePos[i], bodyImages, headImages, botPositioning, True))
-        self._hourglass = Hourglass(0, self._RL.IMAGES["hourglass"])
         buttonPositions = self._generateButtonPositions()
         self._toMenu_btn = RadioButton(buttonPositions[0], self._RL.IMAGES["home_button_on"], self._RL.IMAGES["home_button_off"])
         self._restart_btn = RadioButton(buttonPositions[1], self._RL.IMAGES["restart_button_on"], self._RL.IMAGES["restart_button_off"])
@@ -55,6 +54,7 @@ class GamePlayMenu(Menu):
         self._moveMade = [False, False]
         self._activeBoard = 0
         self._gameOver = False
+        self._hourglass = Hourglass(self._getCurrentPlayer(), self._RL.IMAGES["hourglass"])
 
     @staticmethod
     def _generateBoardPositionsInPixels():

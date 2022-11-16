@@ -130,3 +130,77 @@ class FENAndGSConverter:
     @classmethod
     def _enpassantSquareToFEN(cls, gs):
         return "0" if gs.enpassantSq == 0 else f"{getPower(gs.enpassantSq)}"
+
+    @classmethod
+    def gameStatesToFEN2(cls, gameState1, gameState2, activeBoard):
+        """Converts game states into a FEN2 likewise gameStateToFEN. Returns an active board."""
+        FEN = f"{cls._bitBoardToFEN(gameState1)} {cls._bitBoardToFEN(gameState2)} "
+        FEN += f"{cls._reserveToFEN(gameState1)} {cls._reserveToFEN(gameState2)} "
+        FEN += f"{cls._turnToFEN(gameState1).upper() if activeBoard == 0 else cls._turnToFEN(gameState2)} "
+        FEN += f"{cls._castlingRightToFEN(gameState1)} {cls._castlingRightToFEN(gameState2)} "
+        FEN += f"{cls._enpassantSquareToFEN(gameState1)} {cls._enpassantSquareToFEN(gameState2)} "
+        FEN += f"{gameState1.lastPieceMoved} {gameState2.lastPieceMoved} "
+        FEN += f"{gameState1.gameLogLen} {gameState2.gameLogLen}"
+        return FEN
+
+    @classmethod
+    def _reserveToFEN(cls, gs):
+        return "/".join(map(str, gs.reserve["w"].values())) + "/" + "/".join(map(str, gs.reserve["b"].values()))
+
+    @classmethod
+    def FEN2toGameStates(cls, FEN: str, gameState1, gameState2):
+        """Transfers information from FEN2 into game states likewise FENtoGameState. Returns an active board."""
+        FENParts = FEN.split(" ")
+        errorMsg = "Given FEN string is incorrect"
+        assert len(FENParts) == 13, errorMsg
+        FENEnpassant1 = int(FENParts[7])
+        FENEnpassant2 = int(FENParts[8])
+        assert 0 <= FENEnpassant1 <= 64, errorMsg
+        assert 0 <= FENEnpassant2 <= 64, errorMsg
+        cls._FENtobbOfPieces(FENParts[0], gameState1)
+        cls._FENtobbOfPieces(FENParts[1], gameState2)
+        cls._generatebbOfOccupiedSquares(gameState1)
+        cls._generatebbOfOccupiedSquares(gameState2)
+        cls._FENtoReserve(FENParts[2], gameState1)
+        cls._FENtoReserve(FENParts[3], gameState2)
+        cls._FENtoCastleRight(FENParts[5], gameState1)
+        cls._FENtoCastleRight(FENParts[6], gameState2)
+        cls._FENtoEnpassantSquare(FENEnpassant1, gameState1)
+        cls._FENtoEnpassantSquare(FENEnpassant2, gameState2)
+        cls._FENtoLastPieceMoved(FENParts[9], gameState1)
+        cls._FENtoLastPieceMoved(FENParts[10], gameState2)
+        cls._FENtoGameLogLen(FENParts[11], gameState1)
+        cls._FENtoGameLogLen(FENParts[12], gameState2)
+        return cls._FENtoTurnWithUpperCase(FENParts[4], gameState1, gameState2)
+
+    @classmethod
+    def _FENtoReserve(cls, FENPart, gs):
+        gs.reserve = {"w": {PIECES[i + 1]: int(FENPart.split("/")[:5][i]) for i in range(5)},
+                      "b": {PIECES[i + 1]: int(FENPart.split("/")[5:][i]) for i in range(5)}}
+
+    @classmethod
+    def _FENtoTurnWithUpperCase(cls, FENPart, gs1, gs2):
+        """Sets turn order. Returns an active board."""
+        if FENPart == "W":
+            gs1.whiteTurn = True
+            gs2.whiteTurn = True
+            return 0
+        if FENPart == "B":
+            gs1.whiteTurn = False
+            gs2.whiteTurn = False
+            return 0
+        if FENPart == "w":
+            gs1.whiteTurn = False
+            gs2.whiteTurn = True
+            return 1
+        gs1.whiteTurn = True
+        gs2.whiteTurn = False
+        return 1
+
+    @classmethod
+    def _FENtoLastPieceMoved(cls, FENPart, gs):
+        gs.lastPieceMoved = FENPart
+
+    @classmethod
+    def _FENtoGameLogLen(cls, FENPart, gs):
+        gs.gameLogLen = int(FENPart)
