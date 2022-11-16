@@ -537,7 +537,8 @@ static PyObject* scoreBoard(PyObject* self, PyObject* gs)
 	PyObject* blackCastled = PyObject_GetAttrString(gs, "isBlackCastled");
 	PyObject* currentCastlingRightPy = PyObject_GetAttrString(gs, "currentCastlingRight");
 	PyObject* currentValidMovesCountPy = PyObject_GetAttrString(gs, "currentValidMovesCount");
-	PyObject* gameLog = PyObject_GetAttrString(gs, "gameLog");
+	PyObject* lastPieceMovedPy = PyObject_GetAttrString(gs, "lastPieceMoved");
+	PyObject* gameLogLenPy = PyObject_GetAttrString(gs, "gameLogLen");
 
 	const char pieces[12][3] = { "wK", "wQ", "wR", "wB", "wN", "wp", "bK", "bQ", "bR", "bB", "bN", "bp" };
 	ULL bbOfPieces[12] = { 0 };
@@ -580,14 +581,10 @@ static PyObject* scoreBoard(PyObject* self, PyObject* gs)
 
 	long currentValidMovesCount = PyLong_AsLong(currentValidMovesCountPy);
 
-	Py_ssize_t gameLogLen = PyList_Size(gameLog);
-	char LPM = '\0';
-	if (gameLogLen > 0)
-	{
-		char* lastPieceMoved;
-		PyArg_Parse(PyObject_GetAttrString(PyList_GetItem(gameLog, gameLogLen - 1), "movedPiece"), "s", &lastPieceMoved);
-		LPM = lastPieceMoved[1];
-	}
+	long gameLogLen = PyLong_AsLong(gameLogLenPy);
+	char* lastPieceMoved;
+    PyArg_Parse(lastPieceMovedPy, "s", &lastPieceMoved);
+    char LPM = lastPieceMoved[0];
 
 	long score = 0;
 
