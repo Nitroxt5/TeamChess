@@ -27,6 +27,8 @@ class GameState:
                                     "a": 0b1111111111111111000000000000000000000000000000001111111111111111}
         self.whiteTurn = True
         self.gameLog = []
+        self.lastPieceMoved = "-"
+        self.gameLogLen = 0
         self.checkmate = False
         self.stalemate = False
         self.enpassantSq = 0
@@ -82,6 +84,8 @@ class GameState:
     def _appendToGameStateLogs(self, move):
         self._hasher.appendHashToLog()
         self.gameLog.append(move)
+        self.lastPieceMoved = self.gameLog[-1].movedPiece[1]
+        self.gameLogLen += 1
         self.enpassantSqLog.append(self.enpassantSq)
         self.castleRightsLog.append(self.currentCastlingRight)
         self._threatTableGenerator.appendThreatTableToLog()
@@ -162,7 +166,14 @@ class GameState:
         self.enpassantSq = self.enpassantSqLog.pop()
         self.currentCastlingRight = self.castleRightsLog.pop()
         self._threatTableGenerator.popThreatTableFromLog()
-        return self.gameLog.pop()
+        move = self.gameLog.pop()
+        if len(self.gameLog) == 0:
+            self.lastPieceMoved = "-"
+            self.gameLogLen = 0
+        else:
+            self.lastPieceMoved = self.gameLog[-1].movedPiece[1]
+            self.gameLogLen -= 1
+        return move
 
     def _setEnpassantCapture(self, move):
         if self.whiteTurn:
