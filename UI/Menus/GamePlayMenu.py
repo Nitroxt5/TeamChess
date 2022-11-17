@@ -155,11 +155,11 @@ class GamePlayMenu(Menu):
                 if self._gameOver:
                     with PositionRecorder() as pr:
                         pr.deleteHalfPositionsOfGame(self._activeBoard, self._gameNum)
-                        # pr.deleteLastPositions(6)
-                        pr.updateResult(self._getResult())
+                        pr.deleteLastPositions(6)
+                        pr.updateResultAndMoves(self._getResult(), self._gameStates[1 - self._activeBoard].gameLogLen)
                     self._gameNum += 1
-                    if self._gameNum != 5:
-                        self._restart(difficulties)
+                    # if self._gameNum != 5:
+                    #     self._restart(difficulties)
                 self._AI.cameUpWithMove = False
             for i in range(2):
                 if self._moveMade[i]:

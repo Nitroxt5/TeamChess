@@ -22,9 +22,9 @@ class PositionRecorder:
             curs.execute("INSERT INTO positions(position, board, game) VALUES (%s, %s, %s)", (position, board, game))
         self._connection.commit()
 
-    def updateResult(self, result: int):
+    def updateResultAndMoves(self, result: int, movesCount: int):
         with self._connection.cursor() as curs:
-            curs.execute("UPDATE positions SET result=%s WHERE result IS NULL", (result,))
+            curs.execute("UPDATE positions SET result=%s, moves=%s WHERE result IS NULL", (result, movesCount))
         self._connection.commit()
 
     def deleteHalfPositionsOfGame(self, board: int, game: int):
@@ -37,3 +37,9 @@ class PositionRecorder:
             for i in range(count):
                 curs.execute("DELETE FROM positions WHERE id=(SELECT MAX(id) FROM positions)")
         self._connection.commit()
+
+    def getPositions(self):
+        with self._connection.cursor() as curs:
+            curs.execute("SELECT position, result, board, moves FROM positions")
+            result = curs.fetchall()
+        return result
