@@ -169,10 +169,9 @@ class GameState:
         move = self.gameLog.pop()
         if len(self.gameLog) == 0:
             self.lastPieceMoved = "-"
-            self.gameLogLen = 0
         else:
             self.lastPieceMoved = self.gameLog[-1].movedPiece[1]
-            self.gameLogLen -= 1
+        self.gameLogLen -= 1
         return move
 
     def _setEnpassantCapture(self, move):

@@ -10,8 +10,10 @@ from UI.Highlighter import Highlighter
 from UI.Menus.Menu import Menu
 from UI.UIObjects import Label, Hourglass, Timer, Image, RadioButton, ImgDropDownMenu
 from UI.WindowSizeConsts import FONT_SIZE, MARGIN, MARGIN_LEFT, RESERVE_MARGIN, SCREEN_HEIGHT, SCREEN_WIDTH, BOARD_SIZE, SQ_SIZE, FPS
+from Utils.FENConverter import FENAndGSConverter as Conv
 from Utils.Logger import ConsoleLogger
 from Utils.MagicConsts import COLORED_PIECES, DIM, RESERVE_PIECES, GAME_MODES, PIECES, SQUARES
+from Utils.PositionRecorder import PositionRecorder
 from Utils.ResourceManager import SettingsSaver
 
 
@@ -55,6 +57,8 @@ class GamePlayMenu(Menu):
         self._activeBoard = 0
         self._gameOver = False
         self._hourglass = Hourglass(self._getCurrentPlayer(), self._RL.IMAGES["hourglass"])
+
+        self._gameNum = 1
 
     @staticmethod
     def _generateBoardPositionsInPixels():
@@ -144,6 +148,18 @@ class GamePlayMenu(Menu):
                 player = self._getCurrentPlayer()
                 self._requiredPiece_ddms[player].changeHead(RESERVE_PIECES[self._requiredPieces[player][1]] + 1)
                 self._handleNonPromotionMove(self._AI.move)
+                if self._gameStates[1].gameLogLen >= 12:
+                    with PositionRecorder() as pr:
+                        pr.addPosition(Conv.gameStatesToFEN2(self._gameStates[0], self._gameStates[1], self._activeBoard), 1 - self._activeBoard, self._gameNum)
+                self._gameOverCheck()
+                if self._gameOver:
+                    with PositionRecorder() as pr:
+                        pr.deleteHalfPositionsOfGame(self._activeBoard, self._gameNum)
+                        # pr.deleteLastPositions(6)
+                        pr.updateResult(self._getResult())
+                    self._gameNum += 1
+                    if self._gameNum != 5:
+                        self._restart(difficulties)
                 self._AI.cameUpWithMove = False
             for i in range(2):
                 if self._moveMade[i]:
@@ -153,6 +169,15 @@ class GamePlayMenu(Menu):
             self._changeColorOfUIObjects(mousePos, [self._toMenu_btn, self._restart_btn])
             self.drawGameState()
             pg.display.flip()
+
+    def _getResult(self):
+        if self._gameStates[0].stalemate or self._gameStates[1].stalemate:
+            return 1
+        for i in range(2):
+            if self._gameStates[i].checkmate and self._gameStates[i].whiteTurn:
+                return 0
+            if self._gameStates[i].checkmate and not self._gameStates[i].whiteTurn:
+                return 2
 
     @staticmethod
     def _generateNamesPositionsInPixels():
@@ -370,6 +395,16 @@ class GamePlayMenu(Menu):
                 self.drawGameState()
                 self._timers[0].switch()
             self._timers[self._getCurrentPlayer()].state = timerState
+
+    def _restart(self, difficulties: list):
+        timerState = self._timers[self._getCurrentPlayer()].state
+        self._timers[self._getCurrentPlayer()].state = False
+        self._AI.terminate()
+        ConsoleLogger.endgameOutput(self._gameStates, difficulties, self._AI)
+        self._setBoardsToDefault(difficulties)
+        self.drawGameState()
+        self._timers[0].switch()
+        self._timers[self._getCurrentPlayer()].state = timerState
 
     def _handleDDMs(self, mousePos: tuple):
         for i, ddm in enumerate(self._requiredPiece_ddms):
