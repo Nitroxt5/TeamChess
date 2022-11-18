@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from math import sqrt
-from random import randint
+from random import randint, seed
 from ScoreBoard import scoreBoard
 from time import perf_counter
 from Engine.Move import Move
@@ -37,7 +37,9 @@ class AI:
     def randomMoveAI(self) -> Move:
         validMoves = self._gameState.getValidMoves()
         self._gameState.updatePawnPromotionMoves(validMoves, self._otherGameState)
-        return validMoves[randint(0, len(validMoves) - 1)]
+        moves = validMoves[0] + validMoves[1] + validMoves[2]
+        seed()
+        return moves[randint(0, len(moves) - 1)]
 
     def negaScoutMoveAI(self, requiredDepth: int, timeLeft: float, potentialScore: int, bestUnavailableReservePiece: [str, None], returnQ):
         """This method is an entry point of the new process which calculates AI next move"""

@@ -25,12 +25,15 @@ class AIHandler:
         if not self._thinking:
             ConsoleLogger.thinkingStart(playerName)
             AIPlayer = AI(self._gameStates[activeBoard], self._gameStates[1 - activeBoard])
-            self._thinking = True
             teammateNum = self._getPlayersTeammate(playerNum)
-            self._process = Process(target=AIPlayer.negaScoutMoveAI,
-                                    args=(depth, timeLeft, self._potentialScores[teammateNum],
-                                          self._requiredPieces[teammateNum], self._returnQ))
-            self._process.start()
+            if self._gameStates[1].gameLogLen > 1:
+                self._thinking = True
+                self._process = Process(target=AIPlayer.negaScoutMoveAI,
+                                        args=(depth, timeLeft, self._potentialScores[teammateNum],
+                                              self._requiredPieces[teammateNum], self._returnQ))
+                self._process.start()
+            else:
+                self._returnQ.put((AIPlayer.randomMoveAI(), 0, None, 0, 0))
             # for debug
             # AIPlayer.negaScoutMoveAI(depth, timeLeft, self._potentialScores[teammateNum], self._requiredPieces[teammateNum], self._returnQ)
         if not self._process.is_alive():

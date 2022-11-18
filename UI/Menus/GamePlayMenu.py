@@ -10,10 +10,9 @@ from UI.Highlighter import Highlighter
 from UI.Menus.Menu import Menu
 from UI.UIObjects import Label, Hourglass, Timer, Image, RadioButton, ImgDropDownMenu
 from UI.WindowSizeConsts import FONT_SIZE, MARGIN, MARGIN_LEFT, RESERVE_MARGIN, SCREEN_HEIGHT, SCREEN_WIDTH, BOARD_SIZE, SQ_SIZE, FPS
-from Utils.FENConverter import FENAndGSConverter as Conv
 from Utils.Logger import ConsoleLogger
 from Utils.MagicConsts import COLORED_PIECES, DIM, RESERVE_PIECES, GAME_MODES, PIECES, SQUARES
-from Utils.PositionRecorder import PositionRecorder
+from Utils.PositionRecorder import PositionRecorder, getFeatures
 from Utils.ResourceManager import SettingsSaver
 
 
@@ -148,9 +147,9 @@ class GamePlayMenu(Menu):
                 player = self._getCurrentPlayer()
                 self._requiredPiece_ddms[player].changeHead(RESERVE_PIECES[self._requiredPieces[player][1]] + 1)
                 self._handleNonPromotionMove(self._AI.move)
-                if self._gameStates[1].gameLogLen >= 12:
+                if self._gameStates[1].gameLogLen >= 12 and not self._AI.move.isCapture:
                     with PositionRecorder() as pr:
-                        pr.addPosition(Conv.gameStatesToFEN2(self._gameStates[0], self._gameStates[1], self._activeBoard), 1 - self._activeBoard, self._gameNum)
+                        pr.addPosition(" ".join(map(str, getFeatures(self._gameStates[1 - self._activeBoard]))), 1 - self._activeBoard, self._gameNum)
                 self._gameOverCheck()
                 if self._gameOver:
                     with PositionRecorder() as pr:
@@ -158,8 +157,8 @@ class GamePlayMenu(Menu):
                         pr.deleteLastPositions(6)
                         pr.updateResultAndMoves(self._getResult(), self._gameStates[1 - self._activeBoard].gameLogLen)
                     self._gameNum += 1
-                    # if self._gameNum != 5:
-                    #     self._restart(difficulties)
+                    if self._gameNum != 5:
+                        self._restart(difficulties)
                 self._AI.cameUpWithMove = False
             for i in range(2):
                 if self._moveMade[i]:
