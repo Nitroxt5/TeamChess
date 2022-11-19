@@ -1,5 +1,5 @@
-from TestDLL import getPower
-from Utils.MagicConsts import CASTLE_SIDES, COLORED_PIECES, COLORS, PIECES, SQUARES
+from Engine.Move import Move
+from Utils.MagicConsts import CASTLE_SIDES, COLORED_PIECES, COLORS, PIECES, SQUARES, COLUMNS, ROWS
 
 
 class FENAndGSConverter:
@@ -8,19 +8,17 @@ class FENAndGSConverter:
         """Turns a FEN string into a bitboard representation, used in program.
 
         FEN string must be correct, otherwise behaviour of this method is unpredictable.
-        FEN string must not contain halfmove and fullmove counters.
-        Enpassant square must be a number (a8 is 1; h8 is 8; a1 is 56; h1 is 64)
-        If enpassant square is absent, it must be a 0
         """
         FENParts = FEN.split(" ")
-        assert len(FENParts) == 4, "Given FEN string is incorrect"
-        FENEnpassant = int(FENParts[3])
-        assert 0 <= FENEnpassant <= 64, "Given FEN string is incorrect"
+        assert len(FENParts) == 6, "Given FEN string is incorrect"
         cls._FENtobbOfPieces(FENParts[0], gameState)
         cls._generatebbOfOccupiedSquares(gameState)
         cls._FENtoTurn(FENParts[1], gameState)
         cls._FENtoCastleRight(FENParts[2], gameState)
-        cls._FENtoEnpassantSquare(FENEnpassant, gameState)
+        cls._FENtoEnpassantSquare(FENParts[3], gameState)
+        gameState.gameLogLen = (int(FENParts[5]) - 1) * 2
+        if not gameState.whiteTurn:
+            gameState.gameLogLen += 1
 
     @classmethod
     def _FENtobbOfPieces(cls, FENPart: str, gs):
@@ -60,24 +58,20 @@ class FENAndGSConverter:
                 gs.setCastleRight(CASTLE_SIDES[FENRuleToStr[rule]])
 
     @classmethod
-    def _FENtoEnpassantSquare(cls, FENEnpassant: int, gs):
-        if FENEnpassant == 0:
+    def _FENtoEnpassantSquare(cls, FENPart: str, gs):
+        if FENPart == "-":
             gs.enpassantSq = 0
         else:
-            gs.enpassantSq = 1 << (64 - FENEnpassant)
+            gs.enpassantSq = COLUMNS[FENPart[0]] & ROWS[FENPart[1]]
 
     @classmethod
     def gameStateToFEN(cls, gameState):
         """Turns a bitboard representation, used in program, into a FEN string.
-
-        FEN string will not contain halfmove and fullmove counters.
-        Enpassant square will be a number (a8 is 1; h8 is 8; a1 is 56; h1 is 64)
-        If enpassant square is absent, it will be a 0
-        """
+        Draw move counters is not important for swedish chess, so it sets to 0"""
         FEN = cls._bitBoardToFEN(gameState)
         FEN += f" {cls._turnToFEN(gameState)} "
         FEN += cls._castlingRightToFEN(gameState)
-        FEN += f" {cls._enpassantSquareToFEN(gameState)}"
+        FEN += f" {cls._enpassantSquareToFEN(gameState)} 0 {gameState.gameLogLen // 2 + 1}"
         return FEN
 
     @classmethod
@@ -129,78 +123,4 @@ class FENAndGSConverter:
 
     @classmethod
     def _enpassantSquareToFEN(cls, gs):
-        return "0" if gs.enpassantSq == 0 else f"{getPower(gs.enpassantSq)}"
-
-    @classmethod
-    def gameStatesToFEN2(cls, gameState1, gameState2, activeBoard):
-        """Converts game states into a FEN2 likewise gameStateToFEN. Returns an active board."""
-        FEN = f"{cls._bitBoardToFEN(gameState1)} {cls._bitBoardToFEN(gameState2)} "
-        FEN += f"{cls._reserveToFEN(gameState1)} {cls._reserveToFEN(gameState2)} "
-        FEN += f"{cls._turnToFEN(gameState1).upper() if activeBoard == 0 else cls._turnToFEN(gameState2)} "
-        FEN += f"{cls._castlingRightToFEN(gameState1)} {cls._castlingRightToFEN(gameState2)} "
-        FEN += f"{cls._enpassantSquareToFEN(gameState1)} {cls._enpassantSquareToFEN(gameState2)} "
-        FEN += f"{gameState1.lastPieceMoved} {gameState2.lastPieceMoved} "
-        FEN += f"{gameState1.gameLogLen} {gameState2.gameLogLen}"
-        return FEN
-
-    @classmethod
-    def _reserveToFEN(cls, gs):
-        return "/".join(map(str, gs.reserve["w"].values())) + "/" + "/".join(map(str, gs.reserve["b"].values()))
-
-    @classmethod
-    def FEN2toGameStates(cls, FEN: str, gameState1, gameState2):
-        """Transfers information from FEN2 into game states likewise FENtoGameState. Returns an active board."""
-        FENParts = FEN.split(" ")
-        errorMsg = "Given FEN string is incorrect"
-        assert len(FENParts) == 13, errorMsg
-        FENEnpassant1 = int(FENParts[7])
-        FENEnpassant2 = int(FENParts[8])
-        assert 0 <= FENEnpassant1 <= 64, errorMsg
-        assert 0 <= FENEnpassant2 <= 64, errorMsg
-        cls._FENtobbOfPieces(FENParts[0], gameState1)
-        cls._FENtobbOfPieces(FENParts[1], gameState2)
-        cls._generatebbOfOccupiedSquares(gameState1)
-        cls._generatebbOfOccupiedSquares(gameState2)
-        cls._FENtoReserve(FENParts[2], gameState1)
-        cls._FENtoReserve(FENParts[3], gameState2)
-        cls._FENtoCastleRight(FENParts[5], gameState1)
-        cls._FENtoCastleRight(FENParts[6], gameState2)
-        cls._FENtoEnpassantSquare(FENEnpassant1, gameState1)
-        cls._FENtoEnpassantSquare(FENEnpassant2, gameState2)
-        cls._FENtoLastPieceMoved(FENParts[9], gameState1)
-        cls._FENtoLastPieceMoved(FENParts[10], gameState2)
-        cls._FENtoGameLogLen(FENParts[11], gameState1)
-        cls._FENtoGameLogLen(FENParts[12], gameState2)
-        return cls._FENtoTurnWithUpperCase(FENParts[4], gameState1, gameState2)
-
-    @classmethod
-    def _FENtoReserve(cls, FENPart, gs):
-        gs.reserve = {"w": {PIECES[i + 1]: int(FENPart.split("/")[:5][i]) for i in range(5)},
-                      "b": {PIECES[i + 1]: int(FENPart.split("/")[5:][i]) for i in range(5)}}
-
-    @classmethod
-    def _FENtoTurnWithUpperCase(cls, FENPart, gs1, gs2):
-        """Sets turn order. Returns an active board."""
-        if FENPart == "W":
-            gs1.whiteTurn = True
-            gs2.whiteTurn = True
-            return 0
-        if FENPart == "B":
-            gs1.whiteTurn = False
-            gs2.whiteTurn = False
-            return 0
-        if FENPart == "w":
-            gs1.whiteTurn = False
-            gs2.whiteTurn = True
-            return 1
-        gs1.whiteTurn = True
-        gs2.whiteTurn = False
-        return 1
-
-    @classmethod
-    def _FENtoLastPieceMoved(cls, FENPart, gs):
-        gs.lastPieceMoved = FENPart
-
-    @classmethod
-    def _FENtoGameLogLen(cls, FENPart, gs):
-        gs.gameLogLen = int(FENPart)
+        return "-" if gs.enpassantSq == 0 else Move.getSquareNotation(gs.enpassantSq)
