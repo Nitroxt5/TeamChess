@@ -37,8 +37,7 @@ class GameState:
         self.castleRightsLog = []
         self.reserve = {"w": {"Q": 0, "R": 0, "B": 0, "N": 0, "p": 0}, "b": {"Q": 0, "R": 0, "B": 0, "N": 0, "p": 0}}
         # self.reserve = {"w": {"Q": 16, "R": 16, "B": 16, "N": 16, "p": 16}, "b": {"Q": 16, "R": 16, "B": 16, "N": 16, "p": 16}}
-        # FENAndGSConverter.FENtoGameState("8/k1P5/2K5/8/3P4/3PP1P1/4PPPP/5BQR w - 0", self)
-        # FENAndGSConverter.FENtoGameState("rnbqkb1r/pp3Bpp/3p1n2/1p2p3/4P3/2PP4/PP3PPP/RNBQK1NR b KQkq 0", self)
+        # FENAndGSConverter.FENtoGameState("r4qk1/pp2b3/2n3p1/3P1b2/3PpPpp/PPN1B3/B5PN/R3QR1K w - - 2 28", self)
         # print(self)
         self._hasher = GSHasher(self)
         self._threatTableGenerator = ThreatTableGenerator(self)

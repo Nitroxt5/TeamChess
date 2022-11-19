@@ -42,9 +42,14 @@ class PositionRecorder:
 
     def getPositions(self):
         with self._connection.cursor() as curs:
-            curs.execute("SELECT position, result, board, moves FROM positions")
+            curs.execute("SELECT position, result, moves FROM positions")
             result = curs.fetchall()
         return result
+
+    def addPosition2(self, position: str, result: int, moves: int):
+        with self._connection.cursor() as curs:
+            curs.execute("INSERT INTO positions(position, result, moves) VALUES (%s, %s, %s)", (position, result, moves))
+        self._connection.commit()
 
 
 knightPositionScore = [[1, 2, 1, 1, 1, 1, 2, 1],

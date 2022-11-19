@@ -26,6 +26,11 @@ class AIHandler:
             ConsoleLogger.thinkingStart(playerName)
             AIPlayer = AI(self._gameStates[activeBoard], self._gameStates[1 - activeBoard])
             teammateNum = self._getPlayersTeammate(playerNum)
+            # self._thinking = True
+            # self._process = Process(target=AIPlayer.negaScoutMoveAI,
+            #                         args=(depth, timeLeft, self._potentialScores[teammateNum],
+            #                               self._requiredPieces[teammateNum], self._returnQ))
+            # self._process.start()
             if self._gameStates[1].gameLogLen > 1:
                 self._thinking = True
                 self._process = Process(target=AIPlayer.negaScoutMoveAI,
