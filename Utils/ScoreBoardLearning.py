@@ -92,7 +92,7 @@ def coordinateDecentMethod(weights: list, realResults: list, movesLeftCounts: li
             step = 4 if (it == 0 and numIters > 1) else 1
             while step >= 1:
                 weights1 = weights0.copy()
-                if weights1[param] + step < 200:
+                if weights1[param] + step < 100:
                     weights1[param] += step
                     if weights1[param] != weights0[param]:
                         y1 = evaluateAverageError(evaluateEstimatedResults(weights1, positions), realResults, movesLeftCounts)
