@@ -1,5 +1,6 @@
 import pygame as pg
 from copy import deepcopy
+from random import randint
 from sys import exit as sys_exit
 from TestDLL import numSplit, getPower
 from AI.AIHandler import AIHandler
@@ -49,7 +50,8 @@ class GamePlayMenu(Menu):
         self._isPromoting = False
         self._potentialScores = [0, 0, 0, 0]
         self._requiredPieces = ["wQ", "bQ", "wQ", "bQ"]
-        self._AI = AIHandler(self._gameStates, self._potentialScores, self._requiredPieces)
+        self._AI = AIHandler(self._gameStates, self._potentialScores, self._requiredPieces, False)
+        self._oldAI = AIHandler(self._gameStates, self._potentialScores, self._requiredPieces, True)
         self._selectedSq = [(), ()]
         self._clicks = [[], []]
         self._moveMade = [False, False]
@@ -57,7 +59,7 @@ class GamePlayMenu(Menu):
         self._gameOver = False
         self._hourglass = Hourglass(self._getCurrentPlayer(), self._RL.IMAGES["hourglass"])
 
-        self._gameNum = 71
+        self._gameNum = 0
 
     @staticmethod
     def _generateBoardPositionsInPixels():
@@ -86,6 +88,12 @@ class GamePlayMenu(Menu):
         return difficulties[self._getCurrentPlayer()] == 1
 
     def create(self, dialogWindowMenu, difficulties: list, playerNames: list, gameMode: int):
+        with open("log.txt", "w"):
+            pass
+        oldTeam = randint(0, 1)
+        newTeam = 1 - oldTeam
+        line = f"New team num: {newTeam + 1}; Old team num: {oldTeam + 1};\n"
+        print(line)
         working = True
         self._gameOver = False
         clock = pg.time.Clock()
@@ -110,7 +118,11 @@ class GamePlayMenu(Menu):
                         sys_exit()
                 elif e.type == pg.QUIT:
                     self._AI.terminate()
+                    self._oldAI.terminate()
+                    print("New:\n")
                     ConsoleLogger.endgameOutput(self._gameStates, difficulties, self._AI)
+                    print("Old:\n")
+                    ConsoleLogger.endgameOutput(self._gameStates, difficulties, self._oldAI)
                     self._setBoardsToDefault(difficulties)
                     self._gameOver = True
                     working = False
@@ -140,26 +152,42 @@ class GamePlayMenu(Menu):
             self._gameOverCheck()
             if self._gameOver:
                 self._AI.terminate()
-            if not self._gameOver and not self._isPlayerTurn(difficulties) and not self._AI.cameUpWithMove:
-                player = self._getCurrentPlayer()
-                self._AI.start(self._timers[player].value, difficulties[player], self._activeBoard, self._getPlayerName(playerNames))
-            if self._AI.cameUpWithMove:
-                player = self._getCurrentPlayer()
-                self._requiredPiece_ddms[player].changeHead(RESERVE_PIECES[self._requiredPieces[player][1]] + 1)
-                self._handleNonPromotionMove(self._AI.move)
-                # if self._gameStates[1].gameLogLen >= 12 and not self._AI.move.isCapture:
-                #     with PositionRecorder() as pr:
-                #         pr.addPosition(" ".join(map(str, getFeatures(self._gameStates[1 - self._activeBoard]))), 1 - self._activeBoard, self._gameNum)
-                # self._gameOverCheck()
-                # if self._gameOver:
-                #     with PositionRecorder() as pr:
-                #         pr.deleteHalfPositionsOfGame(self._activeBoard, self._gameNum)
-                #         pr.deleteLastPositions(6)
-                #         pr.updateResultAndMoves(self._getResult(), self._gameStates[1 - self._activeBoard].gameLogLen)
-                #     self._gameNum += 1
-                #     if self._gameNum != 101:
-                #         self._restart(difficulties)
-                self._AI.cameUpWithMove = False
+                self._oldAI.terminate()
+            if self._getCurrentTeam() == newTeam:
+                if not self._gameOver and not self._isPlayerTurn(difficulties) and not self._AI.cameUpWithMove:
+                    player = self._getCurrentPlayer()
+                    self._AI.start(self._timers[player].value, difficulties[player], self._activeBoard, self._getPlayerName(playerNames))
+                if self._AI.cameUpWithMove:
+                    player = self._getCurrentPlayer()
+                    self._requiredPiece_ddms[player].changeHead(RESERVE_PIECES[self._requiredPieces[player][1]] + 1)
+                    currentTeam = self._getCurrentTeam()
+                    self._handleNonPromotionMove(self._AI.move)
+                    # if self._gameStates[1].gameLogLen >= 12 and not self._AI.move.isCapture:
+                    #     with PositionRecorder() as pr:
+                    #         pr.addPosition(" ".join(map(str, getFeatures(self._gameStates[1 - self._activeBoard]))), 1 - self._activeBoard, self._gameNum)
+                    # if self._gameOver:
+                    #     with PositionRecorder() as pr:
+                    #         pr.deleteHalfPositionsOfGame(self._activeBoard, self._gameNum)
+                    #         pr.deleteLastPositions(6)
+                    #         pr.updateResultAndMoves(self._getResult(), self._gameStates[1 - self._activeBoard].gameLogLen)
+                    #     self._gameNum += 1
+                    #     if self._gameNum != 101:
+                    #         self._restart(difficulties)
+                    if self._gameOver:
+                        line, newTeam, oldTeam = self._writeResult(line, newTeam, oldTeam, difficulties, currentTeam)
+                    self._AI.cameUpWithMove = False
+            else:
+                if not self._gameOver and not self._isPlayerTurn(difficulties) and not self._oldAI.cameUpWithMove:
+                    player = self._getCurrentPlayer()
+                    self._oldAI.start(self._timers[player].value, difficulties[player], self._activeBoard, self._getPlayerName(playerNames))
+                if self._oldAI.cameUpWithMove:
+                    player = self._getCurrentPlayer()
+                    self._requiredPiece_ddms[player].changeHead(RESERVE_PIECES[self._requiredPieces[player][1]] + 1)
+                    currentTeam = self._getCurrentTeam()
+                    self._handleNonPromotionMove(self._oldAI.move)
+                    if self._gameOver:
+                        line, newTeam, oldTeam = self._writeResult(line, newTeam, oldTeam, difficulties, currentTeam)
+                    self._oldAI.cameUpWithMove = False
             for i in range(2):
                 if self._moveMade[i]:
                     self._resetActiveBoardSelectAndClicks()
@@ -168,6 +196,24 @@ class GamePlayMenu(Menu):
             self._changeColorOfUIObjects(mousePos, [self._toMenu_btn, self._restart_btn])
             self.drawGameState()
             pg.display.flip()
+
+    def _writeResult(self, line: str, newTeam: int, oldTeam: int, difficulties: list, currentTeam: int):
+        self._gameNum += 1
+        line += f"Game: {self._gameNum}\n"
+        if self._gameStates[0].stalemate or self._gameStates[1].stalemate:
+            line += "Draw"
+        else:
+            line += f"New team {int(newTeam == currentTeam)}\n"
+            line += f"Old team {int(oldTeam == currentTeam)}\n"
+        with open("log.txt", "a") as f:
+            f.write(line)
+        oldTeam = randint(0, 1)
+        newTeam = 1 - oldTeam
+        line = f"New team num: {newTeam + 1}; Old team num: {oldTeam + 1};\n"
+        print(line)
+        if self._gameNum != 20:
+            self._restart(difficulties)
+        return line, newTeam, oldTeam
 
     def _getResult(self):
         if self._gameStates[0].stalemate or self._gameStates[1].stalemate:
@@ -369,7 +415,8 @@ class GamePlayMenu(Menu):
                 self._potentialScores[i] = 400
         self._highlighter = Highlighter(self._screen, self._gameStates, self._RL)
         self._promotionsGen = PossiblePromotionsGen(self._gameStates)
-        self._AI = AIHandler(self._gameStates, self._potentialScores, self._requiredPieces)
+        self._AI = AIHandler(self._gameStates, self._potentialScores, self._requiredPieces, False)
+        self._oldAI = AIHandler(self._gameStates, self._potentialScores, self._requiredPieces, True)
         self._hourglass = Hourglass(0, self._RL.IMAGES["hourglass"])
         for i in range(len(self._timers)):
             self._timers[i].reset()
@@ -389,7 +436,11 @@ class GamePlayMenu(Menu):
             self._timers[self._getCurrentPlayer()].state = False
             if dialogWindowMenu.create(self._textContent["DW2"], self):
                 self._AI.terminate()
+                self._oldAI.terminate()
+                print("New:\n")
                 ConsoleLogger.endgameOutput(self._gameStates, difficulties, self._AI)
+                print("Old:\n")
+                ConsoleLogger.endgameOutput(self._gameStates, difficulties, self._oldAI)
                 self._setBoardsToDefault(difficulties)
                 self.drawGameState()
                 self._timers[0].switch()
@@ -399,7 +450,11 @@ class GamePlayMenu(Menu):
         timerState = self._timers[self._getCurrentPlayer()].state
         self._timers[self._getCurrentPlayer()].state = False
         self._AI.terminate()
+        self._oldAI.terminate()
+        print("New:\n")
         ConsoleLogger.endgameOutput(self._gameStates, difficulties, self._AI)
+        print("Old:\n")
+        ConsoleLogger.endgameOutput(self._gameStates, difficulties, self._oldAI)
         self._setBoardsToDefault(difficulties)
         self.drawGameState()
         self._timers[0].switch()
@@ -641,6 +696,11 @@ class GamePlayMenu(Menu):
     def _getPlayerName(self, playerNames: list):
         """Gets name of a player who is now to move"""
         return playerNames[self._getCurrentPlayer()]
+
+    def _getCurrentTeam(self):
+        if self._getCurrentPlayer() in (0, 3):
+            return 0
+        return 1
 
     def _gameOverCheck(self):
         if self._gameStates[0].checkmate or self._gameStates[1].checkmate:

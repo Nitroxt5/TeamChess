@@ -32,7 +32,7 @@ class NewGameMenu(Menu):
         self._UIObjects = [self._board1_img, self._board2_img, self._back_btn, self._play_btn, self._gameMode_ddm,
                            self._gameMode_lbl] + self._player_ddms
 
-        self._difficulties = [2, 2, 2, 2]  # 1 = player, 2 = EasyAI, 3 = NormalAI, 4 = HardAI
+        self._difficulties = [4, 4, 4, 4]  # 1 = player, 2 = EasyAI, 3 = NormalAI, 4 = HardAI
         self._currentGameMode = 0
 
     @staticmethod

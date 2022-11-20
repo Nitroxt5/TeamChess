@@ -1,5 +1,7 @@
 from multiprocessing import Process, Queue
+from random import randint
 from AI.AI import AI
+from AI.OldAI import OldAI
 from Engine.Move import Move
 from Generators.PossiblePromotions import PossiblePromotionsGen
 from Utils.Logger import ConsoleLogger
@@ -7,7 +9,7 @@ from Utils.MagicConsts import SQUARES, CHECKMATE
 
 
 class AIHandler:
-    def __init__(self, gameStates: list, potentialScores: list, requiredPieces: list):
+    def __init__(self, gameStates: list, potentialScores: list, requiredPieces: list, old: bool):
         self._gameStates = gameStates
         self._potentialScores = potentialScores
         self._requiredPieces = requiredPieces
@@ -15,6 +17,7 @@ class AIHandler:
         self._process = Process()
         self._returnQ = Queue()
         self._thinking = False
+        self._old = old
         self.move = None
         self.cameUpWithMove = False
         self.thinkingTime = [0, 0]
@@ -24,9 +27,12 @@ class AIHandler:
         playerNum = self._getCurrentPlayer(activeBoard)
         if not self._thinking:
             ConsoleLogger.thinkingStart(playerName)
-            AIPlayer = AI(self._gameStates[activeBoard], self._gameStates[1 - activeBoard])
+            if self._old:
+                AIPlayer = OldAI(self._gameStates[activeBoard], self._gameStates[1 - activeBoard])
+            else:
+                AIPlayer = AI(self._gameStates[activeBoard], self._gameStates[1 - activeBoard])
             teammateNum = self._getPlayersTeammate(playerNum)
-            # self._thinking = True
+            self._thinking = True
             # self._process = Process(target=AIPlayer.negaScoutMoveAI,
             #                         args=(depth, timeLeft, self._potentialScores[teammateNum],
             #                               self._requiredPieces[teammateNum], self._returnQ))
@@ -85,7 +91,10 @@ class AIHandler:
     def _updateMoveWithPromotionPos(self, activeBoard: int):
         promotions = self._promotionsGen.calculatePossiblePromotions(activeBoard)
         requiredPromotions = [(SQUARES[loc[1]][loc[0]], piece) for loc, piece in promotions.items() if piece[1] == self.move.promotedTo]
-        promotionPos = self._findBestPromotionPos(requiredPromotions, activeBoard)
+        if self._old:
+            promotionPos = requiredPromotions[randint(0, len(requiredPromotions) - 1)][0]
+        else:
+            promotionPos = self._findBestPromotionPos(requiredPromotions, activeBoard)
         self.move = Move(self.move.startSquare, self.move.endSquare, self._gameStates[activeBoard],
                          movedPiece=self.move.movedPiece, promotedTo=self.move.promotedTo,
                          promotedPiecePosition=promotionPos)
@@ -96,6 +105,7 @@ class AIHandler:
         AIPlayer = AI(self._gameStates[1 - activeBoard], self._gameStates[activeBoard])
         bestScore = -CHECKMATE
         bestPromotion = promotions[0]
+        score = 0
         for promotion in promotions:
             score = AIPlayer.scoreBoardWithRemovedPieceAtPos(promotion[1], promotion[0])
             if score > bestScore:

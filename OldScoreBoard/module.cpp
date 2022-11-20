@@ -2,23 +2,21 @@
 #define ULL unsigned long long
 #define PY_SSIZE_T_CLEAN
 
-//long weights[] = {15,  // for positioning the rook on the semi-open file with pawn of the same color
-//                  20,  // for positioning the rook on the semi-open file with pawn of the opposite color
-//                  30,  // for positioning the rook on the open file
-//                  20,  // for positioning the rook on the penultimate row
-//                  3,   // for every possible (not necessary valid) knight move
-//                  4,   // for every possible (not necessary valid) bishop move
-//                  50,  // for castling
-//                  20,  // for checking opponent king
-//                  70,  // for castling deprivation (for each side)
-//                  30,  // for pawn shield in front of king
-//                  10,  // for pseudo passed pawn
-//                  20,  // penalty for doubled pawns
-//                  30,  // penalty for tripled pawns
-//                  20,  // penalty for early queen participation
-//                  30}; // for center control (for each square)
-
-long weights[] = {33, 46, 58, 39, 10, 16, 28, 20, 53, 31, 17, 18, 30, 20, 17};
+long weights[] = {15,  // for positioning the rook on the semi-open file with pawn of the same color
+                  20,  // for positioning the rook on the semi-open file with pawn of the opposite color
+                  30,  // for positioning the rook on the open file
+                  20,  // for positioning the rook on the penultimate row
+                  3,   // for every possible (not necessary valid) knight move
+                  4,   // for every possible (not necessary valid) bishop move
+                  50,  // for castling
+                  20,  // for checking opponent king
+                  70,  // for castling deprivation (for each side)
+                  30,  // for pawn shield in front of king
+                  10,  // for pseudo passed pawn
+                  20,  // penalty for doubled pawns
+                  30,  // penalty for tripled pawns
+                  20,  // penalty for early queen participation
+                  30}; // for center control (for each square)
 
 long knightPositionScore[8][8] = { 1, 2, 1, 1, 1, 1, 2, 1,
 								   1, 2, 2, 2, 2, 2, 2, 1,
@@ -626,19 +624,19 @@ static PyObject* scoreBoard(PyObject* self, PyObject* gs)
 	return PyLong_FromLong(score);
 }
 
-static PyMethodDef ScoreBoard_methods[] = {
+static PyMethodDef OldScoreBoard_methods[] = {
 	{ "scoreBoard", (PyCFunction)scoreBoard, METH_O, ""},
 	{ NULL, NULL, 0, NULL }
 };
 
-static PyModuleDef ScoreBoard_module = {
+static PyModuleDef OldScoreBoard_module = {
 	PyModuleDef_HEAD_INIT,
-	"ScoreBoard",
+	"OldScoreBoard",
 	"Provides a fast score board function",
 	-1,
-	ScoreBoard_methods
+	OldScoreBoard_methods
 };
 
-PyMODINIT_FUNC PyInit_ScoreBoard() {
-	return PyModule_Create(&ScoreBoard_module);
+PyMODINIT_FUNC PyInit_OldScoreBoard() {
+	return PyModule_Create(&OldScoreBoard_module);
 }
