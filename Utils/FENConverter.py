@@ -1,4 +1,7 @@
 from Engine.Move import Move
+from Generators.GSHasher import GSHasher
+from Generators.MoveGen import MoveGenerator
+from Generators.ThreatTables import ThreatTableGenerator
 from Utils.MagicConsts import CASTLE_SIDES, COLORED_PIECES, COLORS, PIECES, SQUARES, COLUMNS, ROWS
 
 
@@ -19,6 +22,9 @@ class FENAndGSConverter:
         gameState.gameLogLen = (int(FENParts[5]) - 1) * 2
         if not gameState.whiteTurn:
             gameState.gameLogLen += 1
+        gameState.hasher = GSHasher(gameState)
+        gameState.threatTableGenerator = ThreatTableGenerator(gameState)
+        gameState.moveGenerator = MoveGenerator(gameState)
 
     @classmethod
     def _FENtobbOfPieces(cls, FENPart: str, gs):
@@ -55,6 +61,12 @@ class FENAndGSConverter:
             gs.currentCastlingRight = 0
         else:
             for rule in FENPart:
+                if rule == "a":
+                    gs.isBlackInCheck = True
+                    continue
+                if rule == "A":
+                    gs.isWhiteInCheck = True
+                    continue
                 gs.setCastleRight(CASTLE_SIDES[FENRuleToStr[rule]])
 
     @classmethod

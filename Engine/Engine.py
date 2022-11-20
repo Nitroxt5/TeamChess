@@ -39,9 +39,9 @@ class GameState:
         # self.reserve = {"w": {"Q": 16, "R": 16, "B": 16, "N": 16, "p": 16}, "b": {"Q": 16, "R": 16, "B": 16, "N": 16, "p": 16}}
         # FENAndGSConverter.FENtoGameState("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1", self)
         # print(self)
-        self._hasher = GSHasher(self)
-        self._threatTableGenerator = ThreatTableGenerator(self)
-        self._moveGenerator = MoveGenerator(self)
+        self.hasher = GSHasher(self)
+        self.threatTableGenerator = ThreatTableGenerator(self)
+        self.moveGenerator = MoveGenerator(self)
         self.isWhiteCastled = False
         self.isBlackCastled = False
         self.isWhiteInCheck = False
@@ -74,24 +74,24 @@ class GameState:
                 other._unsetPromotedPiece(move)
         self.whiteTurn = not self.whiteTurn
         self._generateEnpassantSquare(move)
-        self._hasher.updateBoardHash(move)
+        self.hasher.updateBoardHash(move)
         self._updateCastleRights(move)
-        self._threatTableGenerator.createThreatTable()
+        self.threatTableGenerator.createThreatTable()
         self.inCheck()
         Asserter.assertionEndCheck(self)
 
     def _appendToGameStateLogs(self, move):
-        self._hasher.appendHashToLog()
+        self.hasher.appendHashToLog()
         self.gameLog.append(move)
         self.lastPieceMoved = self.gameLog[-1].movedPiece[1]
         self.gameLogLen += 1
         self.enpassantSqLog.append(self.enpassantSq)
         self.castleRightsLog.append(self.currentCastlingRight)
-        self._threatTableGenerator.appendThreatTableToLog()
+        self.threatTableGenerator.appendThreatTableToLog()
 
     def _updateGameStateReserve(self, piece: str, amount: int):
         self.reserve[piece[0]][piece[1]] += amount
-        self._hasher.updateReserveHash(piece, self.reserve[piece[0]][piece[1]] - amount)
+        self.hasher.updateReserveHash(piece, self.reserve[piece[0]][piece[1]] - amount)
 
     def _unsetEnpassantCapture(self, move):
         if self.whiteTurn:
@@ -123,7 +123,7 @@ class GameState:
 
     def _unsetPromotedPiece(self, move):
         self.unsetSqState(f"{move.movedPiece[0] + move.promotedTo}", move.promotedPiecePosition)
-        self._hasher.switchBoardHash(getPower(move.promotedPiecePosition), move.movedPiece[0] + move.promotedTo)
+        self.hasher.switchBoardHash(getPower(move.promotedPiecePosition), move.movedPiece[0] + move.promotedTo)
         self._updateGameStateReserve(move.movedPiece, 1)
 
     def _generateEnpassantSquare(self, move):
@@ -161,10 +161,10 @@ class GameState:
         Asserter.assertionEndCheck(self)
 
     def _popFromLogs(self):
-        self._hasher.popHashFromLog()
+        self.hasher.popHashFromLog()
         self.enpassantSq = self.enpassantSqLog.pop()
         self.currentCastlingRight = self.castleRightsLog.pop()
-        self._threatTableGenerator.popThreatTableFromLog()
+        self.threatTableGenerator.popThreatTableFromLog()
         move = self.gameLog.pop()
         if len(self.gameLog) == 0:
             self.lastPieceMoved = "-"
@@ -243,9 +243,9 @@ class GameState:
             return self.isBlackInCheck
 
     def isSquareAttackedByOpponent(self, square: int):
-        if self.whiteTurn and (self._threatTableGenerator.bbOfThreats["b"] & square):
+        if self.whiteTurn and (self.threatTableGenerator.bbOfThreats["b"] & square):
             return True
-        if not self.whiteTurn and (self._threatTableGenerator.bbOfThreats["w"] & square):
+        if not self.whiteTurn and (self.threatTableGenerator.bbOfThreats["w"] & square):
             return True
         return False
 
@@ -259,23 +259,23 @@ class GameState:
         canBeRemoved = False
         whiteInCheck, blackInCheck = self.isWhiteInCheck, self.isBlackInCheck
         self.unsetSqState(piece, square)
-        self._threatTableGenerator.createThreatTable()
+        self.threatTableGenerator.createThreatTable()
         self.inCheck()
         self.setSqState(piece, square)
         if whiteInCheck == self.isWhiteInCheck and blackInCheck == self.isBlackInCheck:
             canBeRemoved = True
         self.isWhiteInCheck, self.isBlackInCheck = whiteInCheck, blackInCheck
-        self._threatTableGenerator.createThreatTable()
+        self.threatTableGenerator.createThreatTable()
         return canBeRemoved
 
     def getValidMoves(self):
-        return self._moveGenerator.getValidMoves()
+        return self.moveGenerator.getValidMoves()
 
     def updatePawnPromotionMoves(self, moves: list, other):
-        self._moveGenerator.updatePawnPromotionMoves(moves, other)
+        self.moveGenerator.updatePawnPromotionMoves(moves, other)
 
     def getUnavailableReserveMoves(self):
-        return self._moveGenerator.getUnavailableReserveMoves()
+        return self.moveGenerator.getUnavailableReserveMoves()
 
     def setSqState(self, piece: str, piecePosition: int):
         """Sets specified piece into specified position. Does nothing if piece is None or square is already occupied with that exact piece"""
@@ -332,4 +332,4 @@ class GameState:
 
     @property
     def boardHash(self):
-        return self._hasher.boardHash
+        return self.hasher.boardHash
