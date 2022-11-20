@@ -1,0 +1,8 @@
+New team num: 1; Old team num: 2;
+Game: 1
+New team 0
+Old team 1
+New team num: 1; Old team num: 2;
+Game: 2
+New team 0
+Old team 1

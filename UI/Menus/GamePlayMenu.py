@@ -153,6 +153,7 @@ class GamePlayMenu(Menu):
             if self._gameOver:
                 self._AI.terminate()
                 self._oldAI.terminate()
+                line, newTeam, oldTeam = self._writeResult(line, newTeam, oldTeam, difficulties, 1 - self._getCurrentTeam())
             if self._getCurrentTeam() == newTeam:
                 if not self._gameOver and not self._isPlayerTurn(difficulties) and not self._AI.cameUpWithMove:
                     player = self._getCurrentPlayer()
@@ -198,20 +199,21 @@ class GamePlayMenu(Menu):
             pg.display.flip()
 
     def _writeResult(self, line: str, newTeam: int, oldTeam: int, difficulties: list, currentTeam: int):
-        self._gameNum += 1
-        line += f"Game: {self._gameNum}\n"
-        if self._gameStates[0].stalemate or self._gameStates[1].stalemate:
-            line += "Draw"
-        else:
-            line += f"New team {int(newTeam == currentTeam)}\n"
-            line += f"Old team {int(oldTeam == currentTeam)}\n"
-        with open("log.txt", "a") as f:
-            f.write(line)
-        oldTeam = randint(0, 1)
-        newTeam = 1 - oldTeam
-        line = f"New team num: {newTeam + 1}; Old team num: {oldTeam + 1};\n"
-        print(line)
-        if self._gameNum != 20:
+        if self._gameNum != 2:
+            self._gameNum += 1
+            line += f"Game: {self._gameNum}\n"
+            if self._gameStates[0].stalemate or self._gameStates[1].stalemate:
+                line += "Draw"
+            else:
+                line += f"New team {int(newTeam == currentTeam)}\n"
+                line += f"Old team {int(oldTeam == currentTeam)}\n"
+            with open("log.txt", "a") as f:
+                f.write(line)
+            oldTeam = randint(0, 1)
+            newTeam = 1 - oldTeam
+            line = f"New team num: {newTeam + 1}; Old team num: {oldTeam + 1};\n"
+            print(line)
+        if self._gameNum != 2:
             self._restart(difficulties)
         return line, newTeam, oldTeam
 
@@ -447,7 +449,6 @@ class GamePlayMenu(Menu):
             self._timers[self._getCurrentPlayer()].state = timerState
 
     def _restart(self, difficulties: list):
-        timerState = self._timers[self._getCurrentPlayer()].state
         self._timers[self._getCurrentPlayer()].state = False
         self._AI.terminate()
         self._oldAI.terminate()
@@ -458,7 +459,6 @@ class GamePlayMenu(Menu):
         self._setBoardsToDefault(difficulties)
         self.drawGameState()
         self._timers[0].switch()
-        self._timers[self._getCurrentPlayer()].state = timerState
 
     def _handleDDMs(self, mousePos: tuple):
         for i, ddm in enumerate(self._requiredPiece_ddms):
