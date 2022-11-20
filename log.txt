@@ -1,8 +1,52 @@
 New team num: 1; Old team num: 2;
 Game: 1
+New team 1
+Old team 0
+New team num: 2; Old team num: 1;
+Game: 2
+New team 1
+Old team 0
+New team num: 1; Old team num: 2;
+Game: 3
+New team 1
+Old team 0
+New team num: 1; Old team num: 2;
+Game: 4
+New team 0
+Old team 1
+New team num: 2; Old team num: 1;
+Game: 5
+New team 0
+Old team 1
+New team num: 2; Old team num: 1;
+Game: 6
 New team 0
 Old team 1
 New team num: 1; Old team num: 2;
-Game: 2
+Game: 7
 New team 0
 Old team 1
+New team num: 1; Old team num: 2;
+Game: 8
+New team 1
+Old team 0
+New team num: 2; Old team num: 1;
+Game: 9
+New team 1
+Old team 0
+New team num: 1; Old team num: 2;
+Game: 10
+New team 0
+Old team 1
+New team num: 2; Old team num: 1;
+Game: 11
+New team 1
+Old team 0
+New team num: 2; Old team num: 1;
+Game: 12
+New team 1
+Old team 0
+New team num: 1; Old team num: 2;
+Game: 13
+New team 1
+Old team 0

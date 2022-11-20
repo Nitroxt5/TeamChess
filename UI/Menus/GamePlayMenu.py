@@ -59,7 +59,7 @@ class GamePlayMenu(Menu):
         self._gameOver = False
         self._hourglass = Hourglass(self._getCurrentPlayer(), self._RL.IMAGES["hourglass"])
 
-        self._gameNum = 0
+        self._gameNum = 12
 
     @staticmethod
     def _generateBoardPositionsInPixels():
@@ -88,8 +88,8 @@ class GamePlayMenu(Menu):
         return difficulties[self._getCurrentPlayer()] == 1
 
     def create(self, dialogWindowMenu, difficulties: list, playerNames: list, gameMode: int):
-        with open("log.txt", "w"):
-            pass
+        # with open("log.txt", "w"):
+        #     pass
         oldTeam = randint(0, 1)
         newTeam = 1 - oldTeam
         line = f"New team num: {newTeam + 1}; Old team num: {oldTeam + 1};\n"
@@ -199,7 +199,7 @@ class GamePlayMenu(Menu):
             pg.display.flip()
 
     def _writeResult(self, line: str, newTeam: int, oldTeam: int, difficulties: list, currentTeam: int):
-        if self._gameNum != 2:
+        if self._gameNum != 20:
             self._gameNum += 1
             line += f"Game: {self._gameNum}\n"
             if self._gameStates[0].stalemate or self._gameStates[1].stalemate:
@@ -213,7 +213,7 @@ class GamePlayMenu(Menu):
             newTeam = 1 - oldTeam
             line = f"New team num: {newTeam + 1}; Old team num: {oldTeam + 1};\n"
             print(line)
-        if self._gameNum != 2:
+        if self._gameNum != 20:
             self._restart(difficulties)
         return line, newTeam, oldTeam
 
