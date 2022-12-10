@@ -112,7 +112,7 @@ class AI:
             return turn * scoreBoard(self._gameState)
         self._oneDepthSearch(moves, turn, currentDepth)
         self._sortMoves(moves)
-        silentMoveCounter = 19 + int(2 * sqrt(max(len(validMoves[1]), 100)))
+        silentMoveCounter = 20 + int(2 * sqrt(max(len(validMoves[1]), 100)))
         for move in moves:
             if not silentMoveCounter:
                 break
@@ -151,7 +151,7 @@ class AI:
                 move.estimatedScore = turn * scoreBoard(self._gameState)
                 self._gameState.undoMove()
             if move.capturedPiece == self._teammateBestUnavailableReservePiece and self._teammatePotentialScore > 0:
-                move.estimatedScore += self._teammatePotentialScore // 10
+                move.estimatedScore = self._teammatePotentialScore
 
     @staticmethod
     def _sortMoves(moves):
@@ -201,7 +201,7 @@ class AI:
 
     def _updateScoreWithTeammatesPotentialScore(self, move, score: int):
         if move.capturedPiece == self._teammateBestUnavailableReservePiece and self._teammatePotentialScore > 0:
-            score += self._teammatePotentialScore // 10
+            score = self._teammatePotentialScore
         return score
 
     def _updateBestMoveHashTable(self, currentDepth: int, score: int):

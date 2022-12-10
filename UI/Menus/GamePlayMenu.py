@@ -350,6 +350,7 @@ class GamePlayMenu(Menu):
         for i in range(len(self._timers)):
             self._timers[i].reset()
             self._requiredPiece_ddms[i].hide()
+            self._requiredPiece_ddms[i].changeHead(RESERVE_PIECES["Q"] + 1)
 
     def _handleToMenuBtn(self, dialogWindowMenu, mousePos: tuple):
         if self._toMenu_btn.checkForInput(mousePos):
