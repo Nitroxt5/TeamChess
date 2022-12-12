@@ -121,7 +121,7 @@ class AI:
             if score is None:
                 silentMoveCounter, score = self._calculateScore(move, alpha, beta, turn, currentDepth, searchDepth, silentMoveCounter)
             self._gameState.undoMove()
-            score = self._updateScoreWithTeammatesPotentialScore(move, score)
+            score = self._updateScoreWithTeammatesPotentialScore(move, score, currentDepth)
             prevAlpha = alpha
             if score > alpha:
                 alpha = score
@@ -151,7 +151,7 @@ class AI:
                 move.estimatedScore = turn * scoreBoard(self._gameState)
                 self._gameState.undoMove()
             if move.capturedPiece == self._teammateBestUnavailableReservePiece and self._teammatePotentialScore > 0:
-                move.estimatedScore = self._teammatePotentialScore
+                move.estimatedScore += self._teammatePotentialScore // 10 * currentDepth
 
     @staticmethod
     def _sortMoves(moves):
@@ -199,9 +199,9 @@ class AI:
     def _isSilentMove(self, move):
         return not (move.isCapture or self._gameState.isWhiteInCheck or self._gameState.isBlackInCheck)
 
-    def _updateScoreWithTeammatesPotentialScore(self, move, score: int):
+    def _updateScoreWithTeammatesPotentialScore(self, move, score: int, currentDepth: int):
         if move.capturedPiece == self._teammateBestUnavailableReservePiece and self._teammatePotentialScore > 0:
-            score = self._teammatePotentialScore
+            score += self._teammatePotentialScore // 10 * currentDepth
         return score
 
     def _updateBestMoveHashTable(self, currentDepth: int, score: int):
