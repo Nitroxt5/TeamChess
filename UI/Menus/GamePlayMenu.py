@@ -147,7 +147,7 @@ class GamePlayMenu(Menu):
                 if self._AI.cameUpWithMove:
                     player = self._getCurrentPlayer()
                     self._requiredPiece_ddms[player].changeHead(RESERVE_PIECES[self._requiredPieces[player][1]] + 1)
-                    self._sendMove(self._AI.move, network)
+                    self._sendState(self._AI.move, network)
                     self._AI.cameUpWithMove = False
             for i in range(2):
                 if self._moveMade[i]:
@@ -162,9 +162,15 @@ class GamePlayMenu(Menu):
         msg = network.request()
         if msg == "quit":
             return False
-        if isinstance(msg, Move):
-            self._handleMove(msg)
+        if isinstance(msg, dict):
+            self._handleMove(msg["move"])
+            self._requiredPieces = msg["requiredPieces"]
+            self._handleDDMNetwork()
         return True
+
+    def _handleDDMNetwork(self):
+        for i, ddm in enumerate(self._requiredPiece_ddms):
+            ddm.changeHead(RESERVE_PIECES[self._requiredPieces[i][1]] + 1)
 
     def _terminateThreads(self, network: Network):
         network.send("quit")
@@ -177,8 +183,8 @@ class GamePlayMenu(Menu):
         except ValueError:
             return 0
 
-    def _sendMove(self, move: Move, network: Network):
-        network.send(move)
+    def _sendState(self, move: Move, network: Network):
+        network.send({"move": move, "requiredPieces": self._requiredPieces})
         self._moveSent = True
 
     @staticmethod
@@ -538,7 +544,7 @@ class GamePlayMenu(Menu):
                     if move.isPawnPromotion:
                         self._handlePromotionMove(validMove, playerNames)
                     if not (validMove.isPawnPromotion and validMove.promotedTo is None):
-                        self._sendMove(validMove, network)
+                        self._sendState(validMove, network)
                         break
 
     def _isSimilarMove(self, move, validMove):

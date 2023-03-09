@@ -3,7 +3,6 @@ import pickle
 from copy import deepcopy
 from threading import Thread, Barrier, Event, Lock
 from queue import Queue
-from Engine.Move import Move
 from Networking.NetHelpers import getIP
 from Utils.Logger import ConsoleLogger
 
@@ -23,7 +22,7 @@ class Server:
         self._lock = Lock()
         self._acceptionEvent = acceptionEvent
         self._gameParams = {}
-        self._lastMove = Queue()
+        self._lastState = Queue()
         self._sentMove = {player: False for player in self._players}
         self._tryBind()
         self._waitForConnections()
@@ -69,24 +68,24 @@ class Server:
         if not data:
             return False
         msg = pickle.loads(data)
-        if isinstance(msg, Move):
-            self._lastMove.put(msg)
+        if isinstance(msg, dict):
+            self._lastState.put(msg)
         if msg == "get":
-            if self._sentMove[player] or self._getLastMove() is None:
+            if self._sentMove[player] or self._getLastState() is None:
                 self._connections[player].sendall(pickle.dumps(None))
             else:
-                self._connections[player].sendall(pickle.dumps(self._getLastMove()))
+                self._connections[player].sendall(pickle.dumps(self._getLastState()))
                 self._sentMove[player] = True
         if self._sentToAll():
             self._sentMove = {player: False for player in self._players}
-            self._lastMove.get()
+            self._lastState.get()
         if msg == "quit":
             return False
         return True
 
-    def _getLastMove(self):
+    def _getLastState(self):
         try:
-            return self._lastMove.queue[0]
+            return self._lastState.queue[0]
         except IndexError:
             return
 
