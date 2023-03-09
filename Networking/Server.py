@@ -9,17 +9,19 @@ from Utils.Logger import ConsoleLogger
 
 
 class Server:
-    def __init__(self, freePlayers: list[int], acceptionEvent: Event, moveEvent: Event):
+    def __init__(self, freePlayers: list[int], acceptionEvent: Event):
         self._server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._ip = getIP()
         self._port = 5555
         self._addr = (self._ip, self._port)
-        self._players = freePlayers
+        if len(freePlayers) == 0:
+            self._players = [0]
+        else:
+            self._players = freePlayers
         self._connections: {int: socket.socket} = {}
         self._barrier = Barrier(len(self._players))
         self._lock = Lock()
         self._acceptionEvent = acceptionEvent
-        self._moveEvent = moveEvent
         self._gameParams = {}
         self._lastMove = Queue()
         self._sentMove = {player: False for player in self._players}
@@ -32,6 +34,7 @@ class Server:
         ConsoleLogger.waitingForConnection()
 
     def _waitForConnections(self):
+        threads = []
         for i, player in enumerate(self._players):
             if i == 0:
                 self._acceptionEvent.set()
@@ -40,7 +43,11 @@ class Server:
                 self._gameParams = pickle.loads(conn.recv(1024))
             self._connections[player] = conn
             ConsoleLogger.connectedToAddr(addr, player + 1)
-            Thread(target=self._threadedClient, args=(conn, player)).start()
+            threads.append(Thread(target=self._threadedClient, args=(conn, player)))
+            threads[-1].start()
+        for thread in threads:
+            thread.join()
+        self._server.close()
 
     def _threadedClient(self, conn: socket.socket, player: int):
         self._barrier.wait()
@@ -64,18 +71,15 @@ class Server:
         msg = pickle.loads(data)
         if isinstance(msg, Move):
             self._lastMove.put(msg)
-            print("Server received", msg, self._sentMove)
         if msg == "get":
             if self._sentMove[player] or self._getLastMove() is None:
                 self._connections[player].sendall(pickle.dumps(None))
             else:
                 self._connections[player].sendall(pickle.dumps(self._getLastMove()))
                 self._sentMove[player] = True
-                print("Server sent", self._getLastMove(), self._sentMove)
         if self._sentToAll():
             self._sentMove = {player: False for player in self._players}
             self._lastMove.get()
-            self._moveEvent.clear()
         if msg == "quit":
             return False
         return True

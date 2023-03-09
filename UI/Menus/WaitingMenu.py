@@ -29,8 +29,9 @@ class WaitingMenu(Menu):
                     working = False
             gameParams = self._getFirstMsg()
             if gameParams is not None:
-                gamePlayMenu.create(network, dialogWindowMenu, gameParams["difficulties"], gameParams["playerNames"],
-                                    gameParams["gameMode"], gameParams["playerNum"])
+                self._msgs.get()
+                gamePlayMenu.create(network, dialogWindowMenu, gameParams["difficulties"],
+                                    gameParams["playerNames"].copy(), gameParams["gameMode"], gameParams["playerNum"])
                 working = False
             pg.display.flip()
         return False

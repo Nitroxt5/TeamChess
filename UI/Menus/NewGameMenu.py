@@ -97,9 +97,9 @@ class NewGameMenu(Menu):
                         if ddm.checkForInput(mousePos):
                             ddm.switch()
                         choice = ddm.checkForChoice(mousePos)
-                        self._configureNameByDifficulty(i, choice)
                         if choice is not None:
                             self._difficulties[i] = choice
+                            self._configureNameByDifficulty(i, choice)
             pg.display.flip()
 
     def _configureStartingNamesAccordingToChosenDifficulties(self):
@@ -111,7 +111,7 @@ class NewGameMenu(Menu):
 
     def _initiateGame(self, waitingMenu, gamePlayMenu, dialogWindowMenu):
         acceptionEvent = Event()
-        Thread(target=Server, args=([player for player, difficulty in enumerate(self._difficulties) if difficulty == 1], acceptionEvent, moveEvent)).start()
+        Thread(target=Server, args=([player for player, difficulty in enumerate(self._difficulties) if difficulty == 1], acceptionEvent)).start()
         acceptionEvent.wait()
         network = Network(getIP())
         gameParams = {"difficulties": self._difficulties, "playerNames": self._names, "gameMode": self._currentGameMode}

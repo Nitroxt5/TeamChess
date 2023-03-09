@@ -88,6 +88,7 @@ class GamePlayMenu(Menu):
         working = True
         self._gameOver = False
         clock = pg.time.Clock()
+        playerNames[connectedPlayer] += f" ({self._textContent['you']})"
         playerNamesPositions = self._generateNamesPositionsInPixels()
         self._player_lbls = [Label(playerNames[i], playerNamesPositions[i], self._font, shift=2) for i in range(4)]
         timerPositions = self._generateTimerPositionsInPixels()
@@ -95,7 +96,7 @@ class GamePlayMenu(Menu):
         for i in range(len(difficulties)):
             if difficulties[i] == 1:
                 self._potentialScores[i] = 400
-            if difficulties[i] != 1:
+            if difficulties[i] != 1 or i != connectedPlayer:
                 self._requiredPiece_ddms[i].turnOff()
         self._timers[0].switch()
         while working:
@@ -163,7 +164,6 @@ class GamePlayMenu(Menu):
             return False
         if isinstance(msg, Move):
             self._handleMove(msg)
-            print("Client received", msg)
         return True
 
     def _terminateThreads(self, network: Network):
@@ -180,7 +180,6 @@ class GamePlayMenu(Menu):
     def _sendMove(self, move: Move, network: Network):
         network.send(move)
         self._moveSent = True
-        print("Client sent", move)
 
     @staticmethod
     def _generateNamesPositionsInPixels():
