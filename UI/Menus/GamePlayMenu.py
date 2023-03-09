@@ -84,7 +84,7 @@ class GamePlayMenu(Menu):
         """Figures out who is to move: AI or player"""
         return difficulties[self._getCurrentPlayer()] == 1
 
-    def create(self, network: Network, dialogWindowMenu, difficulties: list, playerNames: list, gameMode: int, connectedPlayer: int, moveEvent):
+    def create(self, network: Network, dialogWindowMenu, difficulties: list, playerNames: list, gameMode: int, connectedPlayer: int):
         working = True
         self._gameOver = False
         clock = pg.time.Clock()

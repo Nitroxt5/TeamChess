@@ -24,7 +24,7 @@ class ConnectMenu(Menu):
         backBtnPos = (SCREEN_WIDTH // 4 * 3, SCREEN_HEIGHT - SQ_SIZE * 2)
         return connectBtnPos, backBtnPos
 
-    def create(self, waitingMenu, gamePlayMenu, dialogWindowMenu, moveEvent):
+    def create(self, waitingMenu, gamePlayMenu, dialogWindowMenu):
         working = True
         clock = pg.time.Clock()
         while working:
@@ -43,13 +43,13 @@ class ConnectMenu(Menu):
                     if self._back_btn.checkForInput(mousePos):
                         working = False
                     if self._connect_btn.checkForInput(mousePos):
-                        self._handleConnectButton(waitingMenu, gamePlayMenu, dialogWindowMenu, moveEvent)
+                        self._handleConnectButton(waitingMenu, gamePlayMenu, dialogWindowMenu)
                     if self._inputBox.checkForInput(mousePos):
                         self._err_lbl = Label("", (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 4 * 2), self._font)
             pg.display.flip()
         return False
 
-    def _handleConnectButton(self, waitingMenu, gamePlayMenu, dialogWindowMenu, moveEvent):
+    def _handleConnectButton(self, waitingMenu, gamePlayMenu, dialogWindowMenu):
         if not checkIP(self._inputBox.text):
             self._showError()
             return
@@ -57,7 +57,7 @@ class ConnectMenu(Menu):
         if network is None:
             self._showError()
             return
-        waitingMenu.create(network, gamePlayMenu, dialogWindowMenu, moveEvent)
+        waitingMenu.create(network, gamePlayMenu, dialogWindowMenu)
 
     def _showError(self):
         self._err_lbl = Label(self._textContent["Error"], (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 4), self._font)

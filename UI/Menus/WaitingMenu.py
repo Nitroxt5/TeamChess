@@ -14,7 +14,7 @@ class WaitingMenu(Menu):
         super().__init__(screen, resourceLoader, Label(self._textContent["Name"], (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 10), self._bigFont, shift=5))
         self._msgs = Queue()
 
-    def create(self, network: Network, gamePlayMenu, dialogWindowMenu, moveEvent):
+    def create(self, network: Network, gamePlayMenu, dialogWindowMenu):
         code_lbl = Label(network.ip, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2), self._bigFont)
         working = True
         clock = pg.time.Clock()
@@ -30,7 +30,7 @@ class WaitingMenu(Menu):
             gameParams = self._getFirstMsg()
             if gameParams is not None:
                 gamePlayMenu.create(network, dialogWindowMenu, gameParams["difficulties"], gameParams["playerNames"],
-                                    gameParams["gameMode"], gameParams["playerNum"], moveEvent)
+                                    gameParams["gameMode"], gameParams["playerNum"])
                 working = False
             pg.display.flip()
         return False

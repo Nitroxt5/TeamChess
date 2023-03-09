@@ -1,5 +1,4 @@
 import pygame as pg
-from threading import Event
 from UI.Menus.Menu import Menu
 from UI.UIObjects import Button, Label
 from UI.WindowSizeConsts import FONT_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH, FPS
@@ -21,8 +20,6 @@ class MainMenu(Menu):
         self._quit_btn = Button(self._RL.IMAGES["button"], quitBtnPos, self._textContent["Quit_btn"], self._font)
         self._buttons = [self._newGame_btn, self._connect_btn, self._settings_btn, self._quit_btn]
 
-        self._moveEvent = Event()
-
     @staticmethod
     def _generateBtnPositionsInPixels():
         return [(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 6 * i) for i in range(2, 6)]
@@ -43,9 +40,9 @@ class MainMenu(Menu):
                     if e.button != 1:
                         continue
                     if self._newGame_btn.checkForInput(mousePos):
-                        newGameMenu.create(waitingMenu, gamePlayMenu, dialogWindowMenu, self._moveEvent)
+                        newGameMenu.create(waitingMenu, gamePlayMenu, dialogWindowMenu)
                     if self._connect_btn.checkForInput(mousePos):
-                        connectMenu.create(waitingMenu, gamePlayMenu, dialogWindowMenu, self._moveEvent)
+                        connectMenu.create(waitingMenu, gamePlayMenu, dialogWindowMenu)
                     if self._settings_btn.checkForInput(mousePos):
                         settingsMenu.create(dialogWindowMenu)
                     if self._quit_btn.checkForInput(mousePos):
