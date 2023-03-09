@@ -409,19 +409,24 @@ class InputBox(UIObject):
         width = SCREEN_WIDTH // 2
         height = SCREEN_HEIGHT // 10
         super().__init__(center)
-        self._rect = pg.Rect(self._xPos, self._yPos, width, height)
-        self._color = self._TOP_COLOR
+        self._thickness = SQ_SIZE // 12
+        self._rectShift = 3
+        self._textShift = 2
+        self._rect1 = pg.Rect(self._xPos - width // 2 - self._rectShift, self._yPos - height // 2 - self._rectShift, width, height)
+        self._rect2 = pg.Rect(self._xPos - width // 2, self._yPos - height // 2, width, height)
         self.text = text
         self._font = font
-        self._txt_surface = self._font.render(self.text, True, self._color)
+        self._text1 = self._font.render(self.text, True, self._BACK_COLOR)
+        self._text2 = self._font.render(self.text, True, self._TOP_COLOR)
+        self._textRect1 = self._text1.get_rect(center=(self._xPos - width // 2 + self._thickness, self._yPos))
+        self._textRect2 = self._text2.get_rect(center=(self._xPos - width // 2 + self._textShift + self._thickness, self._yPos + self._textShift))
         self._active = False
 
     def checkForInput(self, position: tuple):
-        return self._rect.collidepoint(position)
+        return self._rect1.collidepoint(position)
 
     def deactivate(self):
         self._active = False
-        self._color = self._TOP_COLOR
 
     def handle_event(self, event):
         if event.type == pg.MOUSEBUTTONDOWN:
@@ -429,19 +434,26 @@ class InputBox(UIObject):
                 self._active = not self._active
             else:
                 self._active = False
-            self._color = self._BACK_COLOR if self._active else self._TOP_COLOR
         if event.type == pg.KEYDOWN:
             if self._active:
                 if event.key == pg.K_BACKSPACE:
                     self.text = self.text[:-1]
                 elif len(self.text) < 15:
                     self.text += event.unicode
-                self._txt_surface = self._font.render(self.text, True, self._color)
+                self._text1 = self._font.render(self.text, True, self._BACK_COLOR)
+                self._text2 = self._font.render(self.text, True, self._TOP_COLOR)
 
     def clear(self):
         self.text = ""
-        self._txt_surface = self._font.render(self.text, True, self._color)
+        self._text1 = self._font.render(self.text, True, self._BACK_COLOR)
+        self._text2 = self._font.render(self.text, True, self._TOP_COLOR)
 
     def update(self, screen):
-        screen.blit(self._txt_surface, (self._rect.x + 5, self._rect.y + 5))
-        pg.draw.rect(screen, self._color, self._rect, 2)
+        if self._active:
+            pg.draw.rect(screen, self._TOP_COLOR, self._rect1, self._thickness)
+            pg.draw.rect(screen, self._BACK_COLOR, self._rect2, self._thickness)
+        else:
+            pg.draw.rect(screen, self._BACK_COLOR, self._rect1, self._thickness)
+            pg.draw.rect(screen, self._TOP_COLOR, self._rect2, self._thickness)
+        screen.blit(self._text1, self._textRect1)
+        screen.blit(self._text2, self._textRect2)

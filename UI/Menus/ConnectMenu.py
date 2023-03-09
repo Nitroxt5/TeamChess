@@ -12,7 +12,7 @@ class ConnectMenu(Menu):
         self._bigFont = pg.font.SysFont("Helvetica", FONT_SIZE * 7, True, False)
         self._textContent = textContent
         super().__init__(screen, resourceLoader, Label(self._textContent["Name"], (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 10), self._bigFont, shift=5))
-        self._inputBox = InputBox((SCREEN_HEIGHT // 2, SCREEN_WIDTH // 4), self._font)
+        self._inputBox = InputBox((SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2), self._font)
         connectBtnPos, backBtnPos = self._generateBtnPositions()
         self._connect_btn = Button(self._RL.IMAGES["button"], connectBtnPos, self._textContent["Connect_btn"], self._font)
         self._back_btn = Button(self._RL.IMAGES["button"], backBtnPos, self._textContent["Back_btn"], self._font)
@@ -41,6 +41,7 @@ class ConnectMenu(Menu):
                     if e.button != 1:
                         continue
                     if self._back_btn.checkForInput(mousePos):
+                        self._err_lbl = Label("", (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 4), self._font)
                         working = False
                     if self._connect_btn.checkForInput(mousePos):
                         self._handleConnectButton(waitingMenu, gamePlayMenu, dialogWindowMenu)
