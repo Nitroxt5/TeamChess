@@ -10,7 +10,6 @@ class DialogWindowMenu(Menu):
         super().__init__(screen, resourceLoader, Label("", (0, 0), self._font))
 
     def create(self, text: str, gamePlayMenu=None):
-        """Creates dialog window"""
         working = True
         clock = pg.time.Clock()
         dW = DialogWindow(text, self._font, self._RL.IMAGES["dialogWindow"], self._RL.SETTINGS["language"])

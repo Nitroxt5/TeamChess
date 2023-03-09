@@ -44,7 +44,7 @@ class ResourceLoader:
         IMAGE_SIZES["board"] = (BOARD_SIZE, BOARD_SIZE)
         IMAGE_SIZES["board_with_pieces1"] = (BOARD_SIZE // 2, BOARD_SIZE // 2)
         IMAGE_SIZES["board_with_pieces2"] = (BOARD_SIZE // 2, BOARD_SIZE // 2)
-        IMAGE_SIZES["button"] = (SCREEN_WIDTH // 5, int(SQ_SIZE * 1.5))
+        IMAGE_SIZES["button"] = (SCREEN_WIDTH // 4, int(SQ_SIZE * 1.5))
         IMAGE_SIZES["header"] = (SCREEN_WIDTH // 4 * 3, SCREEN_HEIGHT // 5)
         IMAGE_SIZES["ddm_head"] = (BOARD_SIZE * 5 // 12, SQ_SIZE * 2 // 3)
         IMAGE_SIZES["ddm_body"] = (BOARD_SIZE * 5 // 12, SQ_SIZE * 2 // 3)

@@ -49,3 +49,15 @@ class ConsoleLogger:
     @classmethod
     def foundBetterPromotionAtSq(cls, square: int, score: int):
         print(f"Found better promotion at square {Move.getSquareNotation(square)} with score {score}")
+
+    @classmethod
+    def waitingForConnection(cls):
+        print("Waiting for a connection, Server Started")
+
+    @classmethod
+    def connectedToAddr(cls, addr: tuple, player: int):
+        print(f"Connected to: {addr}, player {player}")
+
+    @classmethod
+    def lostConnection(cls):
+        print("Lost connection")

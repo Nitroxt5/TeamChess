@@ -1,4 +1,8 @@
 import pygame as pg
+from threading import Thread, Event
+from Networking.NetHelpers import getIP
+from Networking.Network import Network
+from Networking.Server import Server
 from UI.Menus.Menu import Menu
 from UI.UIObjects import Label, Button, Image, DropDownMenu
 from UI.WindowSizeConsts import FONT_SIZE, FPS, SCREEN_HEIGHT, SCREEN_WIDTH, SQ_SIZE, BOARD_SIZE
@@ -62,7 +66,7 @@ class NewGameMenu(Menu):
         ddm4pos = (xBoard2, yBoard + BOARD_SIZE // 4 + SQ_SIZE // 2)
         return gameModeDDMPos, ddm1pos, ddm2pos, ddm3pos, ddm4pos
 
-    def create(self, gamePlayMenu, dialogWindowMenu):
+    def create(self, waitingMenu, gamePlayMenu, dialogWindowMenu, moveEvent):
         working = True
         clock = pg.time.Clock()
         self._configureStartingNamesAccordingToChosenDifficulties()
@@ -81,7 +85,8 @@ class NewGameMenu(Menu):
                     if self._back_btn.checkForInput(mousePos):
                         working = False
                     if self._play_btn.checkForInput(mousePos):
-                        gamePlayMenu.create(dialogWindowMenu, self._difficulties, self._names, self._currentGameMode)
+                        self._initiateGame(waitingMenu, gamePlayMenu, dialogWindowMenu, moveEvent)
+                        # gamePlayMenu.create(dialogWindowMenu, self._difficulties, self._names, self._currentGameMode)
                         working = False
                     if self._gameMode_ddm.checkForInput(mousePos):
                         self._gameMode_ddm.switch()
@@ -100,12 +105,21 @@ class NewGameMenu(Menu):
     def _configureStartingNamesAccordingToChosenDifficulties(self):
         for i, ddm_lst in enumerate([self._textContent["DDM1"], self._textContent["DDM2"], self._textContent["DDM3"], self._textContent["DDM4"]]):
             ddm_lst[0] = ddm_lst[self._difficulties[i]]
-            if self._difficulties[i] in [2, 3, 4]:
+            if self._difficulties[i] in (2, 3, 4):
                 self._names[i] = f"{self._NAMES[i]} {self._textContent['AItxt']} ({self._textContent['diffNames'][self._difficulties[i]]})"
         self._textContent["DDM5"][0] = self._textContent["DDM5"][self._currentGameMode + 1]
+
+    def _initiateGame(self, waitingMenu, gamePlayMenu, dialogWindowMenu, moveEvent):
+        acceptionEvent = Event()
+        Thread(target=Server, args=([player for player, difficulty in enumerate(self._difficulties) if difficulty == 1], acceptionEvent, moveEvent)).start()
+        acceptionEvent.wait()
+        network = Network(getIP())
+        gameParams = {"difficulties": self._difficulties, "playerNames": self._names, "gameMode": self._currentGameMode}
+        network.send(gameParams)
+        waitingMenu.create(network, gamePlayMenu, dialogWindowMenu, moveEvent)
 
     def _configureNameByDifficulty(self, nameNum: int, choice: int):
         if choice == 1:
             self._names[nameNum] = self._NAMES[nameNum]
-        elif choice in [2, 3, 4]:
+        elif choice in (2, 3, 4):
             self._names[nameNum] = f"{self._NAMES[nameNum]} {self._textContent['AItxt']} ({self._textContent['diffNames'][choice]})"

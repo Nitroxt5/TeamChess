@@ -1,4 +1,5 @@
 import pygame as pg
+from threading import Event
 from UI.Menus.Menu import Menu
 from UI.UIObjects import Button, Label
 from UI.WindowSizeConsts import FONT_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH, FPS
@@ -13,22 +14,28 @@ class MainMenu(Menu):
         menuName_lbl = Label("SwiChess", (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 10), self._bigFont, shift=5)
         super().__init__(screen, resourceLoader, menuName_lbl)
 
-        settingsBtnPos = (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)
-        self._settings_btn = Button(self._RL.IMAGES["button"], settingsBtnPos, self._textContent["Settings_btn"], self._font)
-        newGameBtnPos = (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - self._settings_btn.height * 2)
+        newGameBtnPos, connectBtnPos, settingsBtnPos, quitBtnPos = MainMenu._generateBtnPositionsInPixels()
         self._newGame_btn = Button(self._RL.IMAGES["button"], newGameBtnPos, self._textContent["NewGame_btn"], self._font)
-        quitBtnPos = (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + self._settings_btn.height * 2)
+        self._connect_btn = Button(self._RL.IMAGES["button"], connectBtnPos, self._textContent["Connect_btn"], self._font)
+        self._settings_btn = Button(self._RL.IMAGES["button"], settingsBtnPos, self._textContent["Settings_btn"], self._font)
         self._quit_btn = Button(self._RL.IMAGES["button"], quitBtnPos, self._textContent["Quit_btn"], self._font)
+        self._buttons = [self._newGame_btn, self._connect_btn, self._settings_btn, self._quit_btn]
 
-    def create(self, newGameMenu, settingsMenu, gamePlayMenu, dialogWindowMenu):
+        self._moveEvent = Event()
+
+    @staticmethod
+    def _generateBtnPositionsInPixels():
+        return [(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 6 * i) for i in range(2, 6)]
+
+    def create(self, newGameMenu, connectMenu, settingsMenu, waitingMenu, gamePlayMenu, dialogWindowMenu):
         working = True
         clock = pg.time.Clock()
         while working:
             mousePos = pg.mouse.get_pos()
             clock.tick(FPS)
             self._drawMenu()
-            self._changeColorOfUIObjects(mousePos, [self._newGame_btn, self._settings_btn, self._quit_btn])
-            self._updateUIObjects([self._newGame_btn, self._settings_btn, self._quit_btn])
+            self._changeColorOfUIObjects(mousePos, self._buttons)
+            self._updateUIObjects(self._buttons)
             for e in pg.event.get():
                 if e.type == pg.QUIT:
                     working = False
@@ -36,7 +43,9 @@ class MainMenu(Menu):
                     if e.button != 1:
                         continue
                     if self._newGame_btn.checkForInput(mousePos):
-                        newGameMenu.create(gamePlayMenu, dialogWindowMenu)
+                        newGameMenu.create(waitingMenu, gamePlayMenu, dialogWindowMenu, self._moveEvent)
+                    if self._connect_btn.checkForInput(mousePos):
+                        connectMenu.create(waitingMenu, gamePlayMenu, dialogWindowMenu, self._moveEvent)
                     if self._settings_btn.checkForInput(mousePos):
                         settingsMenu.create(dialogWindowMenu)
                     if self._quit_btn.checkForInput(mousePos):

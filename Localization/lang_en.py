@@ -1,5 +1,5 @@
-mainMenuContent = {"NewGame_btn": "New game", "Settings_btn": "Settings", "Quit_btn": "Quit",
-                   "DW": "Do you really want to exit?"}
+mainMenuContent = {"NewGame_btn": "New game", "Connect_btn": "Connect", "Settings_btn": "Settings",
+                   "Quit_btn": "Quit", "DW": "Do you really want to exit?"}
 settingsMenuContent = {"Name": "Settings", "Sound_btn": ("Sound: ON", "Sound: OFF"), "Lang_btn": "Language: EN",
                        "Back_btn": "Back", "DW": "You need to restart the game to apply the settings"}
 newGameMenuContent = {"Name": "New game", "DDM1": ["Player 1", "Player 1", "AI (Easy)", "AI (Normal)", "AI (Hard)"],
@@ -11,4 +11,7 @@ newGameMenuContent = {"Name": "New game", "DDM1": ["Player 1", "Player 1", "AI (
                       "diffNames": {2: "Easy", 3: "Normal", 4: "Hard"}}
 gamePlayMenuContent = {"promText": "chooses a piece to promote", "T1": "Team 1 wins", "T2": "Team 2 wins", "D": "Draw",
                        "DW1": "Do you really want to exit?", "DW2": "Do you really want to restart?"}
+connectionMenuContent = {"Name": "Connection to game", "Error": "Wrong code!", "Connect_btn": "Connect",
+                         "Back_btn": "Back"}
+waitingMenuContent = {"Name": "Waiting for players..."}
 playerNames = ["Player 1", "Player 2", "Player 3", "Player 4"]

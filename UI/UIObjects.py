@@ -55,9 +55,7 @@ class Button(UIObject):
                 self._text2 = self._font.render(self._textInput, True, self._TOP_COLOR)
 
     def checkForInput(self, position: tuple):
-        if self._rect.left < position[0] < self._rect.right and self._rect.top < position[1] < self._rect.bottom:
-            return True
-        return False
+        return self._rect.collidepoint(position)
 
     @property
     def height(self):
@@ -93,9 +91,7 @@ class RadioButton(UIObject):
             self._activeImage = self._offImage
 
     def checkForInput(self, position: tuple):
-        if self._rect.left < position[0] < self._rect.right and self._rect.top < position[1] < self._rect.bottom:
-            return True
-        return False
+        return self._rect.collidepoint(position)
 
     @property
     def state(self):
@@ -406,3 +402,46 @@ class Timer(UIObject):
             return
         self._state = value
         self._currentTime = perf_counter()
+
+
+class InputBox(UIObject):
+    def __init__(self, center: tuple, font: pg.font.SysFont, text=""):
+        width = SCREEN_WIDTH // 2
+        height = SCREEN_HEIGHT // 10
+        super().__init__(center)
+        self._rect = pg.Rect(self._xPos, self._yPos, width, height)
+        self._color = self._TOP_COLOR
+        self.text = text
+        self._font = font
+        self._txt_surface = self._font.render(self.text, True, self._color)
+        self._active = False
+
+    def checkForInput(self, position: tuple):
+        return self._rect.collidepoint(position)
+
+    def deactivate(self):
+        self._active = False
+        self._color = self._TOP_COLOR
+
+    def handle_event(self, event):
+        if event.type == pg.MOUSEBUTTONDOWN:
+            if self.checkForInput(event.pos):
+                self._active = not self._active
+            else:
+                self._active = False
+            self._color = self._BACK_COLOR if self._active else self._TOP_COLOR
+        if event.type == pg.KEYDOWN:
+            if self._active:
+                if event.key == pg.K_BACKSPACE:
+                    self.text = self.text[:-1]
+                elif len(self.text) < 15:
+                    self.text += event.unicode
+                self._txt_surface = self._font.render(self.text, True, self._color)
+
+    def clear(self):
+        self.text = ""
+        self._txt_surface = self._font.render(self.text, True, self._color)
+
+    def update(self, screen):
+        screen.blit(self._txt_surface, (self._rect.x + 5, self._rect.y + 5))
+        pg.draw.rect(screen, self._color, self._rect, 2)
