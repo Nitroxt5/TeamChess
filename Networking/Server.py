@@ -64,22 +64,25 @@ class Server:
         conn.close()
 
     def _retransmitData(self, player: int):
-        data = self._connections[player].recv(1024)
-        if not data:
-            return False
-        msg = pickle.loads(data)
-        if isinstance(msg, dict):
-            self._lastState.put(msg)
-        if msg == "get":
-            if self._sentMove[player] or self._getLastState() is None:
-                self._connections[player].sendall(pickle.dumps(None))
-            else:
-                self._connections[player].sendall(pickle.dumps(self._getLastState()))
-                self._sentMove[player] = True
-        if self._sentToAll():
-            self._sentMove = {player: False for player in self._players}
-            self._lastState.get()
-        if msg == "quit":
+        try:
+            data = self._connections[player].recv(1024)
+            if not data:
+                return False
+            msg = pickle.loads(data)
+            if isinstance(msg, dict):
+                self._lastState.put(msg)
+            if msg == "get":
+                if self._sentMove[player] or self._getLastState() is None:
+                    self._connections[player].sendall(pickle.dumps(None))
+                else:
+                    self._connections[player].sendall(pickle.dumps(self._getLastState()))
+                    self._sentMove[player] = True
+            if self._sentToAll():
+                self._sentMove = {player: False for player in self._players}
+                self._lastState.get()
+            if msg == "quit":
+                return False
+        except ConnectionResetError:
             return False
         return True
 
