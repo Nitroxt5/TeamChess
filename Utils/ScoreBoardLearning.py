@@ -1,4 +1,3 @@
-import json
 from math import exp
 from time import perf_counter
 from random import seed, shuffle
@@ -15,12 +14,12 @@ eps = 0.00001
 def trainScoreBoard():
     seed(1)
     weights = [15, 20, 30, 20, 3, 4, 50, 20, 70, 30, 10, 20, 30, 20, 30]
-    # with PositionRecorder() as pr:
-    #     positions = pr.getPositions()
+    with PositionRecorder() as pr:
+        positions = pr.getPositions()
     # positions = getEarlyPositions()
     # with open("earlyPositions.json", "w") as f:
     #     json.dump(positions, f)
-    positions = getUploadedEarlyPositions()
+    # positions = getUploadedEarlyPositions()
     shuffle(positions)
     trainAmount = int(len(positions) * 0.8)
     positionTypes = {"train": positions[:trainAmount], "validation": positions[trainAmount:]}
@@ -32,10 +31,9 @@ def trainScoreBoard():
         features = list(map(int, featuresStr.split(sep=" ")))
         estimatedResults.append(estimateResult(weights, features))
         realResults.append(res / 2)
-        movesLeftCounts.append(moves - features[-2])
+        movesLeftCounts.append(moves - features[-1])
     print(evaluateAverageError(estimatedResults, realResults, movesLeftCounts))
-    # newWeights = coordinateDecentMethod(weights, realResults, movesLeftCounts, positionTypes["train"], numIters=10)
-    newWeights = [33, 46, 58, 39, 10, 16, 28, 20, 53, 31, 17, 18, 30, 20, 17]
+    newWeights = coordinateDecentMethod(weights, realResults, movesLeftCounts, positionTypes["train"], numIters=10)
     print(list(map(int, newWeights)))
     print(evaluateAverageError(evaluateEstimatedResults(newWeights, positionTypes["train"]), realResults, movesLeftCounts))
     oldGuessesCount = 0
@@ -62,7 +60,7 @@ def trainScoreBoard():
 
 
 def scoreBoard(weights: list[int], features: list[int]):
-    return sum([weights[i] * features[i] for i in range(len(weights))]) + features[-1]
+    return sum([weights[i] * features[i] for i in range(len(weights))]) + features[-2]
 
 
 def estimateResult(weights: list[int], features: list[int]):
@@ -144,26 +142,6 @@ def parseFENFile(filename: str):
 
 def countRows(filename):
     return sum(1 for _ in open(filename, "r"))
-
-
-def getEarlyPositions():
-    print("Started collecting early positions")
-    with PositionRecorder() as pr:
-        positions = pr.getPositions()
-    earlyPositions = []
-    for position in positions:
-        featuresStr, res, moves = position
-        features = list(map(int, featuresStr.split(sep=" ")))
-        if 10 <= features[-2] <= 70:
-            earlyPositions.append(position)
-    print("Collection complete")
-    return earlyPositions
-
-
-def getUploadedEarlyPositions():
-    with open("earlyPositions.json", "r") as f:
-        earlyPositions = json.load(f)
-    return earlyPositions
 
 
 if __name__ == "__main__":

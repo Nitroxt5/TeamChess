@@ -2,21 +2,21 @@
 #define ULL unsigned long long
 #define PY_SSIZE_T_CLEAN
 
-long weights[] = {15,  // for positioning the rook on the semi-open file with pawn of the same color
-                  20,  // for positioning the rook on the semi-open file with pawn of the opposite color
-                  30,  // for positioning the rook on the open file
-                  20,  // for positioning the rook on the penultimate row
-                  3,   // for every possible (not necessary valid) knight move
-                  4,   // for every possible (not necessary valid) bishop move
-                  50,  // for castling
-                  20,  // for checking opponent king
-                  70,  // for castling deprivation (for each side)
-                  30,  // for pawn shield in front of king
-                  10,  // for pseudo passed pawn
-                  20,  // penalty for doubled pawns
-                  30,  // penalty for tripled pawns
-                  20,  // penalty for early queen participation
-                  30}; // for center control (for each square)
+long weights[] = {15,  // for positioning the rook on the semi-open file with pawn of the same color 0
+                  20,  // for positioning the rook on the semi-open file with pawn of the opposite color 1
+                  30,  // for positioning the rook on the open file 2
+                  20,  // for positioning the rook on the penultimate row 3
+                  3,   // for every possible (not necessary valid) knight move 4
+                  4,   // for every possible (not necessary valid) bishop move 5
+                  50,  // for castling 6
+                  20,  // for checking opponent king 7
+                  70,  // for castling deprivation (for each side) 8
+                  30,  // for pawn shield in front of king 9
+                  10,  // for pseudo passed pawn 10
+                  20,  // penalty for doubled pawns 11
+                  30,  // penalty for tripled pawns 12
+                  20,  // penalty for early queen participation 13
+                  30}; // for center control (for each square) 14
 
 long knightPositionScore[8][8] = { 1, 2, 1, 1, 1, 1, 2, 1,
 								   1, 2, 2, 2, 2, 2, 2, 1,
