@@ -20,8 +20,8 @@ class ConnectMenu(Menu):
 
     @staticmethod
     def _generateBtnPositions():
-        connectBtnPos = (SCREEN_WIDTH // 4, SCREEN_HEIGHT - SQ_SIZE * 2)
-        backBtnPos = (SCREEN_WIDTH // 4 * 3, SCREEN_HEIGHT - SQ_SIZE * 2)
+        connectBtnPos = (SCREEN_WIDTH // 4 * 3, SCREEN_HEIGHT - SQ_SIZE * 2)
+        backBtnPos = (SCREEN_WIDTH // 4, SCREEN_HEIGHT - SQ_SIZE * 2)
         return connectBtnPos, backBtnPos
 
     def create(self, waitingMenu, gamePlayMenu, dialogWindowMenu):
