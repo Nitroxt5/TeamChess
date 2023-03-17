@@ -149,11 +149,7 @@ class GamePlayMenu(Menu):
                     self._requiredPiece_ddms[player].changeHead(RESERVE_PIECES[self._requiredPieces[player][1]] + 1)
                     self._sendState(self._AI.move, network)
                     self._AI.cameUpWithMove = False
-            for i in range(2):
-                if self._moveMade[i]:
-                    self._resetActiveBoardSelectAndClicks()
-                    self._soundPlayed = False
-                    self._moveMade[i] = False
+            self._resetVarsIfMoveMade()
             self._changeColorOfUIObjects(mousePos, [self._toMenu_btn])
             self.drawGameState()
             pg.display.flip()
@@ -597,6 +593,7 @@ class GamePlayMenu(Menu):
             self._validMoves[i] = self._gameStates[i].getValidMoves()
             self._gameStates[i].updatePawnPromotionMoves(self._validMoves[i], self._gameStates[1 - i])
         self._moveMade[self._activeBoard] = True
+        self._resetActiveBoardSelectAndClicks()
         self._activeBoard = 1 - self._activeBoard
         self._gameOverCheck()
         if not self._gameOver:
@@ -604,6 +601,8 @@ class GamePlayMenu(Menu):
         self._hourglass = Hourglass(self._getCurrentPlayer(), self._RL.IMAGES["hourglass"])
         self._playSoundIfAllowed()
         self._moveSent = False
+        self.drawGameState()
+        pg.display.flip()
 
     def _triedToMakeIllegalMove(self):
         return not self._moveMade[self._activeBoard] and len(self._clicks[self._activeBoard]) == 2
@@ -625,6 +624,13 @@ class GamePlayMenu(Menu):
         if self._gameStates[self._activeBoard].whiteTurn:
             return self._activeBoard * 2
         return self._activeBoard * 2 + 1
+
+    def _resetVarsIfMoveMade(self):
+        for i in range(2):
+            if self._moveMade[i]:
+                self._resetActiveBoardSelectAndClicks()
+                self._soundPlayed = False
+                self._moveMade[i] = False
 
     def _getPlayerName(self, playerNames: list):
         """Gets name of a player who is now to move"""

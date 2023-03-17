@@ -116,12 +116,12 @@ class Highlighter:
             if len(self._gameStates[i].gameLog) == 0 or not self._needHighlightLastMove(i, selectedSq[i]):
                 continue
             lastMove = self._gameStates[i].gameLog[-1]
-            startLoc = getPower(lastMove.startSquare)
-            endLoc = getPower(lastMove.endSquare)
             if lastMove.isReserve:
                 highlightStartPosition = self._getLastMoveReserveHighlightPositionInPixels(i, lastMove)
             else:
+                startLoc = getPower(lastMove.startSquare)
                 highlightStartPosition = self._getBoardHighlightPositionInPixelsByLocation(i, (startLoc % DIM, startLoc // DIM))
+            endLoc = getPower(lastMove.endSquare)
             highlightEndPosition = self._getBoardHighlightPositionInPixelsByLocation(i, (endLoc % DIM, endLoc // DIM))
             Image(self._BLUE, highlightStartPosition).update(self._screen)
             Image(self._BLUE, highlightEndPosition).update(self._screen)
