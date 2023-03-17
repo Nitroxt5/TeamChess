@@ -68,5 +68,5 @@ class ConnectMenu(Menu):
     def _tryNetwork(self):
         try:
             return Network(self._inputBox.text)
-        except (ConnectionRefusedError, ValueError):
+        except (ConnectionRefusedError, ValueError, TimeoutError):
             return None
