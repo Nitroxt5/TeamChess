@@ -60,7 +60,10 @@ class Server:
         for i, connection in self._connections.items():
             if i == player:
                 continue
-            connection.sendall(pickle.dumps("quit"))
+            try:
+                connection.sendall(pickle.dumps("quit"))
+            except OSError:
+                pass
         conn.close()
 
     def _retransmitData(self, player: int):

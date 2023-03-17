@@ -101,7 +101,7 @@ class GamePlayMenu(Menu):
         self._timers[0].switch()
         while working:
             clock.tick(FPS)
-            working = self._handleMessages(network)
+            self._handleMessages(network)
             mousePos = pg.mouse.get_pos()
             for e in pg.event.get():
                 if e.type == pg.KEYDOWN:
@@ -161,12 +161,11 @@ class GamePlayMenu(Menu):
     def _handleMessages(self, network: Network):
         msg = network.request()
         if msg == "quit":
-            return False
+            pg.event.post(pg.event.Event(pg.QUIT))
         if isinstance(msg, dict):
             self._handleMove(msg["move"])
             self._requiredPieces = msg["requiredPieces"]
             self._handleDDMNetwork()
-        return True
 
     def _handleDDMNetwork(self):
         for i, ddm in enumerate(self._requiredPiece_ddms):
