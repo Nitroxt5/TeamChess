@@ -1,5 +1,21 @@
-from ipaddress import IPv4Address, AddressValueError
 import socket
+from dataclasses import dataclass, field
+from ipaddress import IPv4Address, AddressValueError
+from Engine.Move import Move
+
+
+@dataclass
+class GameParams:
+    gameMode: int = field(default=0)
+    playerNum: int = field(default=0)
+    difficulties: list[int] = field(default_factory=list)
+    playerNames: list[str] = field(default_factory=list)
+
+
+@dataclass
+class GameStateUpdate:
+    move: Move
+    requiredPieces: list[str] = field(default_factory=list)
 
 
 def getIP():
