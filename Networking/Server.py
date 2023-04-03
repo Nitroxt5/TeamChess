@@ -1,7 +1,7 @@
 import socket
 import pickle
 from copy import deepcopy
-from threading import Thread, Barrier, Event, Lock
+from threading import Thread, Barrier, Event
 from queue import Queue
 from Networking.NetHelpers import getIP
 from Utils.Logger import ConsoleLogger
@@ -19,7 +19,6 @@ class Server:
             self._players = freePlayers
         self._connections: {int: socket.socket} = {}
         self._barrier = Barrier(len(self._players))
-        self._lock = Lock()
         self._acceptionEvent = acceptionEvent
         self._gameParams = {}
         self._lastState = Queue()

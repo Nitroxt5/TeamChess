@@ -117,6 +117,7 @@ class NewGameMenu(Menu):
         gameParams = {"difficulties": self._difficulties, "playerNames": self._names, "gameMode": self._currentGameMode}
         network.send(gameParams)
         waitingMenu.create(network, gamePlayMenu, dialogWindowMenu)
+        network.close()
 
     def _configureNameByDifficulty(self, nameNum: int, choice: int):
         if choice == 1:

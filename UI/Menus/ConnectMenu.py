@@ -59,6 +59,7 @@ class ConnectMenu(Menu):
             self._showError()
             return
         waitingMenu.create(network, gamePlayMenu, dialogWindowMenu)
+        network.close()
 
     def _showError(self):
         self._err_lbl = Label(self._textContent["Error"], (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 4), self._font)
