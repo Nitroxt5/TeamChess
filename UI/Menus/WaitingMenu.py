@@ -1,6 +1,7 @@
 import pygame as pg
 from threading import Thread
 from queue import Queue
+from Networking.NetHelpers import GameParams
 from Networking.Network import Network
 from UI.Menus.Menu import Menu
 from UI.UIObjects import Label
@@ -28,10 +29,10 @@ class WaitingMenu(Menu):
                 if e.type == pg.QUIT:
                     working = False
             gameParams = self._getFirstMsg()
-            if gameParams is not None:
+            if isinstance(gameParams, GameParams):
                 self._msgs.get()
-                gamePlayMenu.create(network, dialogWindowMenu, gameParams["difficulties"],
-                                    gameParams["playerNames"].copy(), gameParams["gameMode"], gameParams["playerNum"])
+                gamePlayMenu.create(network, dialogWindowMenu, gameParams.difficulties,
+                                    gameParams.playerNames.copy(), gameParams.gameMode, gameParams.playerNum)
                 working = False
             pg.display.flip()
         return False

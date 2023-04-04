@@ -1,6 +1,6 @@
 import pygame as pg
 from threading import Thread, Event
-from Networking.NetHelpers import getIP
+from Networking.NetHelpers import getIP, GameParams
 from Networking.Network import Network
 from Networking.Server import Server
 from UI.Menus.Menu import Menu
@@ -114,7 +114,7 @@ class NewGameMenu(Menu):
         Thread(target=Server, args=([player for player, difficulty in enumerate(self._difficulties) if difficulty == 1], acceptionEvent)).start()
         acceptionEvent.wait()
         network = Network(getIP())
-        gameParams = {"difficulties": self._difficulties, "playerNames": self._names, "gameMode": self._currentGameMode}
+        gameParams = GameParams(difficulties=self._difficulties, playerNames=self._names, gameMode=self._currentGameMode)
         network.send(gameParams)
         waitingMenu.create(network, gamePlayMenu, dialogWindowMenu)
         network.close()
