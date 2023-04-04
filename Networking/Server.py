@@ -1,14 +1,14 @@
 import socket
 import pickle
 from copy import deepcopy
-from threading import Thread, Barrier, Event, BrokenBarrierError
+from threading import Thread, Barrier, Event, Lock
 from queue import Queue
-from Networking.NetHelpers import getIP, GameStateUpdate
+from Networking.NetHelpers import getIP
 from Utils.Logger import ConsoleLogger
 
 
 class Server:
-    def __init__(self, freePlayers: list[int], acceptionEvent: Event, barrier: Barrier):
+    def __init__(self, freePlayers: list[int], acceptionEvent: Event):
         self._server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._ip = getIP()
         self._port = 5555
@@ -18,7 +18,8 @@ class Server:
         else:
             self._players = freePlayers
         self._connections: {int: socket.socket} = {}
-        self._barrier = barrier
+        self._barrier = Barrier(len(self._players))
+        self._lock = Lock()
         self._acceptionEvent = acceptionEvent
         self._gameParams = {}
         self._lastState = Queue()
@@ -33,12 +34,10 @@ class Server:
 
     def _waitForConnections(self):
         threads = []
-        self._acceptionEvent.set()
         for i, player in enumerate(self._players):
-            try:
-                conn, addr = self._server.accept()
-            except OSError:
-                break
+            if i == 0:
+                self._acceptionEvent.set()
+            conn, addr = self._server.accept()
             if i == 0:
                 self._gameParams = pickle.loads(conn.recv(1024))
             self._connections[player] = conn
@@ -47,20 +46,25 @@ class Server:
             threads[-1].start()
         for thread in threads:
             thread.join()
+        self._server.close()
 
     def _threadedClient(self, conn: socket.socket, player: int):
-        try:
-            self._barrier.wait()
-        except BrokenBarrierError:
-            self._closeConnections(conn, player)
-            return
+        self._barrier.wait()
         gameParams = deepcopy(self._gameParams)
-        gameParams.playerNum = player
+        gameParams["playerNum"] = player
         conn.sendall(pickle.dumps(gameParams))
         working = True
         while working:
             working = self._retransmitData(player)
-        self._closeConnections(conn, player)
+        ConsoleLogger.lostConnection()
+        for i, connection in self._connections.items():
+            if i == player:
+                continue
+            try:
+                connection.sendall(pickle.dumps("quit"))
+            except OSError:
+                pass
+        conn.close()
 
     def _retransmitData(self, player: int):
         try:
@@ -68,7 +72,7 @@ class Server:
             if not data:
                 return False
             msg = pickle.loads(data)
-            if isinstance(msg, GameStateUpdate):
+            if isinstance(msg, dict):
                 self._lastState.put(msg)
             if msg == "get":
                 if self._sentMove[player] or self._getLastState() is None:
@@ -96,21 +100,6 @@ class Server:
             if not val:
                 return False
         return True
-
-    def _closeConnections(self, conn: socket.socket, player: int):
-        ConsoleLogger.lostConnection()
-        self._sendQuit(player)
-        conn.close()
-        self._server.close()
-
-    def _sendQuit(self, disconnectedPlayer: int):
-        for i, connection in self._connections.items():
-            if i == disconnectedPlayer:
-                continue
-            try:
-                connection.sendall(pickle.dumps("quit"))
-            except OSError:
-                pass
 
     @property
     def ip(self):

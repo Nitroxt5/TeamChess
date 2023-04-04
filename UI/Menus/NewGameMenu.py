@@ -1,6 +1,6 @@
 import pygame as pg
-from threading import Thread, Event, Barrier
-from Networking.NetHelpers import getIP, GameParams
+from threading import Thread, Event
+from Networking.NetHelpers import getIP
 from Networking.Network import Network
 from Networking.Server import Server
 from UI.Menus.Menu import Menu
@@ -86,6 +86,7 @@ class NewGameMenu(Menu):
                         working = False
                     if self._play_btn.checkForInput(mousePos):
                         self._initiateGame(waitingMenu, gamePlayMenu, dialogWindowMenu)
+                        # gamePlayMenu.create(dialogWindowMenu, self._difficulties, self._names, self._currentGameMode)
                         working = False
                     if self._gameMode_ddm.checkForInput(mousePos):
                         self._gameMode_ddm.switch()
@@ -110,14 +111,12 @@ class NewGameMenu(Menu):
 
     def _initiateGame(self, waitingMenu, gamePlayMenu, dialogWindowMenu):
         acceptionEvent = Event()
-        players = [player for player, difficulty in enumerate(self._difficulties) if difficulty == 1]
-        barrier = Barrier(len(players))
-        Thread(target=Server, args=(players, acceptionEvent, barrier)).start()
+        Thread(target=Server, args=([player for player, difficulty in enumerate(self._difficulties) if difficulty == 1], acceptionEvent)).start()
         acceptionEvent.wait()
         network = Network(getIP())
-        gameParams = GameParams(difficulties=self._difficulties, playerNames=self._names, gameMode=self._currentGameMode)
+        gameParams = {"difficulties": self._difficulties, "playerNames": self._names, "gameMode": self._currentGameMode}
         network.send(gameParams)
-        waitingMenu.create(network, gamePlayMenu, dialogWindowMenu, barrier)
+        waitingMenu.create(network, gamePlayMenu, dialogWindowMenu)
 
     def _configureNameByDifficulty(self, nameNum: int, choice: int):
         if choice == 1:

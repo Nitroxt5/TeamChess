@@ -23,9 +23,6 @@ class Network:
         self.send("get")
         return self.recv()
 
-    def close(self):
-        self._client.close()
-
     @property
     def ip(self):
         return self._ip

@@ -14,5 +14,5 @@ gamePlayMenuContent = {"promText": "chooses a piece to promote", "T1": "Team 1 w
                        "you": "You"}
 connectionMenuContent = {"Name": "Connection to game", "Error": "Wrong code!", "Connect_btn": "Connect",
                          "Back_btn": "Back"}
-waitingMenuContent = {"Name": "Waiting for players...", "Back_btn": "Back"}
+waitingMenuContent = {"Name": "Waiting for players..."}
 playerNames = ["Player 1", "Player 2", "Player 3", "Player 4"]

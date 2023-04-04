@@ -6,7 +6,6 @@ from AI.AIHandler import AIHandler
 from Engine.Engine import GameState
 from Engine.Move import Move
 from Generators.PossiblePromotions import PossiblePromotionsGen
-from Networking.NetHelpers import GameStateUpdate
 from Networking.Network import Network
 from UI.Highlighter import Highlighter
 from UI.Menus.Menu import Menu
@@ -157,12 +156,12 @@ class GamePlayMenu(Menu):
 
     def _handleMessages(self, network: Network):
         msg = network.request()
-        if isinstance(msg, GameStateUpdate):
-            self._handleMove(msg.move)
-            self._requiredPieces = msg.requiredPieces
-            self._handleDDMNetwork()
         if msg == "quit":
             pg.event.post(pg.event.Event(pg.QUIT))
+        if isinstance(msg, dict):
+            self._handleMove(msg["move"])
+            self._requiredPieces = msg["requiredPieces"]
+            self._handleDDMNetwork()
 
     def _handleDDMNetwork(self):
         for i, ddm in enumerate(self._requiredPiece_ddms):
@@ -180,7 +179,7 @@ class GamePlayMenu(Menu):
             return 0
 
     def _sendState(self, move: Move, network: Network):
-        network.send(GameStateUpdate(move, self._requiredPieces))
+        network.send({"move": move, "requiredPieces": self._requiredPieces})
         self._moveSent = True
 
     @staticmethod
