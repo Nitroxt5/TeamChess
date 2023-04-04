@@ -86,7 +86,6 @@ class NewGameMenu(Menu):
                         working = False
                     if self._play_btn.checkForInput(mousePos):
                         self._initiateGame(waitingMenu, gamePlayMenu, dialogWindowMenu)
-                        # gamePlayMenu.create(dialogWindowMenu, self._difficulties, self._names, self._currentGameMode)
                         working = False
                     if self._gameMode_ddm.checkForInput(mousePos):
                         self._gameMode_ddm.switch()
@@ -116,7 +115,7 @@ class NewGameMenu(Menu):
         network = Network(getIP())
         gameParams = GameParams(difficulties=self._difficulties, playerNames=self._names, gameMode=self._currentGameMode)
         network.send(gameParams)
-        waitingMenu.create(network, gamePlayMenu, dialogWindowMenu)
+        waitingMenu.create(network, gamePlayMenu, dialogWindowMenu, True)
         network.close()
 
     def _configureNameByDifficulty(self, nameNum: int, choice: int):

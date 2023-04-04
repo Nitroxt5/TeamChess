@@ -71,7 +71,7 @@ class GamePlayMenu(Menu):
         """Figures out who is to move: AI or player"""
         return difficulties[self._getCurrentPlayer()] == 1
 
-    def create(self, network: Network, dialogWindowMenu, difficulties: list, playerNames: list, gameMode: int, connectedPlayer: int):
+    def create(self, network: Network, dialogWindowMenu, difficulties: list, playerNames: list, gameMode: int, connectedPlayer: int, isHost: bool):
         self._connectedPlayer = connectedPlayer
         self._highlighter = Highlighter(self._screen, self._gameStates, self._RL, self._connectedPlayer)
         working = True
@@ -123,7 +123,7 @@ class GamePlayMenu(Menu):
             self._gameOverCheck()
             if self._gameOver:
                 self._AI.terminate()
-            if self._getHost(difficulties) == connectedPlayer and not self._moveSent:
+            if isHost and not self._moveSent:
                 if not self._gameOver and not self._isPlayerTurn(difficulties) and not self._AI.cameUpWithMove:
                     player = self._getCurrentPlayer()
                     self._AI.start(self._timers[player].value, difficulties[player], self._activeBoard, self._getPlayerName(playerNames))
@@ -154,13 +154,6 @@ class GamePlayMenu(Menu):
     def _terminateThreads(self, network: Network):
         network.send("quit")
         self._AI.terminate()
-
-    @staticmethod
-    def _getHost(difficulties: list[int]):
-        try:
-            return difficulties.index(1)
-        except ValueError:
-            return 0
 
     def _sendState(self, move: Move, network: Network):
         network.send(GameStateUpdate(move, self._requiredPieces))

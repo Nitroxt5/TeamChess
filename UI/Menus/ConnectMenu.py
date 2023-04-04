@@ -59,7 +59,7 @@ class ConnectMenu(Menu):
         if network is None:
             self._showError()
             return
-        waitingMenu.create(network, gamePlayMenu, dialogWindowMenu)
+        waitingMenu.create(network, gamePlayMenu, dialogWindowMenu, False)
         network.close()
 
     def _showError(self):
