@@ -6,10 +6,11 @@ from Utils.MagicConsts import PIECES, SQUARES, DIM, RESERVE_PIECES
 
 
 class Highlighter:
-    def __init__(self, screen, gameStates: list, resourceLoader):
+    def __init__(self, screen, gameStates: list, resourceLoader, connectedPlayer: int):
         self._screen = screen
         self._gameStates = gameStates
         self._RL = resourceLoader
+        self._connectedPlayer = connectedPlayer
         self._DARK_GREEN = pg.Surface((SQ_SIZE, SQ_SIZE))
         self._DARK_GREEN.fill((110, 90, 0))
         self._BLUE = pg.Surface((SQ_SIZE, SQ_SIZE))
@@ -54,13 +55,16 @@ class Highlighter:
         else:
             return self._convertSelectedSqReserveSqToPixelsOnRightBoard(pos)
 
-    @staticmethod
-    def _convertSelectedSqReserveSqToPixelsOnLeftBoard(pos: tuple):
-        return MARGIN + RESERVE_MARGIN + pos[0] * SQ_SIZE + SQ_SIZE // 2, MARGIN + pos[1] * SQ_SIZE + SQ_SIZE // 2
+    def _convertSelectedSqReserveSqToPixelsOnLeftBoard(self, pos: tuple):
+        newPos = pos
+        if self._connectedPlayer == 1 or self._connectedPlayer == 2:
+            newPos = (pos[0], self._invertCoord(pos[1]))
+        return MARGIN + RESERVE_MARGIN + newPos[0] * SQ_SIZE + SQ_SIZE // 2, MARGIN + newPos[1] * SQ_SIZE + SQ_SIZE // 2
 
-    @staticmethod
-    def _convertSelectedSqReserveSqToPixelsOnRightBoard(pos: tuple):
-        newPos = (pos[0], Highlighter._invertCoord(pos[1]))
+    def _convertSelectedSqReserveSqToPixelsOnRightBoard(self, pos: tuple):
+        newPos = pos
+        if self._connectedPlayer == 0 or self._connectedPlayer == 3:
+            newPos = (pos[0], self._invertCoord(pos[1]))
         return MARGIN_LEFT + RESERVE_MARGIN + newPos[0] * SQ_SIZE + SQ_SIZE // 2, MARGIN + newPos[1] * SQ_SIZE + SQ_SIZE // 2
 
     @staticmethod
@@ -73,13 +77,16 @@ class Highlighter:
         else:
             return self._convertBoardSqToPixelsOnRightBoard(pos)
 
-    @staticmethod
-    def _convertBoardSqToPixelsOnLeftBoard(pos: tuple):
-        return MARGIN + pos[0] * SQ_SIZE + SQ_SIZE // 2, MARGIN + pos[1] * SQ_SIZE + SQ_SIZE // 2
+    def _convertBoardSqToPixelsOnLeftBoard(self, pos: tuple):
+        newPos = pos
+        if self._connectedPlayer == 1 or self._connectedPlayer == 2:
+            newPos = self._invertPos(pos)
+        return MARGIN + newPos[0] * SQ_SIZE + SQ_SIZE // 2, MARGIN + newPos[1] * SQ_SIZE + SQ_SIZE // 2
 
-    @staticmethod
-    def _convertBoardSqToPixelsOnRightBoard(pos: tuple):
-        newPos = Highlighter._invertPos(pos)
+    def _convertBoardSqToPixelsOnRightBoard(self, pos: tuple):
+        newPos = pos
+        if self._connectedPlayer == 0 or self._connectedPlayer == 3:
+            newPos = self._invertPos(pos)
         return MARGIN_LEFT + newPos[0] * SQ_SIZE + SQ_SIZE // 2, MARGIN + newPos[1] * SQ_SIZE + SQ_SIZE // 2
 
     @staticmethod
@@ -149,14 +156,18 @@ class Highlighter:
         else:
             return self._convertLastMoveReserveSqToPixelsOnRightBoard(move)
 
-    @staticmethod
-    def _convertLastMoveReserveSqToPixelsOnLeftBoard(move):
-        marginTop = MARGIN - SQ_SIZE // 2 if move.movedPiece[0] == "b" else MARGIN + BOARD_SIZE + SQ_SIZE // 2
+    def _convertLastMoveReserveSqToPixelsOnLeftBoard(self, move):
+        if self._connectedPlayer == 0 or self._connectedPlayer == 3:
+            marginTop = MARGIN - SQ_SIZE // 2 if move.movedPiece[0] == "b" else MARGIN + BOARD_SIZE + SQ_SIZE // 2
+        else:
+            marginTop = MARGIN - SQ_SIZE // 2 if move.movedPiece[0] == "w" else MARGIN + BOARD_SIZE + SQ_SIZE // 2
         return MARGIN + RESERVE_MARGIN + RESERVE_PIECES[move.movedPiece[1]] * SQ_SIZE + SQ_SIZE // 2, marginTop
 
-    @staticmethod
-    def _convertLastMoveReserveSqToPixelsOnRightBoard(move):
-        marginTop = MARGIN - SQ_SIZE // 2 if move.movedPiece[0] == "w" else MARGIN + BOARD_SIZE + SQ_SIZE // 2
+    def _convertLastMoveReserveSqToPixelsOnRightBoard(self, move):
+        if self._connectedPlayer == 0 or self._connectedPlayer == 3:
+            marginTop = MARGIN - SQ_SIZE // 2 if move.movedPiece[0] == "w" else MARGIN + BOARD_SIZE + SQ_SIZE // 2
+        else:
+            marginTop = MARGIN - SQ_SIZE // 2 if move.movedPiece[0] == "b" else MARGIN + BOARD_SIZE + SQ_SIZE // 2
         return MARGIN_LEFT + RESERVE_MARGIN + RESERVE_PIECES[move.movedPiece[1]] * SQ_SIZE + SQ_SIZE // 2, marginTop
 
     def highlightPossiblePromotions(self, possiblePromotions: dict, boardNum: int):

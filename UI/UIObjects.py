@@ -312,15 +312,25 @@ class Image(UIObject):
 
 
 class Hourglass(UIObject):
-    def __init__(self, currentPlayer: int, image: pg.Surface):
-        if currentPlayer == 0:
-            pos = (MARGIN, SCREEN_HEIGHT - MARGIN + 5)
-        elif currentPlayer == 1:
-            pos = (MARGIN, MARGIN - SQ_SIZE - 5)
-        elif currentPlayer == 2:
-            pos = (MARGIN_LEFT, MARGIN - SQ_SIZE - 5)
+    def __init__(self, currentPlayer: int, image: pg.Surface, connectedPlayer: int):
+        if connectedPlayer == 0 or connectedPlayer == 3:
+            if currentPlayer == 0:
+                pos = (MARGIN, SCREEN_HEIGHT - MARGIN + 5)
+            elif currentPlayer == 1:
+                pos = (MARGIN, MARGIN - SQ_SIZE - 5)
+            elif currentPlayer == 2:
+                pos = (MARGIN_LEFT, MARGIN - SQ_SIZE - 5)
+            else:
+                pos = (MARGIN_LEFT, SCREEN_HEIGHT - MARGIN + 5)
         else:
-            pos = (MARGIN_LEFT, SCREEN_HEIGHT - MARGIN + 5)
+            if currentPlayer == 0:
+                pos = (MARGIN, MARGIN - SQ_SIZE - 5)
+            elif currentPlayer == 1:
+                pos = (MARGIN, SCREEN_HEIGHT - MARGIN + 5)
+            elif currentPlayer == 2:
+                pos = (MARGIN_LEFT, SCREEN_HEIGHT - MARGIN + 5)
+            else:
+                pos = (MARGIN_LEFT, MARGIN - SQ_SIZE - 5)
         super().__init__(pos)
         self._image = image
         self._orig_image = self._image

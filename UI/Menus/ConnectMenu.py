@@ -45,6 +45,7 @@ class ConnectMenu(Menu):
                         working = False
                     if self._connect_btn.checkForInput(mousePos):
                         self._handleConnectButton(waitingMenu, gamePlayMenu, dialogWindowMenu)
+                        working = False
                     if self._inputBox.checkForInput(mousePos):
                         self._err_lbl = Label("", (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 4 * 2), self._font)
             pg.display.flip()
@@ -59,6 +60,7 @@ class ConnectMenu(Menu):
             self._showError()
             return
         waitingMenu.create(network, gamePlayMenu, dialogWindowMenu)
+        network.close()
 
     def _showError(self):
         self._err_lbl = Label(self._textContent["Error"], (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 4), self._font)

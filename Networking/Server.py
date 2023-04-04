@@ -1,9 +1,9 @@
 import socket
 import pickle
 from copy import deepcopy
-from threading import Thread, Barrier, Event, Lock
+from threading import Thread, Barrier, Event
 from queue import Queue
-from Networking.NetHelpers import getIP
+from Networking.NetHelpers import getIP, GameStateUpdate
 from Utils.Logger import ConsoleLogger
 
 
@@ -19,9 +19,8 @@ class Server:
             self._players = freePlayers
         self._connections: {int: socket.socket} = {}
         self._barrier = Barrier(len(self._players))
-        self._lock = Lock()
         self._acceptionEvent = acceptionEvent
-        self._gameParams = {}
+        self._gameParams = None
         self._lastState = Queue()
         self._sentMove = {player: False for player in self._players}
         self._tryBind()
@@ -51,7 +50,7 @@ class Server:
     def _threadedClient(self, conn: socket.socket, player: int):
         self._barrier.wait()
         gameParams = deepcopy(self._gameParams)
-        gameParams["playerNum"] = player
+        gameParams.playerNum = player
         conn.sendall(pickle.dumps(gameParams))
         working = True
         while working:
@@ -72,7 +71,7 @@ class Server:
             if not data:
                 return False
             msg = pickle.loads(data)
-            if isinstance(msg, dict):
+            if isinstance(msg, GameStateUpdate):
                 self._lastState.put(msg)
             if msg == "get":
                 if self._sentMove[player] or self._getLastState() is None:

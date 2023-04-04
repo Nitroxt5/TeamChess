@@ -6,6 +6,7 @@ from AI.AIHandler import AIHandler
 from Engine.Engine import GameState
 from Engine.Move import Move
 from Generators.PossiblePromotions import PossiblePromotionsGen
+from Networking.NetHelpers import GameStateUpdate
 from Networking.Network import Network
 from UI.Highlighter import Highlighter
 from UI.Menus.Menu import Menu
@@ -31,18 +32,11 @@ class GamePlayMenu(Menu):
         self._player_lbls = []
         self._timers = []
         self._requiredPiece_ddms = []
-        reqPiecePos = self._generateRequiredPiecesPositionsInPixels()
-        colors = ("w", "b", "w", "b")
-        for i in range(4):
-            bodyImages = [self._RL.IMAGES[f"{colors[i]}{piece}Sq"] for piece in PIECES if piece != "K"]
-            headImages = [self._RL.IMAGES[f"{colors[i]}{piece}SqH"] for piece in PIECES if piece != "K"]
-            botPositioning = True if i == 0 or i == 3 else False
-            self._requiredPiece_ddms.append(ImgDropDownMenu(reqPiecePos[i], bodyImages, headImages, botPositioning, True))
         buttonPositions = self._generateButtonPositions()
         self._toMenu_btn = RadioButton(buttonPositions[0], self._RL.IMAGES["home_button_on"], self._RL.IMAGES["home_button_off"])
         self._soundPlayed = False
 
-        self._highlighter = Highlighter(self._screen, self._gameStates, self._RL)
+        self._highlighter = None
         self._promotionsGen = PossiblePromotionsGen(self._gameStates)
         self._possiblePromotions = {}
         self._isPromoting = False
@@ -54,9 +48,10 @@ class GamePlayMenu(Menu):
         self._moveMade = [False, False]
         self._activeBoard = 0
         self._gameOver = False
-        self._hourglass = Hourglass(self._getCurrentPlayer(), self._RL.IMAGES["hourglass"])
 
         self._moveSent = False
+        self._connectedPlayer = 0
+        self._hourglass = Hourglass(self._getCurrentPlayer(), self._RL.IMAGES["hourglass"], self._connectedPlayer)
 
     @staticmethod
     def _generateBoardPositionsInPixels():
@@ -64,14 +59,6 @@ class GamePlayMenu(Menu):
         xBoard2 = MARGIN_LEFT + BOARD_SIZE // 2
         yBoard = MARGIN + BOARD_SIZE // 2
         return (xBoard1, yBoard), (xBoard2, yBoard)
-
-    @staticmethod
-    def _generateRequiredPiecesPositionsInPixels():
-        xBoard1 = SCREEN_WIDTH // 2 - SQ_SIZE * 3 // 2
-        xBoard2 = SCREEN_WIDTH // 2 + SQ_SIZE // 2
-        yTop = SQ_SIZE
-        yBot = SCREEN_HEIGHT - SQ_SIZE * 2
-        return (xBoard1, yBot), (xBoard1, yTop), (xBoard2, yTop), (xBoard2, yBot)
 
     @staticmethod
     def _generateButtonPositions():
@@ -85,20 +72,16 @@ class GamePlayMenu(Menu):
         return difficulties[self._getCurrentPlayer()] == 1
 
     def create(self, network: Network, dialogWindowMenu, difficulties: list, playerNames: list, gameMode: int, connectedPlayer: int):
+        self._connectedPlayer = connectedPlayer
+        self._highlighter = Highlighter(self._screen, self._gameStates, self._RL, self._connectedPlayer)
         working = True
         self._gameOver = False
         clock = pg.time.Clock()
-        playerNames[connectedPlayer] += f" ({self._textContent['you']})"
-        playerNamesPositions = self._generateNamesPositionsInPixels()
-        self._player_lbls = [Label(playerNames[i], playerNamesPositions[i], self._font, shift=2) for i in range(4)]
-        timerPositions = self._generateTimerPositionsInPixels()
-        self._timers = [Timer(timerPositions[i], GAME_MODES[gameMode][i], self._RL.IMAGES["timer"], self._font) for i in range(4)]
-        for i in range(len(difficulties)):
-            if difficulties[i] == 1:
-                self._potentialScores[i] = 400
-            if difficulties[i] != 1 or i != connectedPlayer:
-                self._requiredPiece_ddms[i].turnOff()
-        self._timers[0].switch()
+        self._createPlayerNamesLabels(playerNames)
+        self._createRequiredPiecesDDMs()
+        self._configuratePotentialScoresAndDDMs(difficulties)
+        self._createAndStartTimers(gameMode)
+        self._hourglass = Hourglass(self._getCurrentPlayer(), self._RL.IMAGES["hourglass"], connectedPlayer)
         while working:
             clock.tick(FPS)
             self._handleMessages(network)
@@ -156,12 +139,13 @@ class GamePlayMenu(Menu):
 
     def _handleMessages(self, network: Network):
         msg = network.request()
+        if isinstance(msg, GameStateUpdate):
+            self._handleMove(msg.move)
+            self._requiredPieces = msg.requiredPieces
+            print(self._requiredPieces)
+            self._handleDDMNetwork()
         if msg == "quit":
             pg.event.post(pg.event.Event(pg.QUIT))
-        if isinstance(msg, dict):
-            self._handleMove(msg["move"])
-            self._requiredPieces = msg["requiredPieces"]
-            self._handleDDMNetwork()
 
     def _handleDDMNetwork(self):
         for i, ddm in enumerate(self._requiredPiece_ddms):
@@ -179,24 +163,63 @@ class GamePlayMenu(Menu):
             return 0
 
     def _sendState(self, move: Move, network: Network):
-        network.send({"move": move, "requiredPieces": self._requiredPieces})
+        network.send(GameStateUpdate(move, self._requiredPieces))
         self._moveSent = True
 
-    @staticmethod
-    def _generateNamesPositionsInPixels():
+    def _createPlayerNamesLabels(self, playerNames: list[str]):
+        playerNames[self._connectedPlayer] += f" ({self._textContent['you']})"
+        playerNamesPositions = self._generateNamesPositionsInPixels()
+        self._player_lbls = [Label(playerNames[i], playerNamesPositions[i], self._font, shift=2) for i in range(4)]
+
+    def _generateNamesPositionsInPixels(self):
         xBoard1 = MARGIN + BOARD_SIZE // 2
         xBoard2 = MARGIN_LEFT + BOARD_SIZE // 2
         yTop = MARGIN // 2
         yBot = SCREEN_HEIGHT - MARGIN // 2
-        return (xBoard1, yBot), (xBoard1, yTop), (xBoard2, yTop), (xBoard2, yBot)
+        if self._connectedPlayer == 0 or self._connectedPlayer == 3:
+            return (xBoard1, yBot), (xBoard1, yTop), (xBoard2, yTop), (xBoard2, yBot)
+        return (xBoard1, yTop), (xBoard1, yBot), (xBoard2, yBot), (xBoard2, yTop)
 
-    @staticmethod
-    def _generateTimerPositionsInPixels():
+    def _createRequiredPiecesDDMs(self):
+        reqPiecePos = self._generateRequiredPiecesPositionsInPixels()
+        self._requiredPiece_ddms = []
+        colors = ("w", "b", "w", "b")
+        botPlayers = (0, 3) if self._connectedPlayer == 0 or self._connectedPlayer == 3 else (1, 2)
+        for i in range(4):
+            bodyImages = [self._RL.IMAGES[f"{colors[i]}{piece}Sq"] for piece in PIECES if piece != "K"]
+            headImages = [self._RL.IMAGES[f"{colors[i]}{piece}SqH"] for piece in PIECES if piece != "K"]
+            botPositioning = True if i == botPlayers[0] or i == botPlayers[1] else False
+            self._requiredPiece_ddms.append(ImgDropDownMenu(reqPiecePos[i], bodyImages, headImages, botPositioning, True))
+
+    def _generateRequiredPiecesPositionsInPixels(self):
+        xBoard1 = SCREEN_WIDTH // 2 - SQ_SIZE * 3 // 2
+        xBoard2 = SCREEN_WIDTH // 2 + SQ_SIZE // 2
+        yTop = SQ_SIZE
+        yBot = SCREEN_HEIGHT - SQ_SIZE * 2
+        if self._connectedPlayer == 0 or self._connectedPlayer == 3:
+            return (xBoard1, yBot), (xBoard1, yTop), (xBoard2, yTop), (xBoard2, yBot)
+        return (xBoard1, yTop), (xBoard1, yBot), (xBoard2, yBot), (xBoard2, yTop)
+
+    def _configuratePotentialScoresAndDDMs(self, difficulties: list[int]):
+        for i in range(len(difficulties)):
+            if difficulties[i] == 1:
+                self._potentialScores[i] = 400
+            if difficulties[i] != 1 or i != self._connectedPlayer:
+                self._requiredPiece_ddms[i].turnOff()
+
+    def _createAndStartTimers(self, gameMode: int):
+        timerPositions = self._generateTimerPositionsInPixels()
+        self._timers = [Timer(timerPositions[i], GAME_MODES[gameMode][i], self._RL.IMAGES["timer"], self._font) for i in range(4)]
+        self._timers[0].switch()
+
+    def _generateTimerPositionsInPixels(self):
         xBoard1 = MARGIN // 2
         xBoard2 = SCREEN_WIDTH - MARGIN // 2
         yTop = (SCREEN_HEIGHT - BOARD_SIZE + SQ_SIZE) // 2
         yBot = (SCREEN_HEIGHT + BOARD_SIZE - SQ_SIZE) // 2
-        return (xBoard1, yBot), (xBoard1, yTop), (xBoard2, yTop), (xBoard2, yBot)
+        if self._connectedPlayer == 0 or self._connectedPlayer == 3:
+            return (xBoard1, yBot), (xBoard1, yTop), (xBoard2, yTop), (xBoard2, yBot)
+        return (xBoard1, yTop), (xBoard1, yBot), (xBoard2, yBot), (xBoard2, yTop)
 
     def drawGameState(self):
         self._drawBackGround()
@@ -277,14 +300,17 @@ class GamePlayMenu(Menu):
         else:
             return self._convertSquareToPixelsOnRightBoard((location % DIM, location // DIM))
 
-    @staticmethod
-    def _convertSquareToPixelsOnLeftBoard(pos: tuple):
-        return MARGIN + SQ_SIZE * pos[0] + SQ_SIZE // 2, MARGIN + SQ_SIZE * pos[1] + SQ_SIZE // 2
+    def _convertSquareToPixelsOnLeftBoard(self, pos: tuple):
+        if self._connectedPlayer == 0 or self._connectedPlayer == 3:
+            return MARGIN + SQ_SIZE * pos[0] + SQ_SIZE // 2, MARGIN + SQ_SIZE * pos[1] + SQ_SIZE // 2
+        newPos = self._invertPos(pos)
+        return MARGIN + SQ_SIZE * newPos[0] + SQ_SIZE // 2, MARGIN + SQ_SIZE * newPos[1] + SQ_SIZE // 2
 
-    @staticmethod
-    def _convertSquareToPixelsOnRightBoard(pos: tuple):
-        newPos = GamePlayMenu._invertPos(pos)
-        return MARGIN_LEFT + SQ_SIZE * newPos[0] + SQ_SIZE // 2, MARGIN + SQ_SIZE * newPos[1] + SQ_SIZE // 2
+    def _convertSquareToPixelsOnRightBoard(self, pos: tuple):
+        if self._connectedPlayer == 0 or self._connectedPlayer == 3:
+            newPos = GamePlayMenu._invertPos(pos)
+            return MARGIN_LEFT + SQ_SIZE * newPos[0] + SQ_SIZE // 2, MARGIN + SQ_SIZE * newPos[1] + SQ_SIZE // 2
+        return MARGIN_LEFT + SQ_SIZE * pos[0] + SQ_SIZE // 2, MARGIN + SQ_SIZE * pos[1] + SQ_SIZE // 2
 
     @staticmethod
     def _invertPos(pos: tuple):
@@ -310,11 +336,19 @@ class GamePlayMenu(Menu):
                     self._updateUIObjects([piece_img])
 
     def _getReservePiecePositionInPixelsByBoard(self, boardNum: int, piece: str):
-        if boardNum == 0 and piece[0] == "w":
+        if self._connectedPlayer == 0 or self._connectedPlayer == 3:
+            if boardNum == 0 and piece[0] == "w":
+                return self._convertReserveSquareToPixelsAtBottomOfLeftBoard(piece[1])
+            elif boardNum == 0 and piece[0] == "b":
+                return self._convertReserveSquareToPixelsAtTopOfLeftBoard(piece[1])
+            elif boardNum == 1 and piece[0] == "w":
+                return self._convertReserveSquareToPixelsAtTopOfRightBoard(piece[1])
+            return self._convertReserveSquareToPixelsAtBottomOfRightBoard(piece[1])
+        if boardNum == 0 and piece[0] == "b":
             return self._convertReserveSquareToPixelsAtBottomOfLeftBoard(piece[1])
-        elif boardNum == 0 and piece[0] == "b":
+        elif boardNum == 0 and piece[0] == "w":
             return self._convertReserveSquareToPixelsAtTopOfLeftBoard(piece[1])
-        elif boardNum == 1 and piece[0] == "w":
+        elif boardNum == 1 and piece[0] == "b":
             return self._convertReserveSquareToPixelsAtTopOfRightBoard(piece[1])
         return self._convertReserveSquareToPixelsAtBottomOfRightBoard(piece[1])
 
@@ -335,7 +369,11 @@ class GamePlayMenu(Menu):
         return MARGIN_LEFT + RESERVE_MARGIN + SQ_SIZE * RESERVE_PIECES[piece] + SQ_SIZE // 2, MARGIN + BOARD_SIZE + SQ_SIZE // 2
 
     def _getReservePieceCounterPosInPixelsByBoardAndImgPos(self, boardNum: int, piece: str, imgPos: tuple):
-        if (piece[0] == "b" and boardNum == 0) or (piece[0] == "w" and boardNum == 1):
+        if self._connectedPlayer == 0 or self._connectedPlayer == 3:
+            if (piece[0] == "b" and boardNum == 0) or (piece[0] == "w" and boardNum == 1):
+                return self._getReservePieceCounterPosInPixelsAtTop(imgPos)
+            return self._getReservePieceCounterPosInPixelsAtBottom(imgPos)
+        if (piece[0] == "w" and boardNum == 0) or (piece[0] == "b" and boardNum == 1):
             return self._getReservePieceCounterPosInPixelsAtTop(imgPos)
         return self._getReservePieceCounterPosInPixelsAtBottom(imgPos)
 
@@ -371,10 +409,10 @@ class GamePlayMenu(Menu):
         for i in range(len(difficulties)):
             if difficulties[i] == 1:
                 self._potentialScores[i] = 400
-        self._highlighter = Highlighter(self._screen, self._gameStates, self._RL)
+        self._highlighter = Highlighter(self._screen, self._gameStates, self._RL, 0)
         self._promotionsGen = PossiblePromotionsGen(self._gameStates)
         self._AI = AIHandler(self._gameStates, self._potentialScores, self._requiredPieces)
-        self._hourglass = Hourglass(0, self._RL.IMAGES["hourglass"])
+        self._hourglass = Hourglass(0, self._RL.IMAGES["hourglass"], 0)
         for i in range(len(self._timers)):
             self._timers[i].reset()
             self._requiredPiece_ddms[i].hide()
@@ -464,17 +502,18 @@ class GamePlayMenu(Menu):
         else:
             return self._getBoardSqOnRightBoardByPixels(pos)
 
-    @staticmethod
-    def _getBoardSqOnLeftBoardByPixels(pos: tuple):
+    def _getBoardSqOnLeftBoardByPixels(self, pos: tuple):
         column = (pos[0] - MARGIN) // SQ_SIZE
         row = (pos[1] - MARGIN) // SQ_SIZE
+        if self._connectedPlayer == 1 or self._connectedPlayer == 2:
+            column, row = GamePlayMenu._invertPos((column, row))
         return column, row
 
-    @staticmethod
-    def _getBoardSqOnRightBoardByPixels(pos: tuple):
+    def _getBoardSqOnRightBoardByPixels(self, pos: tuple):
         column = (pos[0] - MARGIN_LEFT) // SQ_SIZE
         row = (pos[1] - MARGIN) // SQ_SIZE
-        column, row = GamePlayMenu._invertPos((column, row))
+        if self._connectedPlayer == 0 or self._connectedPlayer == 3:
+            column, row = GamePlayMenu._invertPos((column, row))
         return column, row
 
     def _getReserveSqByPixels(self, pos: tuple):
@@ -483,17 +522,18 @@ class GamePlayMenu(Menu):
         else:
             return self._getReserveSqOnRightBoardByPixels(pos)
 
-    @staticmethod
-    def _getReserveSqOnLeftBoardByPixels(pos: tuple):
+    def _getReserveSqOnLeftBoardByPixels(self, pos: tuple):
         column = (pos[0] - MARGIN - RESERVE_MARGIN) // SQ_SIZE
         row = (pos[1] - MARGIN) // SQ_SIZE
+        if self._connectedPlayer == 1 or self._connectedPlayer == 2:
+            row = self._invertCoord(row)
         return column, row
 
-    @staticmethod
-    def _getReserveSqOnRightBoardByPixels(pos: tuple):
+    def _getReserveSqOnRightBoardByPixels(self, pos: tuple):
         column = (pos[0] - MARGIN_LEFT - RESERVE_MARGIN) // SQ_SIZE
         row = (pos[1] - MARGIN) // SQ_SIZE
-        row = GamePlayMenu._invertCoord(row)
+        if self._connectedPlayer == 0 or self._connectedPlayer == 3:
+            row = self._invertCoord(row)
         return column, row
 
     def _validateClick(self, pos: tuple):
@@ -598,7 +638,7 @@ class GamePlayMenu(Menu):
         self._gameOverCheck()
         if not self._gameOver:
             self._timers[self._getCurrentPlayer()].switch()
-        self._hourglass = Hourglass(self._getCurrentPlayer(), self._RL.IMAGES["hourglass"])
+        self._hourglass = Hourglass(self._getCurrentPlayer(), self._RL.IMAGES["hourglass"], self._connectedPlayer)
         self._playSoundIfAllowed()
         self._moveSent = False
         self.drawGameState()

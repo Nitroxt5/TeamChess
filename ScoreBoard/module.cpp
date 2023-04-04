@@ -18,7 +18,7 @@
 //                  20,  // penalty for early queen participation
 //                  30}; // for center control (for each square)
 
-long weights[] = {33, 46, 58, 39, 10, 16, 28, 20, 53, 31, 17, 18, 30, 20, 17};
+long weights[] = {18, 46, 58, 39, 3, 8, 50, 20, 53, 31, 17, 36, 30, 20, 11};
 
 long knightPositionScore[8][8] = { 1, 2, 1, 1, 1, 1, 2, 1,
 								   1, 2, 2, 2, 2, 2, 2, 1,
