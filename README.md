@@ -17,6 +17,7 @@ It is a part of my graduate work in Belarusian State University.
  - Generators folder includes generators for moves, threat tables and more.
  - Engine folder contains classes for keeping game state in computer memory.
  - AI folder contains AI to play with or against.
+ - Networking folder contains classes implementing multiplayer.
 
 ### Running the code
 
