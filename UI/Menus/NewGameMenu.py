@@ -50,9 +50,7 @@ class NewGameMenu(Menu):
         xBoard1 = SCREEN_WIDTH // 4
         xBoard2 = SCREEN_WIDTH // 4 + BOARD_SIZE // 2 + SQ_SIZE
         yBoard = SCREEN_HEIGHT // 3 + SQ_SIZE
-        board1ImgPos = (xBoard1, yBoard)
-        board2ImgPos = (xBoard2, yBoard)
-        return board1ImgPos, board2ImgPos
+        return (xBoard1, yBoard), (xBoard2, yBoard)
 
     @staticmethod
     def _generateDDMPositionsInPixels():
@@ -112,9 +110,10 @@ class NewGameMenu(Menu):
         acceptionEvent = Event()
         Thread(target=Server, args=([player for player, difficulty in enumerate(self._difficulties) if difficulty == 1], acceptionEvent)).start()
         acceptionEvent.wait()
+        acceptionEvent.clear()
         network = Network(getIP())
-        gameParams = GameParams(difficulties=self._difficulties, playerNames=self._names, gameMode=self._currentGameMode)
-        network.send(gameParams)
+        network.send(GameParams(difficulties=self._difficulties, playerNames=self._names, gameMode=self._currentGameMode))
+        acceptionEvent.wait()
         waitingMenu.create(network, gamePlayMenu, dialogWindowMenu, True)
         network.close()
 

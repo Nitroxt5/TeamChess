@@ -14,6 +14,12 @@ class UIObject:
     def update(self, screen: pg.Surface):
         pass
 
+    def changeColor(self, position: tuple):
+        pass
+
+    def checkForInput(self, position: tuple):
+        return False
+
 
 class Button(UIObject):
     def __init__(self, image: pg.image, pos: tuple, text: str, font: [pg.font.SysFont, None], shift=3, topleft=False):

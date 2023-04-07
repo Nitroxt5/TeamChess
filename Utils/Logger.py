@@ -55,8 +55,8 @@ class ConsoleLogger:
         print("Waiting for a connection, Server Started")
 
     @classmethod
-    def connectedToAddr(cls, addr: tuple, player: int):
-        print(f"Connected to: {addr}, player {player}")
+    def connectedToAddr(cls, addr: tuple):
+        print(f"Connected to: {addr}")
 
     @classmethod
     def lostConnection(cls):

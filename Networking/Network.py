@@ -19,8 +19,8 @@ class Network:
     def recv(self, buffer=1024):
         return pickle.loads(self._client.recv(buffer))
 
-    def request(self):
-        self.send("get")
+    def request(self, requestMsg="get"):
+        self.send(requestMsg)
         return self.recv()
 
     def close(self):

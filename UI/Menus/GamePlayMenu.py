@@ -71,20 +71,20 @@ class GamePlayMenu(Menu):
         """Figures out who is to move: AI or player"""
         return difficulties[self._getCurrentPlayer()] == 1
 
-    def create(self, network: Network, dialogWindowMenu, difficulties: list, playerNames: list, gameMode: int, connectedPlayer: int, isHost: bool):
-        self._connectedPlayer = connectedPlayer
+    def create(self, network: Network, dialogWindowMenu, gameParams, isHost: bool):
+        self._connectedPlayer = gameParams.playerNum
         self._highlighter = Highlighter(self._screen, self._gameStates, self._RL, self._connectedPlayer)
         working = True
         self._gameOver = False
         clock = pg.time.Clock()
-        self._createPlayerNamesLabels(playerNames)
+        self._createPlayerNamesLabels(gameParams.playerNames)
         self._createRequiredPiecesDDMs()
-        self._configuratePotentialScoresAndDDMs(difficulties)
-        self._createAndStartTimers(gameMode)
-        self._hourglass = Hourglass(self._getCurrentPlayer(), self._RL.IMAGES["hourglass"], connectedPlayer)
+        self._configuratePotentialScoresAndDDMs(gameParams.difficulties)
+        self._createAndStartTimers(gameParams.gameMode)
+        self._hourglass = Hourglass(self._getCurrentPlayer(), self._RL.IMAGES["hourglass"], self._connectedPlayer)
         while working:
+            tryRequest = True
             clock.tick(FPS)
-            self._handleMessages(network)
             mousePos = pg.mouse.get_pos()
             for e in pg.event.get():
                 if e.type == pg.KEYDOWN:
@@ -94,8 +94,8 @@ class GamePlayMenu(Menu):
                         sys_exit()
                 elif e.type == pg.QUIT:
                     self._terminateThreads(network)
-                    ConsoleLogger.endgameOutput(self._gameStates, difficulties, self._AI)
-                    self._setBoardsToDefault(difficulties)
+                    ConsoleLogger.endgameOutput(self._gameStates, gameParams.difficulties, self._AI)
+                    self._setBoardsToDefault(gameParams.difficulties)
                     self._gameOver = True
                     working = False
                 elif e.type == pg.MOUSEBUTTONDOWN:
@@ -108,9 +108,10 @@ class GamePlayMenu(Menu):
                         if self._activeBoard == boardNum:
                             column, row = self._getBoardSqByPixels(mousePos)
                             self._validateClick((column, row))
-                            if self._playerTriedToMakeMove(difficulties) and self._getCurrentPlayer() == connectedPlayer and not self._moveSent:
+                            if self._playerTriedToMakeMove(gameParams.difficulties) and self._getCurrentPlayer() == self._connectedPlayer and not self._moveSent:
                                 move = self._configurateMove()
-                                self._sendMoveIfValid(move, playerNames, network)
+                                self._sendMoveIfValid(move, gameParams.playerNames, network)
+                                tryRequest = False
                                 if not self._moveMade[boardNum]:
                                     self._resetFirstClick()
                         elif self._activeBoard == reserveBoardNum:
@@ -124,17 +125,20 @@ class GamePlayMenu(Menu):
             if self._gameOver:
                 self._AI.terminate()
             if isHost and not self._moveSent:
-                if not self._gameOver and not self._isPlayerTurn(difficulties) and not self._AI.cameUpWithMove:
+                if not self._gameOver and not self._isPlayerTurn(gameParams.difficulties) and not self._AI.cameUpWithMove:
                     player = self._getCurrentPlayer()
-                    self._AI.start(self._timers[player].value, difficulties[player], self._activeBoard, self._getPlayerName(playerNames))
+                    self._AI.start(self._timers[player].value, gameParams.difficulties[player], self._activeBoard, self._getPlayerName(gameParams.playerNames))
                 if self._AI.cameUpWithMove:
                     player = self._getCurrentPlayer()
                     self._requiredPiece_ddms[player].changeHead(RESERVE_PIECES[self._requiredPieces[player][1]] + 1)
                     self._sendState(self._AI.move, network)
+                    tryRequest = False
                     self._AI.cameUpWithMove = False
             self._resetVarsIfMoveMade()
             self._changeColorOfUIObjects(mousePos, [self._toMenu_btn])
             self.drawGameState()
+            if tryRequest:
+                self._handleMessages(network)
             pg.display.flip()
 
     def _handleMessages(self, network: Network):
@@ -142,7 +146,6 @@ class GamePlayMenu(Menu):
         if isinstance(msg, GameStateUpdate):
             self._handleMove(msg.move)
             self._requiredPieces = msg.requiredPieces
-            print(self._requiredPieces)
             self._handleDDMNetwork()
         if msg == "quit":
             pg.event.post(pg.event.Event(pg.QUIT))
@@ -160,7 +163,6 @@ class GamePlayMenu(Menu):
         self._moveSent = True
 
     def _createPlayerNamesLabels(self, playerNames: list[str]):
-        playerNames[self._connectedPlayer] += f" ({self._textContent['you']})"
         playerNamesPositions = self._generateNamesPositionsInPixels()
         self._player_lbls = [Label(playerNames[i], playerNamesPositions[i], self._font, shift=2) for i in range(4)]
 

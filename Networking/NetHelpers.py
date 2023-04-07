@@ -7,7 +7,7 @@ from Engine.Move import Move
 @dataclass
 class GameParams:
     gameMode: int = field(default=0)
-    playerNum: int = field(default=0)
+    playerNum: int = field(default=-1)
     difficulties: list[int] = field(default_factory=list)
     playerNames: list[str] = field(default_factory=list)
 
@@ -28,17 +28,6 @@ def getIP():
         ip = '127.0.0.1'
     s.close()
     return ip
-
-
-def handleSocketError(func):
-    def wrapper(*args, **kwargs):
-        result = None
-        try:
-            result = func(*args, **kwargs)
-        except socket.error as e:
-            print(e)
-        return result
-    return wrapper
 
 
 def checkIP(text: str):

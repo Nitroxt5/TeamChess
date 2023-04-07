@@ -10,9 +10,8 @@ newGameMenuContent = {"Name": "New game", "DDM1": ["Player 1", "Player 1", "AI (
                       "gameMode": "Game mode", "Play_btn": "Play", "Back_btn": "Back", "AItxt": "AI",
                       "diffNames": {2: "Easy", 3: "Normal", 4: "Hard"}}
 gamePlayMenuContent = {"promText": "chooses a piece to promote", "T1": "Team 1 wins", "T2": "Team 2 wins", "D": "Draw",
-                       "DW1": "Do you really want to exit?", "DW2": "Do you really want to restart?",
-                       "you": "You"}
+                       "DW1": "Do you really want to exit?", "DW2": "Do you really want to restart?"}
 connectionMenuContent = {"Name": "Connection to game", "Error": "Wrong code!", "Connect_btn": "Connect",
                          "Back_btn": "Back"}
-waitingMenuContent = {"Name": "Waiting for players..."}
+waitingMenuContent = {"Name": "Waiting for players...", "Back_btn": "Back", "serv_addr": "Server address", "you": "You"}
 playerNames = ["Player 1", "Player 2", "Player 3", "Player 4"]
